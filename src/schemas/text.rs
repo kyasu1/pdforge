@@ -1,36 +1,114 @@
 use crate::font::*;
 use crate::schemas::base::BaseSchema;
+use crate::schemas::base::Kind;
+use crate::schemas::JsonPosition;
 use crate::utils::OpBuffer;
 use derive_new::new;
 use icu_segmenter::WordSegmenter;
 use printpdf::*;
+use serde::Deserialize;
 use std::cmp::max;
 
-#[derive(Debug, Clone, new)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsonTextSchema {
+    name: String,
+    kind: Option<String>,
+    position: JsonPosition,
+    width: f32,
+    height: f32,
+    content: String,
+    font_name: String,
+    character_spacing: Option<f32>,
+    line_height: Option<f32>,
+    font_size: Option<f32>,
+}
+
+#[derive(Debug, Clone)]
 pub struct TextSchema {
     base: BaseSchema,
     content: String,
     font_name: String,
-    character_spacing: Option<Pt>,
-    line_height: Option<Pt>,
+    character_spacing: Pt,
+    line_height: Option<f32>,
     font_size: FontSize,
 }
 
 impl TextSchema {
-    pub fn flowing(
+    pub fn new(
+        x: Mm,
+        y: Mm,
+        width: Mm,
+        height: Mm,
+        font_name: String,
+        font_size: Pt,
+        content: String,
+    ) -> Self {
+        let base = BaseSchema::new(String::from("cell"), Kind::Fixed, x, y, width, height);
+
+        Self {
+            base,
+            content,
+            font_name,
+            character_spacing: Pt(0.0),
+            line_height: None,
+            font_size: FontSize::Fixed(font_size),
+        }
+    }
+
+    pub fn from_json(json: JsonTextSchema) -> Result<TextSchema, String> {
+        let kind = match json.kind {
+            Some(kind) => match kind.as_str() {
+                "fixed" => Kind::Fixed,
+                "dynamic" => Kind::Dynamic,
+                _ => return Err(String::from("Invalid Kind")),
+            },
+            None => Kind::Fixed,
+        };
+
+        let base = BaseSchema::new(
+            json.name,
+            kind,
+            Mm(json.position.x),
+            Mm(json.position.y),
+            Mm(json.width),
+            Mm(json.height),
+        );
+
+        let character_spacing = json.character_spacing.map(|f| Pt(f)).unwrap_or(Pt(0.0));
+        let line_height = json.line_height;
+        let font_size = match json.font_size {
+            Some(f) => FontSize::Fixed(Pt(f)),
+            None => {
+                unimplemented!()
+            }
+        };
+        let text = TextSchema {
+            base,
+            content: json.content,
+            font_name: json.font_name,
+            character_spacing,
+            line_height,
+            font_size,
+        };
+
+        Ok(text)
+    }
+    pub fn dynamic(
         name: String,
         content: String,
         font_name: String,
         font_size: Pt,
-        x: f32,
-        y: f32,
-        width: f32,
+        x: Mm,
+        y: Mm,
+        width: Mm,
+        height: Mm,
     ) -> Self {
         Self {
-            base: BaseSchema::flowing(name, String::from("text"), x, y, width),
+            base: BaseSchema::new(name, Kind::Dynamic, x, y, width, height),
             content,
             font_name,
-            character_spacing: None,
+            character_spacing: Pt(0.0),
             line_height: None,
             font_size: FontSize::Fixed(font_size),
         }
@@ -45,16 +123,31 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn new(schema: TextSchema, font_map: &FontMap) -> Result<Self, Error> {
+    pub fn new(schema: &TextSchema, font_map: &FontMap) -> Result<Self, Error> {
         let (font_id, font) = font_map
             .find(schema.font_name.clone())
             .ok_or(Error::FontNotFound)?;
 
         Ok(Self {
-            schema,
+            schema: schema.clone(),
             font: FontSpec::new(font),
             font_id: font_id.clone(),
         })
+    }
+    pub fn set_y(&mut self, y: Mm) {
+        self.schema.base.set_y(y);
+    }
+
+    pub fn split(&self) -> Result<Vec<String>, Error> {
+        let font_size =
+            self.calculate_dynamic_font_size(&self.font, self.schema.base.width(), None)?;
+        Self::split_text_to_size(
+            &self.font,
+            self.schema.content.clone(),
+            font_size,
+            self.schema.base.width().into(),
+            self.schema.character_spacing,
+        )
     }
 
     fn split_text_to_size(
@@ -176,16 +269,11 @@ impl Text {
             FontSize::Dynamic(dynamic) => {
                 let height = match height {
                     Some(height) => height,
-                    None => return Err(Error::InvalidFontSize),
+                    None => return Err(Error::DynamicFontMissingHeight),
                 };
                 let mut font_size = dynamic.get_min();
-                let (mut total_width_in_mm, mut total_height_in_mm) = self.calculate_constraints(
-                    font,
-                    font_size,
-                    width.clone(),
-                    height.clone(),
-                    dynamic.clone(),
-                )?;
+                let (mut total_width_in_mm, mut total_height_in_mm) =
+                    self.calculate_constraints(font, font_size, width.clone(), dynamic.clone())?;
 
                 while dynamic.should_font_grow_to_fit(
                     font_size.clone(),
@@ -200,7 +288,6 @@ impl Text {
                             font,
                             font_size.clone(),
                             width.clone(),
-                            height.clone(),
                             dynamic.clone(),
                         )?;
                     if new_total_height_in_mm <= total_height_in_mm {
@@ -224,7 +311,6 @@ impl Text {
                         font,
                         font_size,
                         width.clone(),
-                        height.clone(),
                         dynamic.clone(),
                     )?;
                 }
@@ -239,16 +325,15 @@ impl Text {
         font: &FontSpec,
         font_size: Pt,
         width: Mm,
-        height: Mm,
         dynamic: DynamicFontSize,
     ) -> Result<(Mm, Mm), Error> {
         let mut total_width_in_mm: Mm = Mm(0.0);
         let mut total_height_in_mm: Mm = Mm(0.0);
-        let line_height = self.schema.line_height.unwrap_or(Pt(1.0));
+        let line_height: f32 = self.schema.line_height.unwrap_or(1.0);
         let first_line_text_height: Pt = font.height_of_font_at_size(font_size);
-        let first_line_height_in_mm: Mm = (first_line_text_height * line_height.0).into();
-        let other_row_height_in_mm: Mm = (font_size * line_height.0).into();
-        let character_spacing = self.schema.character_spacing.unwrap_or(Pt(0.0));
+        let first_line_height_in_mm: Mm = (first_line_text_height * line_height).into();
+        let other_row_height_in_mm: Mm = (font_size * line_height).into();
+        let character_spacing = self.schema.character_spacing;
         let splitted_paragraphs = Self::split_text_to_size(
             font,
             self.schema.content.clone(),
@@ -282,20 +367,44 @@ impl Text {
         Ok((total_width_in_mm, total_height_in_mm))
     }
 
+    pub fn render(
+        &mut self,
+        page_height_in_mm: Mm,
+        fixed_page: usize,
+        current_page: usize,
+        current_top_mm: Option<Mm>,
+        buffer: &mut OpBuffer,
+    ) -> Result<Option<(usize, Option<Mm>)>, Error> {
+        match self.schema.base.kind() {
+            Kind::Fixed => {
+                self.draw(page_height_in_mm.into(), fixed_page, buffer)?;
+                Ok(None)
+            }
+            Kind::Dynamic => {
+                let updated = self.draw2(
+                    page_height_in_mm.into(),
+                    current_page,
+                    current_top_mm,
+                    buffer,
+                )?;
+                Ok(Some(updated))
+            }
+        }
+    }
+
     pub fn draw(
         &mut self,
         page_height: Pt,
         current_page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
-        let font_size: Pt = self
-            .calculate_dynamic_font_size(
-                &self.font,
-                self.schema.base.width(),
-                self.schema.base.height(),
-            )
-            .unwrap();
-        let character_spacing = self.schema.character_spacing.unwrap_or(Pt(0.0));
+        let font_size: Pt = self.calculate_dynamic_font_size(
+            &self.font,
+            self.schema.base.width(),
+            self.schema.base.height(),
+        )?;
+
+        let character_spacing = self.schema.character_spacing;
 
         let splitted_paragraphs: Vec<String> = Self::split_text_to_size(
             &self.font,
@@ -305,6 +414,8 @@ impl Text {
             character_spacing,
         )?;
 
+        let line_height = Pt(self.schema.line_height.unwrap_or(1.0) * font_size.0);
+
         let mut ops: Vec<Op> = vec![
             Op::StartTextSection,
             Op::SetTextCursor {
@@ -313,9 +424,7 @@ impl Text {
                     y: page_height - self.schema.base.y().into(),
                 },
             },
-            Op::SetLineHeight {
-                lh: self.schema.line_height.unwrap_or(font_size),
-            },
+            Op::SetLineHeight { lh: line_height },
             Op::SetCharacterSpacing {
                 // multiplier: character_spacing.clone(),
                 multiplier: 0.0,
@@ -346,7 +455,7 @@ impl Text {
         current_page: usize,
         current_top_mm: Option<Mm>,
         buffer: &mut OpBuffer,
-    ) -> Result<(usize, Mm), Error> {
+    ) -> Result<(usize, Option<Mm>), Error> {
         let top_margin_in_mm = Mm(20.0);
         let bottom_margin_in_mm = Mm(20.0);
         let page_height: Pt = page_height_in_mm.into();
@@ -357,15 +466,15 @@ impl Text {
         // let mut y_bottom_mm = self.schema.base.get_y() + self.schema.base.get_height();
         let y_bottom_mm = page_height_in_mm - bottom_margin_in_mm;
 
-        let font_size: Pt = self
-            .calculate_dynamic_font_size(
-                &self.font,
-                self.schema.base.width(),
-                self.schema.base.height(),
-            )
-            .unwrap();
-        let line_height = self.schema.line_height.unwrap_or(font_size);
-        let character_spacing = self.schema.character_spacing.unwrap_or(Pt(0.0));
+        let font_size: Pt = self.calculate_dynamic_font_size(
+            &self.font,
+            self.schema.base.width(),
+            self.schema.base.height(),
+        )?;
+
+        let line_height = Pt(self.schema.line_height.unwrap_or(1.0) * font_size.0);
+
+        let character_spacing = self.schema.character_spacing;
 
         let lines: Vec<String> = Self::split_text_to_size(
             &self.font,
@@ -410,9 +519,7 @@ impl Text {
                         y: y_start,
                     },
                 },
-                Op::SetLineHeight {
-                    lh: self.schema.line_height.unwrap_or(font_size),
-                },
+                Op::SetLineHeight { lh: line_height },
                 Op::SetCharacterSpacing {
                     // multiplier: character_spacing.clone(),
                     multiplier: 0.0,
@@ -438,7 +545,7 @@ impl Text {
         }
         Ok((
             current_page + pages_increased - 1,
-            (page_height - y_line + top_margin_in_mm.into()).into(),
+            Some((page_height - y_line + top_margin_in_mm.into()).into()),
         ))
     }
 }

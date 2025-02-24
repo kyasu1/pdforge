@@ -1,71 +1,144 @@
 pub mod base;
+pub mod table;
 pub mod text;
 
 use printpdf::Mm;
-use serde::de::Visitor;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
+use snafu::prelude::*;
+use std::fs::File;
+use std::io::BufReader;
+use table::TableSchema;
+use text::TextSchema;
+
+#[derive(Debug, Snafu)]
+pub enum Error {
+    #[snafu(display("Could not read file {filename}"))]
+    TemplateFile {
+        source: std::io::Error,
+        filename: String,
+    },
+    #[snafu(display("Could not parse json file"))]
+    TemplateDeserialize { source: serde_json::Error },
+
+    #[snafu(display("Invalid HEX color string specified"))]
+    InvalidColorString { source: palette::rgb::FromHexError },
+
+    #[snafu(whatever, display("{message}"))]
+    Whatever {
+        message: String,
+        #[snafu(source(from(Box<dyn std::error::Error>, Some)))]
+        source: Option<Box<dyn std::error::Error>>,
+    },
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+enum JsonSchema {
+    Text(text::JsonTextSchema),
+    FlowingText(text::JsonTextSchema),
+    Table(table::JsonTableSchema),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct JsonBasePdf {
+    width: f32,
+    height: f32,
+    padding: Vec<f32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonTemplate {
+    schemas: Vec<Vec<JsonSchema>>,
+    base_pdf: JsonBasePdf,
+    #[serde(rename = "pdfmeVersion")]
+    version: String,
+}
+impl JsonTemplate {
+    fn read_from_file(filename: &str) -> Result<JsonTemplate, Error> {
+        let file = File::open(filename).context(TemplateFileSnafu { filename })?;
+        let reader = BufReader::new(file);
+        let template: JsonTemplate =
+            serde_json::from_reader(reader).context(TemplateDeserializeSnafu)?;
+
+        Ok(template)
+    }
+}
+
+//
+//
+//
+#[derive(Debug, Clone)]
+pub enum Schema {
+    Text(text::TextSchema),
+    FlowingText(text::TextSchema),
+    Table(table::TableSchema),
+}
 
 #[derive(Debug, Clone)]
-struct Size(Mm);
-
-impl Size {
-    pub fn new(v: f32) -> Self {
-        Size(Mm(v))
-    }
-}
-struct SizeVisitor;
-
-impl<'de> Visitor<'de> for SizeVisitor {
-    type Value = Size;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("a floating point number representing size")
-    }
-
-    fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        Ok(Size(Mm(v)))
-    }
-
-    fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        Ok(Size(Mm(v as f32)))
-    }
-}
-
-// deserializer.deserialize_f32(SizeVisitor)
-// }
-
-impl<'de> Deserialize<'de> for Size {
-    fn deserialize<D>(deseriaplizer: D) -> Result<Size, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deseriaplizer.deserialize_f32(SizeVisitor)
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub enum Schema {
-    // Text(text::TextSchema),
-    Text,
-    FlowingText,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 pub struct BasePdf {
-    width: Size,
-    height: Size,
-    padding: Vec<Size>,
+    width: Mm,
+    height: Mm,
+    padding: Vec<Mm>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Template {
-    schemas: Vec<Schema>,
+    pub schemas: Vec<Vec<Schema>>,
     base_pdf: BasePdf,
     version: String,
+}
+
+impl Template {
+    pub fn read_from_file(filename: &str) -> Result<Template, Error> {
+        let json = JsonTemplate::read_from_file(filename)?;
+
+        let base_pdf = BasePdf {
+            width: Mm(json.base_pdf.width),
+            height: Mm(json.base_pdf.height),
+            padding: json.base_pdf.padding.into_iter().map(|v| Mm(v)).collect(),
+        };
+        let schemas = json
+            .schemas
+            .into_iter()
+            .map(|page| {
+                page.into_iter()
+                    .map(|schema| match schema {
+                        JsonSchema::Text(s) => Schema::Text(TextSchema::from_json(s).unwrap()),
+                        JsonSchema::FlowingText(s) => {
+                            Schema::FlowingText(TextSchema::from_json(s).unwrap())
+                        }
+                        JsonSchema::Table(json) => {
+                            Schema::Table(TableSchema::from_json(json).unwrap())
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+        let template = Template {
+            schemas,
+            base_pdf,
+            version: json.version,
+        };
+        Ok(template)
+    }
+
+    pub fn page_heihgt(&self) -> Mm {
+        self.base_pdf.height
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct JsonPosition {
+    x: f32,
+    y: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Alignment {
+    Left,
+    Center,
+    Right,
+    Justify,
 }

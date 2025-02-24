@@ -8,6 +8,7 @@ pub enum Error {
     CharacterNotInFont(char),
     InvalidFontSize,
     FontNotFound,
+    DynamicFontMissingHeight,
 }
 
 #[derive(Debug, Clone)]
@@ -58,10 +59,34 @@ impl FontSpec {
     }
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type")]
+pub enum JsonFontSize {
+    Fixed(f32),
+    Dynamic {
+        min: f32,
+        max: f32,
+        fit: DynamicFontSizeFit,
+    },
+}
+
 #[derive(Debug, Clone)]
 pub enum FontSize {
     Fixed(Pt),
     Dynamic(DynamicFontSize),
+}
+
+impl FontSize {
+    pub fn from_json(json: JsonFontSize) -> FontSize {
+        match json {
+            JsonFontSize::Fixed(f) => FontSize::Fixed(Pt(f)),
+            JsonFontSize::Dynamic { min, max, fit } => FontSize::Dynamic(DynamicFontSize {
+                min: Pt(min),
+                max: Pt(max),
+                fit,
+            }),
+        }
+    }
 }
 
 #[derive(Debug, Clone, new)]
@@ -117,6 +142,7 @@ impl DynamicFontSize {
     }
 }
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub enum DynamicFontSizeFit {
     Horizontal,
     Vertical,
