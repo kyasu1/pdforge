@@ -1,4 +1,5 @@
 pub mod base;
+pub mod qrcode;
 pub mod table;
 pub mod text;
 

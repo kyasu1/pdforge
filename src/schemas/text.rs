@@ -3,7 +3,6 @@ use crate::schemas::base::BaseSchema;
 use crate::schemas::base::Kind;
 use crate::schemas::JsonPosition;
 use crate::utils::OpBuffer;
-use derive_new::new;
 use icu_segmenter::WordSegmenter;
 use printpdf::*;
 use serde::Deserialize;
