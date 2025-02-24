@@ -1,9 +1,12 @@
 pub mod base;
+pub mod image;
 pub mod qrcode;
 pub mod table;
 pub mod text;
 
+use crate::font;
 use printpdf::Mm;
+use qrcode::QrCode;
 use serde::Deserialize;
 use snafu::prelude::*;
 use std::fs::File;
@@ -24,6 +27,9 @@ pub enum Error {
     #[snafu(display("Invalid HEX color string specified"))]
     InvalidColorString { source: palette::rgb::FromHexError },
 
+    #[snafu(display("Font erro"))]
+    FontError { source: font::Error },
+
     #[snafu(whatever, display("{message}"))]
     Whatever {
         message: String,
@@ -38,6 +44,7 @@ enum JsonSchema {
     Text(text::JsonTextSchema),
     FlowingText(text::JsonTextSchema),
     Table(table::JsonTableSchema),
+    QrCode(qrcode::JsonQrCodeSchema),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -74,6 +81,7 @@ pub enum Schema {
     Text(text::TextSchema),
     FlowingText(text::TextSchema),
     Table(table::TableSchema),
+    QrCode(qrcode::QrCode),
 }
 
 #[derive(Debug, Clone)]
@@ -111,6 +119,9 @@ impl Template {
                         }
                         JsonSchema::Table(json) => {
                             Schema::Table(TableSchema::from_json(json).unwrap())
+                        }
+                        JsonSchema::QrCode(json) => {
+                            Schema::QrCode(QrCode::from_json(json).unwrap())
                         }
                     })
                     .collect()

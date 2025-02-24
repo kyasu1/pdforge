@@ -29,30 +29,26 @@ fn main() {
 
     let mut p = 0;
     let mut y: Option<Mm> = None;
+    let page_height = template.page_heihgt();
     for (page_index, page) in template.schemas.iter().enumerate() {
         for schema in page {
             match schema {
                 Schema::Text(obj) => {
                     let mut text = Text::new(obj, &font_map).unwrap();
-                    let updated = text
-                        .render(template.page_heihgt().into(), page_index, p, y, &mut buffer)
-                        .unwrap();
-
-                    if let Some((updated_p, updated_y)) = updated {
-                        p = updated_p;
-                        y = updated_y;
-                    }
+                    text.draw(page_height, page_index, &mut buffer).unwrap();
                 }
                 Schema::FlowingText(obj) => {
                     let mut text = Text::new(obj, &font_map).unwrap();
-                    (p, y) = text
-                        .draw2(template.page_heihgt().into(), p, y, &mut buffer)
-                        .unwrap();
+                    (p, y) = text.draw2(page_height, p, y, &mut buffer).unwrap();
                 }
                 Schema::Table(obj) => {
                     let mut table = Table::new(obj, &font_map);
                     (p, y) = table
                         .render(template.page_heihgt(), p, y, &mut buffer)
+                        .unwrap();
+                }
+                Schema::QrCode(obj) => {
+                    obj.draw(page_height, &mut doc, page_index, &mut buffer)
                         .unwrap();
                 }
             }

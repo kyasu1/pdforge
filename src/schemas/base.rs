@@ -1,15 +1,8 @@
 use printpdf::Mm;
 
 #[derive(Debug, Clone)]
-pub enum Kind {
-    Fixed,
-    Dynamic,
-}
-
-#[derive(Debug, Clone)]
 pub struct BaseSchema {
     name: String,
-    kind: Kind,
     x: Mm,
     y: Mm,
     width: Mm,
@@ -17,19 +10,14 @@ pub struct BaseSchema {
 }
 
 impl BaseSchema {
-    pub fn new(name: String, kind: Kind, x: Mm, y: Mm, width: Mm, height: Mm) -> Self {
+    pub fn new(name: String, x: Mm, y: Mm, width: Mm, height: Mm) -> Self {
         Self {
             name,
-            kind,
             x,
             y,
             width,
             height,
         }
-    }
-
-    pub fn kind(&self) -> Kind {
-        self.kind.clone()
     }
 
     pub fn x(&self) -> Mm {
@@ -44,11 +32,8 @@ impl BaseSchema {
         self.width
     }
 
-    pub fn height(&self) -> Option<Mm> {
-        match self.kind.clone() {
-            Kind::Fixed => Some(self.height),
-            Kind::Dynamic => None,
-        }
+    pub fn height(&self) -> Mm {
+        self.height
     }
 
     pub fn set_y(&mut self, y: Mm) {

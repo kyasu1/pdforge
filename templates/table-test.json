@@ -140,8 +140,7 @@
       },
       {
         "name": "field1",
-        "type": "text",
-        "kind": "dynamic",
+        "type": "flowingText",
         "position": {
           "x": 10,
           "y": 20
@@ -164,8 +163,7 @@
       },
       {
         "name": "field2",
-        "type": "text",
-        "kind": "dynamic",
+        "type": "flowingText",
         "position": {
           "x": 10,
           "y": 10
@@ -188,8 +186,7 @@
       },
       {
         "name": "field2",
-        "type": "text",
-        "kind": "dynamic",
+        "type": "flowingText",
         "position": {
           "x": 10,
           "y": 10
@@ -213,7 +210,6 @@
       {
         "name": "field2",
         "type": "text",
-        "kind": "fixed",
         "position": {
           "x": 10,
           "y": 10
@@ -221,6 +217,29 @@
         "required": false,
         "content": "THIS TEXT IS FIXED",
         "width": 190,
+        "height": 10,
+        "rotate": 0,
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "fontSize": 24,
+        "lineHeight": 1,
+        "characterSpacing": 0,
+        "fontColor": "#000000",
+        "fontName": "NotoSans",
+        "backgroundColor": "",
+        "opacity": 1,
+        "readOnly": false
+      },
+      {
+        "name": "qrCode",
+        "type": "qrCode",
+        "position": {
+          "x": 10,
+          "y": 30
+        },
+        "required": false,
+        "content": "https://pdfme.org",
+        "width": 10,
         "height": 10,
         "rotate": 0,
         "alignment": "center",

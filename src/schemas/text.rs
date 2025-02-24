@@ -1,18 +1,17 @@
-use crate::font::*;
+use crate::font::{DynamicFontSize, FontMap, FontSize, FontSpec};
 use crate::schemas::base::BaseSchema;
-use crate::schemas::base::Kind;
-use crate::schemas::JsonPosition;
+use crate::schemas::{Error, FontSnafu, JsonPosition};
 use crate::utils::OpBuffer;
 use icu_segmenter::WordSegmenter;
 use printpdf::*;
 use serde::Deserialize;
+use snafu::prelude::*;
 use std::cmp::max;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonTextSchema {
     name: String,
-    kind: Option<String>,
     position: JsonPosition,
     width: f32,
     height: f32,
@@ -43,7 +42,7 @@ impl TextSchema {
         font_size: Pt,
         content: String,
     ) -> Self {
-        let base = BaseSchema::new(String::from("cell"), Kind::Fixed, x, y, width, height);
+        let base = BaseSchema::new(String::from("cell"), x, y, width, height);
 
         Self {
             base,
@@ -56,18 +55,8 @@ impl TextSchema {
     }
 
     pub fn from_json(json: JsonTextSchema) -> Result<TextSchema, String> {
-        let kind = match json.kind {
-            Some(kind) => match kind.as_str() {
-                "fixed" => Kind::Fixed,
-                "dynamic" => Kind::Dynamic,
-                _ => return Err(String::from("Invalid Kind")),
-            },
-            None => Kind::Fixed,
-        };
-
         let base = BaseSchema::new(
             json.name,
-            kind,
             Mm(json.position.x),
             Mm(json.position.y),
             Mm(json.width),
@@ -93,25 +82,6 @@ impl TextSchema {
 
         Ok(text)
     }
-    pub fn dynamic(
-        name: String,
-        content: String,
-        font_name: String,
-        font_size: Pt,
-        x: Mm,
-        y: Mm,
-        width: Mm,
-        height: Mm,
-    ) -> Self {
-        Self {
-            base: BaseSchema::new(name, Kind::Dynamic, x, y, width, height),
-            content,
-            font_name,
-            character_spacing: Pt(0.0),
-            line_height: None,
-            font_size: FontSize::Fixed(font_size),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -125,7 +95,7 @@ impl Text {
     pub fn new(schema: &TextSchema, font_map: &FontMap) -> Result<Self, Error> {
         let (font_id, font) = font_map
             .find(schema.font_name.clone())
-            .ok_or(Error::FontNotFound)?;
+            .whatever_context("Font specified in the schema is not loaded")?;
 
         Ok(Self {
             schema: schema.clone(),
@@ -138,8 +108,11 @@ impl Text {
     }
 
     pub fn split(&self) -> Result<Vec<String>, Error> {
-        let font_size =
-            self.calculate_dynamic_font_size(&self.font, self.schema.base.width(), None)?;
+        let font_size = self.calculate_dynamic_font_size(
+            &self.font,
+            self.schema.base.width(),
+            self.schema.base.height(),
+        )?;
         Self::split_text_to_size(
             &self.font,
             self.schema.content.clone(),
@@ -186,8 +159,9 @@ impl Text {
         let mut current_text_size = Pt(0.0);
 
         for segment in segments.iter() {
-            let text_width =
-                font.width_of_text_at_size(segment.clone(), font_size, character_spacing)?;
+            let text_width = font
+                .width_of_text_at_size(segment.clone(), font_size, character_spacing)
+                .context(FontSnafu)?;
 
             if current_text_size + text_width <= box_width {
                 match lines.get(line_count) {
@@ -210,11 +184,13 @@ impl Text {
                 current_text_size = Pt(text_width.0 + character_spacing.0);
             } else {
                 for char in segment.chars() {
-                    let size = font.width_of_text_at_size(
-                        char.clone().to_string(),
-                        font_size,
-                        character_spacing,
-                    )?;
+                    let size = font
+                        .width_of_text_at_size(
+                            char.clone().to_string(),
+                            font_size,
+                            character_spacing,
+                        )
+                        .context(FontSnafu)?;
 
                     if current_text_size.0 + size.0 <= box_width.0 {
                         match lines.get(line_count) {
@@ -261,15 +237,11 @@ impl Text {
         &self,
         font: &FontSpec,
         width: Mm,
-        height: Option<Mm>,
+        height: Mm,
     ) -> Result<Pt, Error> {
         match self.schema.font_size.clone() {
             FontSize::Fixed(font_size) => Ok(font_size),
             FontSize::Dynamic(dynamic) => {
-                let height = match height {
-                    Some(height) => height,
-                    None => return Err(Error::DynamicFontMissingHeight),
-                };
                 let mut font_size = dynamic.get_min();
                 let (mut total_width_in_mm, mut total_height_in_mm) =
                     self.calculate_constraints(font, font_size, width.clone(), dynamic.clone())?;
@@ -343,11 +315,9 @@ impl Text {
 
         for (line_index, line) in splitted_paragraphs.into_iter().enumerate() {
             if dynamic.is_fit_verfical() {
-                let text_width = font.width_of_text_at_size(
-                    line.replace("\n", ""),
-                    font_size,
-                    character_spacing,
-                )?;
+                let text_width = font
+                    .width_of_text_at_size(line.replace("\n", ""), font_size, character_spacing)
+                    .context(FontSnafu)?;
                 total_width_in_mm = max(total_width_in_mm, text_width.into());
             }
             if line_index == 0 {
@@ -357,8 +327,9 @@ impl Text {
             }
 
             if dynamic.is_fit_horizontal() {
-                let text_width =
-                    font.width_of_text_at_size(line.to_string(), font_size, character_spacing)?;
+                let text_width = font
+                    .width_of_text_at_size(line.to_string(), font_size, character_spacing)
+                    .context(FontSnafu)?;
                 total_width_in_mm = max(total_width_in_mm, text_width.into());
             }
         }
@@ -366,34 +337,9 @@ impl Text {
         Ok((total_width_in_mm, total_height_in_mm))
     }
 
-    pub fn render(
-        &mut self,
-        page_height_in_mm: Mm,
-        fixed_page: usize,
-        current_page: usize,
-        current_top_mm: Option<Mm>,
-        buffer: &mut OpBuffer,
-    ) -> Result<Option<(usize, Option<Mm>)>, Error> {
-        match self.schema.base.kind() {
-            Kind::Fixed => {
-                self.draw(page_height_in_mm.into(), fixed_page, buffer)?;
-                Ok(None)
-            }
-            Kind::Dynamic => {
-                let updated = self.draw2(
-                    page_height_in_mm.into(),
-                    current_page,
-                    current_top_mm,
-                    buffer,
-                )?;
-                Ok(Some(updated))
-            }
-        }
-    }
-
     pub fn draw(
         &mut self,
-        page_height: Pt,
+        page_height_in_mm: Mm,
         current_page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
@@ -420,7 +366,7 @@ impl Text {
             Op::SetTextCursor {
                 pos: Point {
                     x: self.schema.base.x().into(),
-                    y: page_height - self.schema.base.y().into(),
+                    y: (page_height_in_mm - self.schema.base.y()).into(),
                 },
             },
             Op::SetLineHeight { lh: line_height },

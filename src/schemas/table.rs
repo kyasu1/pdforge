@@ -1,9 +1,7 @@
 use std::cmp::max;
 
-use super::{
-    base::{BaseSchema, Kind},
-    InvalidColorStringSnafu,
-};
+use super::{base::BaseSchema, InvalidColorStringSnafu};
+use crate::schemas::qrcode::QrCode;
 use crate::schemas::text::Text;
 use crate::{font::FontMap, schemas::text::TextSchema};
 use crate::{
@@ -11,7 +9,7 @@ use crate::{
     utils::OpBuffer,
 };
 use palette::Srgb;
-use printpdf::{Mm, Op, Point, Pt};
+use printpdf::{Mm, Pt};
 use serde::Deserialize;
 use snafu::prelude::*;
 
@@ -148,10 +146,8 @@ impl TableSchema {
     }
 
     pub fn from_json(json: JsonTableSchema) -> Result<Self, Error> {
-        let kind = Kind::Dynamic;
         let base = BaseSchema::new(
             json.name,
-            kind,
             Mm(json.position.x),
             Mm(json.position.y),
             Mm(json.width),
@@ -212,7 +208,6 @@ impl Table {
     ) -> Result<(usize, Option<Mm>), Error> {
         let top_margin_in_mm = Mm(20.0);
         let bottom_margin_in_mm = Mm(20.0);
-        let page_height: Pt = page_height_in_mm.into();
         let mut page_counter = 0;
         let y_top_mm: Mm = current_top_mm.unwrap_or(self.schema.base.y());
         let y_bottom_mm = page_height_in_mm - bottom_margin_in_mm;
@@ -276,7 +271,7 @@ impl Table {
         for (page_index, page) in pages.into_iter().enumerate() {
             for rows in page {
                 for mut cols in rows {
-                    cols.draw(page_height, page_index, buffer).unwrap();
+                    cols.draw(page_height_in_mm, page_index, buffer).unwrap();
                 }
             }
         }

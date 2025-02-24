@@ -1,11 +1,12 @@
 use derive_new::new;
 use printpdf::*;
 use serde::Deserialize;
+use snafu::prelude::*;
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Snafu)]
 pub enum Error {
-    CharacterNotInFont(char),
+    CharacterNotInFont { char: char },
     InvalidFontSize,
     FontNotFound,
     DynamicFontMissingHeight,
@@ -50,7 +51,7 @@ impl FontSpec {
                 let additional_spacing = ((text.chars().count() - 1) as f32) * character_spacing.0;
                 Ok(Pt(scaled + additional_spacing))
             }
-            Err(char) => Err(Error::CharacterNotInFont(char)),
+            Err(char) => Err(Error::CharacterNotInFont { char }),
         }
     }
 
