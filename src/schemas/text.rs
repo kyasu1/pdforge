@@ -507,6 +507,8 @@ impl Text {
             },
         );
 
+        let next_y_line_mm = page_height_in_mm - y_line.into() + font_size.into();
+
         let mut pages_increased = 0;
         let mut y_start = page_height - (current_top_mm.unwrap_or(self.schema.base.y()).into());
 
@@ -545,7 +547,9 @@ impl Text {
         }
         Ok((
             current_page + pages_increased - 1,
-            Some((page_height - y_line + top_margin_in_mm.into()).into()),
+            // Some((page_height - y_line + top_margin_in_mm.into()).into()),
+            // Some(page_height_in_mm - y_line.into()),
+            Some(next_y_line_mm),
         ))
     }
 }

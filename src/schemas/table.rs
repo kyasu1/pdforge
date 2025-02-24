@@ -284,7 +284,7 @@ impl Table {
         Ok((
             current_page + page_counter,
             // Some((page_height - y_line_mm.into() + top_margin_in_mm.into()).into()),
-            Some(y_line_mm.into()),
+            Some(y_line_mm),
         ))
     }
 }
