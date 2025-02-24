@@ -76,10 +76,12 @@
           },
           {
             "name": "col2",
-            "type": "text",
+            "type": "qrCode",
             "alignment": "center",
             "fontName": "NotoSerif",
-            "fontSize": 16
+            "fontSize": 16,
+            "width": 10,
+            "height": 10
           },
           {
             "name": "col3",
