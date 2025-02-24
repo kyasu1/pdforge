@@ -21,6 +21,10 @@ pub struct QrCode {
 }
 
 impl QrCode {
+    pub fn new(name: String, x: Mm, y: Mm, width: Mm, height: Mm, content: String) -> Self {
+        let base = BaseSchema::new(name, x, y, width, height);
+        Self { base, content }
+    }
     pub fn from_json(json: JsonQrCodeSchema) -> Result<Self, String> {
         let base = BaseSchema::new(
             json.name,

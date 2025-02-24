@@ -220,30 +220,41 @@ impl Table {
             let mut x = self.schema.base.x();
             let mut max_height = Mm(0.0);
             for (col_index, col) in row.into_iter().enumerate() {
-                let width = Mm(self.schema.head_width_percentages[col_index]
-                    * self.schema.base.width().0
-                    / 100.0);
                 let cell = self.schema.columns[col_index].clone();
-                let text_schema = TextSchema::new(
-                    x,
-                    y_line_mm,
-                    width,
-                    Mm(5.0),
-                    cell.font_name,
-                    cell.font_size,
-                    col.to_string(),
-                );
-                let text = Text::new(&text_schema, &self.font_map).unwrap();
-                let lines_in_cell = text.split().unwrap();
+                match cell.type_.as_str() {
+                    "text" => {
+                        let width = Mm(self.schema.head_width_percentages[col_index]
+                            * self.schema.base.width().0
+                            / 100.0);
+                        // let cell = self.schema.columns[col_index].clone();
+                        let text_schema = TextSchema::new(
+                            x,
+                            y_line_mm,
+                            width,
+                            Mm(5.0),
+                            cell.font_name,
+                            cell.font_size,
+                            col.to_string(),
+                        );
+                        let text = Text::new(&text_schema, &self.font_map).unwrap();
+                        let lines_in_cell = text.split().unwrap();
 
-                max_height = max(
-                    max_height,
-                    Pt(lines_in_cell.len() as f32 * cell.font_size.0).into(),
-                );
+                        max_height = max(
+                            max_height,
+                            Pt(lines_in_cell.len() as f32 * cell.font_size.0).into(),
+                        );
 
-                cols.push(text);
+                        cols.push(text);
 
-                x = x + width;
+                        x = x + width;
+                    }
+                    "qrCode" => {
+                        // unimplemented!();
+                    }
+                    _ => {
+                        // unimplemented!();
+                    }
+                }
             }
             y_line_mm = y_line_mm + max_height;
 

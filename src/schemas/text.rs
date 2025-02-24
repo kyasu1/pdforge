@@ -159,7 +159,7 @@ impl Text {
         let mut current_text_size = Pt(0.0);
 
         for segment in segments.iter() {
-            let text_width = font
+            let text_width: Pt = font
                 .width_of_text_at_size(segment.clone(), font_size, character_spacing)
                 .context(FontSnafu)?;
 
@@ -181,7 +181,7 @@ impl Text {
             } else if text_width <= box_width {
                 line_count += 1;
                 lines.push(String::from(segment));
-                current_text_size = Pt(text_width.0 + character_spacing.0);
+                current_text_size = text_width + character_spacing;
             } else {
                 for char in segment.chars() {
                     let size = font
@@ -192,10 +192,10 @@ impl Text {
                         )
                         .context(FontSnafu)?;
 
-                    if current_text_size.0 + size.0 <= box_width.0 {
+                    if current_text_size + size <= box_width {
                         match lines.get(line_count) {
                             Some(current) => {
-                                lines[line_count] = format!("{}{}", current, segment);
+                                lines[line_count] = format!("{}{}", current, char);
                                 current_text_size = current_text_size + size + character_spacing;
                             }
                             None => {
@@ -204,6 +204,7 @@ impl Text {
                             }
                         }
                     } else {
+                        line_count += 1;
                         lines.push(char.to_string());
                         current_text_size = size + character_spacing;
                     }
