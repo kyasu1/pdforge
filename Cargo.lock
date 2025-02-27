@@ -1786,6 +1786,7 @@ name = "rust_pdfme"
 version = "0.1.0"
 dependencies = [
  "allsorts 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "base64",
  "derive-new",
  "icu_segmenter",
  "image",

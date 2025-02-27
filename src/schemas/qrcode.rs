@@ -1,10 +1,11 @@
 use crate::schemas::{base::BaseSchema, Error, JsonPosition};
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
-use image::{ColorType, ExtendedColorType, ImageEncoder, Luma};
+use image::{ExtendedColorType, ImageEncoder, Luma};
 use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
 use qrcode_generator::QrCodeEcc;
 use serde::Deserialize;
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonQrCodeSchema {

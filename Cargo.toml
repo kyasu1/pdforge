@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 allsorts = "0.15.0"
+base64 = "0.22.1"
 derive-new = "0.7.0"
 icu_segmenter = { version = "1.5.0", features = ["serde"] }
 image = { version = "0.25.5", features = ["png"] }
