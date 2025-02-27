@@ -1,9 +1,10 @@
 use crate::schemas::{base::BaseSchema, Error, JsonPosition};
 use crate::utils::OpBuffer;
-use printpdf::*;
+use image::codecs::png::PngEncoder;
+use image::{ColorType, ExtendedColorType, ImageEncoder, Luma};
+use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
 use qrcode_generator::QrCodeEcc;
 use serde::Deserialize;
-
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonQrCodeSchema {
@@ -46,21 +47,32 @@ impl QrCode {
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
-        let qrcode_width = 1024;
-        let luma =
-            qrcode_generator::to_png_to_vec(self.content.to_string(), QrCodeEcc::Low, qrcode_width)
+        let qrcode_width = Px(256);
+        let image = if false {
+            let luma = qrcode_generator::to_png_to_vec(
+                self.content.to_string(),
+                QrCodeEcc::Low,
+                qrcode_width.0,
+            )
+            .unwrap();
+            RawImage::decode_from_bytes(&luma).unwrap()
+        } else {
+            let code = qrcode::QrCode::new(&self.content).unwrap();
+            let luma: image::ImageBuffer<Luma<u8>, Vec<u8>> = code.render::<Luma<u8>>().build();
+            let w = luma.width();
+            let h = luma.height();
+
+            let mut buf: Vec<u8> = Vec::new();
+            let encoder: PngEncoder<&mut Vec<u8>> = PngEncoder::new(&mut buf);
+            encoder
+                .write_image(&luma.into_raw(), w, h, ExtendedColorType::L8)
                 .unwrap();
-        let image = RawImage::decode_from_bytes(&luma).unwrap();
-        let image_xobject_id = doc.add_image(&image);
-        let ratio = 300.0 / (qrcode_width as f32) / 25.4;
-        let transform = XObjectTransform {
-            translate_x: Some(self.base.x().into()),
-            translate_y: Some((page_height_in_mm - self.base.y()).into()),
-            rotate: None,
-            scale_x: Some(self.base.width().0 * ratio),
-            scale_y: Some(self.base.height().0 * ratio),
-            dpi: None,
+            RawImage::decode_from_bytes(&buf).unwrap()
         };
+
+        let image_xobject_id = doc.add_image(&image);
+
+        let transform = self.base.get_matrix(page_height_in_mm, Some(qrcode_width));
 
         let ops = vec![Op::UseXObject {
             id: image_xobject_id,
@@ -70,5 +82,20 @@ impl QrCode {
         buffer.insert(page, ops);
 
         Ok(())
+    }
+
+    pub fn set_x(&mut self, x: Mm) {
+        self.base.x = x;
+    }
+
+    pub fn set_y(&mut self, y: Mm) {
+        self.base.y = y;
+    }
+    pub fn get_width(&self) -> Mm {
+        self.base.width
+    }
+
+    pub fn get_height(&self) -> Mm {
+        self.base.height
     }
 }

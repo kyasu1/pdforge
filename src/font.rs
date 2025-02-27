@@ -14,11 +14,11 @@ pub enum Error {
 
 #[derive(Debug, Clone)]
 pub struct FontSpec {
-    font: ParsedFont,
+    font: Box<ParsedFont>,
 }
 
 impl FontSpec {
-    pub fn new(font: &ParsedFont) -> Self {
+    pub fn new(font: Box<ParsedFont>) -> Self {
         Self { font: font.clone() }
     }
     pub fn width_of_text_at_size(
@@ -151,7 +151,7 @@ pub enum DynamicFontSizeFit {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct FontMap {
-    map: BTreeMap<String, (FontId, ParsedFont)>,
+    map: BTreeMap<String, (FontId, Box<ParsedFont>)>,
 }
 
 impl FontMap {
@@ -160,12 +160,12 @@ impl FontMap {
         font_name: String,
         font_id: FontId,
         font: &ParsedFont,
-    ) -> Option<(FontId, ParsedFont)> {
+    ) -> Option<(FontId, Box<ParsedFont>)> {
         self.map
-            .insert(font_name.clone(), (font_id.clone(), font.clone()))
+            .insert(font_name.clone(), (font_id.clone(), Box::new(font.clone())))
     }
 
-    pub fn find(&self, font_name: String) -> Option<&(FontId, ParsedFont)> {
+    pub fn find(&self, font_name: String) -> Option<&(FontId, Box<ParsedFont>)> {
         self.map.get(&font_name)
     }
 }

@@ -70,6 +70,13 @@
           {
             "name": "col1",
             "type": "text",
+            "content": "",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "width": 0,
+            "height": 0,
             "alignment": "left",
             "fontName": "NotoSerif",
             "fontSize": 24
@@ -77,6 +84,11 @@
           {
             "name": "col2",
             "type": "qrCode",
+            "content": "",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
             "alignment": "center",
             "fontName": "NotoSerif",
             "fontSize": 16,
@@ -86,6 +98,13 @@
           {
             "name": "col3",
             "type": "text",
+            "content": "",
+            "width": 0,
+            "height": 0,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
             "alignment": "right",
             "fontName": "NotoSans",
             "fontSize": 32

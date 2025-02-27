@@ -4,15 +4,17 @@ pub mod qrcode;
 pub mod table;
 pub mod text;
 
-use crate::font;
-use printpdf::Mm;
+use crate::font::{self, FontMap};
+use crate::utils::OpBuffer;
+use printpdf::{Mm, PdfDocument, PdfPage, PdfSaveOptions};
 use qrcode::QrCode;
+// use rust_pdfme::font::*;
 use serde::Deserialize;
 use snafu::prelude::*;
 use std::fs::File;
 use std::io::BufReader;
-use table::TableSchema;
-use text::TextSchema;
+use table::Table;
+use text::Text;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -76,13 +78,72 @@ impl JsonTemplate {
 //
 //
 //
+//
+pub trait SchemaTrait {
+    fn render(
+        &self,
+        page_height: Mm,
+        current_top_mm: Option<Mm>,
+        doc: &mut PdfDocument,
+        page: usize,
+        buffer: &mut OpBuffer,
+    ) -> Result<(usize, Option<Mm>), Error>;
+    // fn set_x(&mut self, x: Mm);
+    fn set_y(&mut self, y: Mm);
+    // fn get_width(&self) -> Mm;
+}
+
 #[derive(Debug, Clone)]
 pub enum Schema {
-    Text(text::TextSchema),
-    FlowingText(text::TextSchema),
-    Table(table::TableSchema),
+    Text(text::Text),
+    DynamicText(text::DynamicText),
+    Table(table::Table),
     QrCode(qrcode::QrCode),
 }
+
+impl SchemaTrait for Schema {
+    fn render(
+        &self,
+        page_height: Mm,
+        current_top_mm: Option<Mm>,
+        doc: &mut PdfDocument,
+        page: usize,
+        buffer: &mut OpBuffer,
+    ) -> Result<(usize, Option<Mm>), Error> {
+        match self.clone() {
+            Schema::Text(mut schema) => {
+                schema.render(page_height, page, buffer)?;
+                Ok((page, current_top_mm))
+            }
+            Schema::DynamicText(mut schema) => {
+                schema.render(page_height, page, current_top_mm, buffer)?;
+                Ok((page, current_top_mm))
+            }
+            Schema::Table(mut table) => {
+                table.render(page_height, doc, page, current_top_mm, buffer)
+            }
+            Schema::QrCode(qr_code) => {
+                qr_code.draw(page_height, doc, page, buffer)?;
+                Ok((page, current_top_mm))
+            }
+        }
+    }
+
+    fn set_y(&mut self, y: Mm) {
+        match self {
+            Schema::Text(text) => text.set_y(y),
+            Schema::DynamicText(text) => text.set_y(y),
+            Schema::QrCode(qr_code) => {
+                qr_code.set_y(y);
+            }
+            _ => unimplemented!(),
+        }
+    }
+}
+
+// impl Schema {
+//     pub from_json()
+// }
 
 #[derive(Debug, Clone)]
 pub struct BasePdf {
@@ -99,7 +160,7 @@ pub struct Template {
 }
 
 impl Template {
-    pub fn read_from_file(filename: &str) -> Result<Template, Error> {
+    pub fn read_from_file(filename: &str, font_map: &FontMap) -> Result<Template, Error> {
         let json = JsonTemplate::read_from_file(filename)?;
 
         let base_pdf = BasePdf {
@@ -113,12 +174,12 @@ impl Template {
             .map(|page| {
                 page.into_iter()
                     .map(|schema| match schema {
-                        JsonSchema::Text(s) => Schema::Text(TextSchema::from_json(s).unwrap()),
+                        JsonSchema::Text(s) => Schema::Text(Text::from_json(s, font_map).unwrap()),
                         JsonSchema::FlowingText(s) => {
-                            Schema::FlowingText(TextSchema::from_json(s).unwrap())
+                            Schema::DynamicText(text::DynamicText::from_json(s, font_map).unwrap())
                         }
                         JsonSchema::Table(json) => {
-                            Schema::Table(TableSchema::from_json(json).unwrap())
+                            Schema::Table(Table::from_json(json, font_map).unwrap())
                         }
                         JsonSchema::QrCode(json) => {
                             Schema::QrCode(QrCode::from_json(json).unwrap())
@@ -135,8 +196,51 @@ impl Template {
         Ok(template)
     }
 
-    pub fn page_heihgt(&self) -> Mm {
-        self.base_pdf.height
+    pub fn render(&self, mut doc: &mut PdfDocument) -> Result<(), Error> {
+        let mut buffer = OpBuffer::default();
+
+        let mut p = 0;
+        let mut y: Option<Mm> = None;
+        let page_height = self.base_pdf.height;
+        for (page_index, page) in self.schemas.iter().enumerate() {
+            for schema in page {
+                match schema.clone() {
+                    Schema::Text(mut text) => {
+                        println!("A");
+                        text.render(page_height, page_index, &mut buffer).unwrap();
+                    }
+                    Schema::DynamicText(mut text) => {
+                        println!("B");
+                        (p, y) = text.render(page_height, p, y, &mut buffer).unwrap();
+                    }
+                    Schema::Table(mut table) => {
+                        println!("C");
+                        (p, y) = table.render(page_height, doc, p, y, &mut buffer).unwrap();
+                    }
+                    Schema::QrCode(obj) => {
+                        println!("D");
+                        obj.draw(page_height, &mut doc, page_index, &mut buffer)
+                            .unwrap();
+                    }
+                }
+
+                println!("page {} next_y {:?}", p, y);
+            }
+        }
+
+        let mut pages: Vec<PdfPage> = Vec::new();
+        for ops in buffer.buffer {
+            let page = PdfPage::new(Mm(210.0), Mm(297.0), ops.to_vec());
+            pages.push(page)
+        }
+
+        let bytes = doc.with_pages(pages).save(&PdfSaveOptions {
+            optimize: false,
+            subset_fonts: false,
+        });
+        std::fs::write("./simple.pdf", bytes).unwrap();
+
+        Ok(())
     }
 }
 

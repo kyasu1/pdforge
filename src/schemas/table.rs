@@ -1,15 +1,15 @@
 use std::cmp::max;
 
-use super::{base::BaseSchema, InvalidColorStringSnafu};
-use crate::schemas::qrcode::QrCode;
-use crate::schemas::text::Text;
-use crate::{font::FontMap, schemas::text::TextSchema};
+use super::{base::BaseSchema, InvalidColorStringSnafu, Schema};
+use super::{qrcode, SchemaTrait};
+use crate::font::FontMap;
+use crate::schemas::text;
 use crate::{
     schemas::{Alignment, Error, JsonPosition},
     utils::OpBuffer,
 };
 use palette::Srgb;
-use printpdf::{Mm, Pt};
+use printpdf::{Mm, PdfDocument, Pt};
 use serde::Deserialize;
 use snafu::prelude::*;
 
@@ -33,13 +33,10 @@ pub struct JsonTableStyles {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JsonColumn {
-    name: String,
-    type_: String,
-    alignment: Alignment,
-    font_name: String,
-    font_size: f32,
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum JsonColumn {
+    Text(text::JsonTextSchema),
+    QrCode(qrcode::JsonQrCodeSchema),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -105,47 +102,27 @@ impl TableStyles {
 }
 
 #[derive(Debug, Clone)]
-pub struct ColumnSchema {
-    name: String,
-    type_: String,
-    alignment: Alignment,
-    font_name: String,
-    font_size: Pt,
-}
-
-impl ColumnSchema {
-    pub fn from_json(json: JsonColumn) -> Result<Self, Error> {
-        Ok(ColumnSchema {
-            name: json.name,
-            type_: json.type_,
-            alignment: json.alignment,
-            font_name: json.font_name,
-            font_size: Pt(json.font_size),
-        })
-    }
-}
-#[derive(Debug, Clone)]
-pub struct TableSchema {
+pub struct Table {
     base: BaseSchema,
     content: String,
     show_head: bool,
     head_width_percentages: Vec<f32>,
     table_styles: TableStyles,
-    columns: Vec<ColumnSchema>,
+    columns: Vec<Schema>,
     fields: Vec<Vec<String>>,
 }
 
-impl TableSchema {
-    fn cell_widths(&self) -> Vec<Pt> {
-        let box_width = self.base.width();
+impl Table {
+    fn cell_widths(&self) -> Vec<Mm> {
+        let box_width = self.base.width;
         self.head_width_percentages
             .clone()
             .into_iter()
-            .map(|percent| Pt(box_width.0 * percent))
+            .map(|percent| Mm(box_width.0 * percent / 100.0))
             .collect()
     }
 
-    pub fn from_json(json: JsonTableSchema) -> Result<Self, Error> {
+    pub fn from_json(json: JsonTableSchema, font_map: &FontMap) -> Result<Self, Error> {
         let base = BaseSchema::new(
             json.name,
             Mm(json.position.x),
@@ -171,11 +148,18 @@ impl TableSchema {
 
         let mut columns = Vec::new();
         for json_column in json.columns {
-            let column = ColumnSchema::from_json(json_column)?;
+            let column = match json_column {
+                JsonColumn::Text(schema) => {
+                    Schema::Text(text::Text::from_json(schema, font_map).unwrap())
+                }
+                JsonColumn::QrCode(schema) => {
+                    Schema::QrCode(qrcode::QrCode::from_json(schema).unwrap())
+                }
+            };
 
             columns.push(column)
         }
-        let text = TableSchema {
+        let table = Table {
             base,
             content: json.content,
             show_head: json.show_head,
@@ -184,24 +168,12 @@ impl TableSchema {
             columns,
             fields: json.fields.clone(),
         };
-        Ok(text)
-    }
-}
-
-pub struct Table {
-    schema: TableSchema,
-    font_map: FontMap,
-}
-impl Table {
-    pub fn new(schema: &TableSchema, font_map: &FontMap) -> Self {
-        Self {
-            schema: schema.clone(),
-            font_map: font_map.clone(),
-        }
+        Ok(table)
     }
     pub fn render(
         &mut self,
         page_height_in_mm: Mm,
+        doc: &mut PdfDocument,
         current_page: usize,
         current_top_mm: Option<Mm>,
         buffer: &mut OpBuffer,
@@ -209,47 +181,41 @@ impl Table {
         let top_margin_in_mm = Mm(20.0);
         let bottom_margin_in_mm = Mm(20.0);
         let mut page_counter = 0;
-        let y_top_mm: Mm = current_top_mm.unwrap_or(self.schema.base.y());
+        let y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
         let y_bottom_mm = page_height_in_mm - bottom_margin_in_mm;
         let y_offset: Pt = Pt(0.0);
         let mut y_line_mm: Mm = y_top_mm;
+        let cell_widths = self.cell_widths();
 
         let mut pages = vec![];
-        for row in self.schema.fields.iter() {
-            let mut cols = vec![];
-            let mut x = self.schema.base.x();
+        for row in self.fields.iter() {
+            let mut cols: Vec<Schema> = vec![];
+            let mut x = self.base.x;
             let mut max_height = Mm(0.0);
+
             for (col_index, col) in row.into_iter().enumerate() {
-                let cell = self.schema.columns[col_index].clone();
-                match cell.type_.as_str() {
-                    "text" => {
-                        let width = Mm(self.schema.head_width_percentages[col_index]
-                            * self.schema.base.width().0
-                            / 100.0);
-                        // let cell = self.schema.columns[col_index].clone();
-                        let text_schema = TextSchema::new(
-                            x,
-                            y_line_mm,
-                            width,
-                            Mm(5.0),
-                            cell.font_name,
-                            cell.font_size,
-                            col.to_string(),
-                        );
-                        let text = Text::new(&text_schema, &self.font_map).unwrap();
-                        let lines_in_cell = text.split().unwrap();
+                let cell = self.columns[col_index].clone();
+                let width = cell_widths[col_index];
+                match cell.clone() {
+                    Schema::Text(mut schema) => {
+                        schema.set_x(x);
+                        schema.set_y(y_line_mm);
+                        schema.set_width(width);
+                        schema.set_content(col.to_string());
 
-                        max_height = max(
-                            max_height,
-                            Pt(lines_in_cell.len() as f32 * cell.font_size.0).into(),
-                        );
+                        let height = schema.get_height().unwrap();
+                        max_height = max(max_height, height);
 
-                        cols.push(text);
-
-                        x = x + width;
+                        x += width;
+                        cols.push(Schema::Text(schema));
                     }
-                    "qrCode" => {
-                        // unimplemented!();
+                    Schema::QrCode(mut qrcode) => {
+                        qrcode.set_x(x);
+                        qrcode.set_y(y_line_mm);
+                        max_height = max(max_height, qrcode.get_height());
+
+                        x += width;
+                        cols.push(Schema::QrCode(qrcode));
                     }
                     _ => {
                         // unimplemented!();
@@ -261,7 +227,7 @@ impl Table {
             if y_line_mm > y_bottom_mm {
                 page_counter += 1;
                 // colsのyをリセットする必要がある
-                let updated: Vec<Text> = cols
+                let updated: Vec<Schema> = cols
                     .into_iter()
                     .map(|mut col| {
                         col.set_y(top_margin_in_mm);
@@ -281,16 +247,13 @@ impl Table {
 
         for (page_index, page) in pages.into_iter().enumerate() {
             for rows in page {
-                for mut cols in rows {
-                    cols.draw(page_height_in_mm, page_index, buffer).unwrap();
+                for cols in rows {
+                    cols.render(page_height_in_mm, None, doc, page_index, buffer)
+                        .unwrap();
                 }
             }
         }
 
-        Ok((
-            current_page + page_counter,
-            // Some((page_height - y_line_mm.into() + top_margin_in_mm.into()).into()),
-            Some(y_line_mm),
-        ))
+        Ok((current_page + page_counter, Some(y_line_mm)))
     }
 }
