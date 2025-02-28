@@ -4,15 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-allsorts = "0.15.0"
 base64 = "0.22.1"
 derive-new = "0.7.0"
 icu_segmenter = { version = "1.5.0", features = ["serde"] }
 image = { version = "0.25.5", features = ["png"] }
 palette = "0.7.6"
-printpdf = { git = "https://github.com/fschutt/printpdf", features = ["bmp", "png"] }
+printpdf = { git = "https://github.com/fschutt/printpdf", features = ["bmp", "png", "jpeg"] }
 qrcode = "0.14.1"
-qrcode-generator = "5.0.0"
 serde = { version = "1.0.217", features = ["derive", "serde_derive"] }
 serde_json = "1.0.139"
 snafu = "0.8.5"

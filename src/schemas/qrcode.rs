@@ -3,7 +3,6 @@ use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder, Luma};
 use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
-use qrcode_generator::QrCodeEcc;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -49,34 +48,25 @@ impl QrCode {
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
         let qrcode_width = Px(256);
-        let image = if false {
-            let luma = qrcode_generator::to_png_to_vec(
-                self.content.to_string(),
-                QrCodeEcc::Low,
-                qrcode_width.0,
-            )
+
+        let code = qrcode::QrCode::new(&self.content).unwrap();
+        let luma: image::ImageBuffer<Luma<u8>, Vec<u8>> = code.render::<Luma<u8>>().build();
+        let w = luma.width();
+        let h = luma.height();
+
+        let mut buf: Vec<u8> = Vec::new();
+        let encoder: PngEncoder<&mut Vec<u8>> = PngEncoder::new(&mut buf);
+        encoder
+            .write_image(&luma.into_raw(), w, h, ExtendedColorType::L8)
             .unwrap();
-            RawImage::decode_from_bytes(&luma).unwrap()
-        } else {
-            let code = qrcode::QrCode::new(&self.content).unwrap();
-            let luma: image::ImageBuffer<Luma<u8>, Vec<u8>> = code.render::<Luma<u8>>().build();
-            let w = luma.width();
-            let h = luma.height();
+        let image = RawImage::decode_from_bytes(&buf).unwrap();
 
-            let mut buf: Vec<u8> = Vec::new();
-            let encoder: PngEncoder<&mut Vec<u8>> = PngEncoder::new(&mut buf);
-            encoder
-                .write_image(&luma.into_raw(), w, h, ExtendedColorType::L8)
-                .unwrap();
-            RawImage::decode_from_bytes(&buf).unwrap()
-        };
-
-        let image_xobject_id = doc.add_image(&image);
+        let image_x_object_id = doc.add_image(&image);
 
         let transform = self.base.get_matrix(page_height_in_mm, Some(qrcode_width));
 
         let ops = vec![Op::UseXObject {
-            id: image_xobject_id,
+            id: image_x_object_id,
             transform,
         }];
 

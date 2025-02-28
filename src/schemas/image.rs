@@ -1,9 +1,12 @@
+use std::any::Any;
 use crate::schemas::{base::BaseSchema, Error, JsonPosition};
 use crate::utils::OpBuffer;
 use base64::{engine::general_purpose, Engine as _};
-use image::DynamicImage;
+use image::codecs::png::{PngDecoder, PngEncoder};
+use image::{DynamicImage, EncodableLayout, ExtendedColorType, ImageFormat, Rgb};
 use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
 use serde::Deserialize;
+use std::io::Cursor;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,6 +18,7 @@ pub struct JsonImageSchema {
     content: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct Image {
     base: BaseSchema,
     content: image::DynamicImage,
@@ -22,7 +26,11 @@ pub struct Image {
 
 impl Image {
     fn decode_base64_to_image_buffer(content: &str) -> Result<DynamicImage, String> {
-        let decoded = general_purpose::STANDARD.decode(content).unwrap();
+        let parts: Vec<&str> = content.split(',').collect();
+        if parts.len() != 2 {
+            return Err(String::from("invalid data url"));
+        }
+        let decoded = general_purpose::STANDARD.decode(parts[1]).unwrap();
         Ok(image::load_from_memory(&decoded).unwrap())
     }
 
@@ -34,14 +42,13 @@ impl Image {
         height: Mm,
         content: String,
     ) -> Result<Self, String> {
-        let base = BaseSchema::new(name, x, y, width, height);
         let content: DynamicImage = Self::decode_base64_to_image_buffer(&content)?;
+        let base = BaseSchema::new(name, x, y, width, height);
 
         Ok(Self { base, content })
     }
     pub fn from_json(json: JsonImageSchema) -> Result<Self, String> {
-        let decoded = general_purpose::STANDARD.decode(json.content).unwrap();
-        let content: image::DynamicImage = image::load_from_memory(&decoded).unwrap();
+        let content: DynamicImage = Self::decode_base64_to_image_buffer(&json.content)?;
 
         let base = BaseSchema::new(
             json.name,
@@ -53,23 +60,28 @@ impl Image {
         Ok(Self { base, content })
     }
 
-    pub fn draw(
+    pub fn render(
         &self,
         page_height_in_mm: Mm,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
-        let image = RawImage::decode_from_bytes(&self.content.to_rgb8()).unwrap();
+        let rgb_image = self.content.to_rgb8();
 
-        let image_xobject_id = doc.add_image(&image);
+        let mut buf = Cursor::new(Vec::new());
+        rgb_image.write_to(&mut buf, ImageFormat::Jpeg).unwrap();
+
+        let image = RawImage::decode_from_bytes(&buf.get_ref()).unwrap();
+
+        let image_x_object_id = doc.add_image(&image);
 
         let transform = self
             .base
-            .get_matrix(page_height_in_mm, Some(self.base.width.into()));
+            .get_matrix(page_height_in_mm, Some(Px(image.width)));
 
         let ops = vec![Op::UseXObject {
-            id: image_xobject_id,
+            id: image_x_object_id,
             transform,
         }];
 

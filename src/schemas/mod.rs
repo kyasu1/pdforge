@@ -9,6 +9,7 @@ use crate::utils::OpBuffer;
 use printpdf::{Mm, PdfDocument, PdfPage, PdfSaveOptions};
 use qrcode::QrCode;
 // use rust_pdfme::font::*;
+use image::Image;
 use serde::Deserialize;
 use snafu::prelude::*;
 use std::fs::File;
@@ -47,6 +48,7 @@ enum JsonSchema {
     FlowingText(text::JsonTextSchema),
     Table(table::JsonTableSchema),
     QrCode(qrcode::JsonQrCodeSchema),
+    Image(image::JsonImageSchema),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -99,6 +101,7 @@ pub enum Schema {
     DynamicText(text::DynamicText),
     Table(table::Table),
     QrCode(qrcode::QrCode),
+    Image(image::Image),
 }
 
 impl SchemaTrait for Schema {
@@ -124,6 +127,10 @@ impl SchemaTrait for Schema {
             }
             Schema::QrCode(qr_code) => {
                 qr_code.draw(page_height, doc, page, buffer)?;
+                Ok((page, current_top_mm))
+            }
+            Schema::Image(image) => {
+                image.render(page_height, doc, page, buffer)?;
                 Ok((page, current_top_mm))
             }
         }
@@ -184,6 +191,7 @@ impl Template {
                         JsonSchema::QrCode(json) => {
                             Schema::QrCode(QrCode::from_json(json).unwrap())
                         }
+                        JsonSchema::Image(json) => Schema::Image(Image::from_json(json).unwrap()),
                     })
                     .collect()
             })
@@ -222,6 +230,7 @@ impl Template {
                         obj.draw(page_height, &mut doc, page_index, &mut buffer)
                             .unwrap();
                     }
+                    Schema::Image(obj) => obj.render(page_height, doc, page_index, &mut buffer)?,
                 }
 
                 println!("page {} next_y {:?}", p, y);

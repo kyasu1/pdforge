@@ -49,40 +49,11 @@ dependencies = [
 [[package]]
 name = "allsorts"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7b566d29776fc848a8279a72339499db95ee5592926bac114d35aa9a92efe9c"
-dependencies = [
- "bitflags 1.3.2",
- "bitreader",
- "brotli-decompressor 2.5.1",
- "byteorder",
- "crc32fast",
- "encoding_rs",
- "flate2",
- "glyph-names",
- "itertools 0.10.5",
- "lazy_static",
- "libc",
- "log",
- "num-traits",
- "ouroboros",
- "pathfinder_geometry",
- "rustc-hash",
- "tinyvec",
- "ucd-trie",
- "unicode-canonical-combining-class",
- "unicode-general-category",
- "unicode-joining-type",
-]
-
-[[package]]
-name = "allsorts"
-version = "0.15.0"
 source = "git+https://github.com/fschutt/allsorts?branch=optional-brotli#35e2c8d45de790cd87f4e1009b51aab31278c5b9"
 dependencies = [
  "bitflags 1.3.2",
  "bitreader",
- "brotli-decompressor 4.0.2",
+ "brotli-decompressor",
  "byteorder",
  "crc32fast",
  "encoding_rs",
@@ -237,7 +208,7 @@ name = "azul-text-layout"
 version = "0.0.5"
 source = "git+https://github.com/fschutt/azul?rev=a09ccbd5be6429f8c40c1acd5ebe05850a45380f#a09ccbd5be6429f8c40c1acd5ebe05850a45380f"
 dependencies = [
- "allsorts 0.15.0 (git+https://github.com/fschutt/allsorts?branch=optional-brotli)",
+ "allsorts",
  "azul-core",
  "azul-css",
  "rayon",
@@ -320,16 +291,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8894febbff9f758034a5b8e12d87918f56dfc64a8e1fe757d65e29041538d93"
 dependencies = [
  "generic-array",
-]
-
-[[package]]
-name = "brotli-decompressor"
-version = "2.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e2e4afe60d7dd600fdd3de8d0f08c2b7ec039712e3b6137ff98b7004e82de4f"
-dependencies = [
- "alloc-no-stdlib",
- "alloc-stdlib",
 ]
 
 [[package]]
@@ -615,7 +576,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c936bfdafb507ebbf50b8074c54fa31c5be9a1e7e5f467dd659697041407d07c"
 dependencies = [
  "crc32fast",
- "libz-sys",
  "miniz_oxide",
 ]
 
@@ -818,15 +778,6 @@ name = "highway"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1489f81ead4b71a09ddeab6850c0356c0932587637d753f21ee1010ab875b013"
-
-[[package]]
-name = "html-escape"
-version = "0.2.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d1ad449764d627e22bfd7cd5e8868264fc9236e07c752972b4080cd351cb476"
-dependencies = [
- "utf8-width",
-]
 
 [[package]]
 name = "icu_collections"
@@ -1083,17 +1034,6 @@ name = "libm"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
-
-[[package]]
-name = "libz-sys"
-version = "1.1.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df9b68e50e6e0b26f672573834882eb57759f6db9b3be2ea3c35c91188bb4eaa"
-dependencies = [
- "cc",
- "pkg-config",
- "vcpkg",
-]
 
 [[package]]
 name = "litemap"
@@ -1476,7 +1416,7 @@ name = "printpdf"
 version = "0.8.0"
 source = "git+https://github.com/fschutt/printpdf#4af6a099ab16c755e998c9df252de7c3223d1fce"
 dependencies = [
- "allsorts 0.15.0 (git+https://github.com/fschutt/allsorts?branch=optional-brotli)",
+ "allsorts",
  "azul-core",
  "azul-css",
  "azul-css-parser",
@@ -1567,23 +1507,6 @@ checksum = "d68782463e408eb1e668cf6152704bd856c78c5b6417adaee3203d8f4c1fc9ec"
 dependencies = [
  "image",
 ]
-
-[[package]]
-name = "qrcode-generator"
-version = "5.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "faf0051849b5465059b75f59d388c7318aad6554701b74ecf02afc2573b0306c"
-dependencies = [
- "html-escape",
- "image",
- "qrcodegen",
-]
-
-[[package]]
-name = "qrcodegen"
-version = "1.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4339fc7a1021c9c1621d87f5e3505f2805c8c105420ba2f2a4df86814590c142"
 
 [[package]]
 name = "quick-error"
@@ -1785,7 +1708,6 @@ dependencies = [
 name = "rust_pdfme"
 version = "0.1.0"
 dependencies = [
- "allsorts 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64",
  "derive-new",
  "icu_segmenter",
@@ -1793,7 +1715,6 @@ dependencies = [
  "palette",
  "printpdf",
  "qrcode",
- "qrcode-generator",
  "serde",
  "serde_json",
  "snafu",
@@ -2376,12 +2297,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "utf8-width"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86bd8d4e895da8537e5315b8254664e6b769c4ff3db18321b297a1e7004392e3"
-
-[[package]]
 name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2397,12 +2312,6 @@ dependencies = [
  "num-traits",
  "wasm-bindgen",
 ]
-
-[[package]]
-name = "vcpkg"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "version-compare"
