@@ -20,9 +20,10 @@ impl BaseSchema {
         }
     }
 
-    pub fn get_matrix(&self, page_height: Mm, box_width: Option<Px>) -> XObjectTransform {
-        let ratio: f32 = match box_width {
-            Some(box_width) => 300.0 / (box_width.0 as f32) / 25.4,
+    pub fn get_matrix(&self, page_height: Mm, original_width: Option<Px>) -> XObjectTransform {
+        let dpi: f32 = 300.0;
+        let ratio: f32 = match original_width {
+            Some(original_width) => dpi / 25.4 / (original_width.0 as f32),
 
             None => 1.0,
         };
@@ -32,7 +33,7 @@ impl BaseSchema {
             rotate: None,
             scale_x: Some(ratio * self.width.0),
             scale_y: Some(ratio * self.height.0),
-            dpi: None,
+            dpi: Some(dpi),
         }
     }
 }

@@ -1,11 +1,11 @@
-use std::any::Any;
-use crate::schemas::{base::BaseSchema, Error, JsonPosition};
+use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use base64::{engine::general_purpose, Engine as _};
 use image::codecs::png::{PngDecoder, PngEncoder};
 use image::{DynamicImage, EncodableLayout, ExtendedColorType, ImageFormat, Rgb};
 use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
 use serde::Deserialize;
+use snafu::{whatever, ResultExt};
 use std::io::Cursor;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -24,13 +24,30 @@ pub struct Image {
     content: image::DynamicImage,
 }
 
+impl TryFrom<JsonImageSchema> for Schema {
+    type Error = Error;
+    fn try_from(json: JsonImageSchema) -> Result<Self, Self::Error> {
+        let content: DynamicImage = Image::decode_base64_to_image_buffer(&json.content)?;
+
+        let base = BaseSchema::new(
+            json.name,
+            Mm(json.position.x),
+            Mm(json.position.y),
+            Mm(json.width),
+            Mm(json.height),
+        );
+        Ok(Schema::Image(Image { base, content }))
+    }
+}
 impl Image {
-    fn decode_base64_to_image_buffer(content: &str) -> Result<DynamicImage, String> {
+    fn decode_base64_to_image_buffer(content: &str) -> Result<DynamicImage, Error> {
         let parts: Vec<&str> = content.split(',').collect();
         if parts.len() != 2 {
-            return Err(String::from("invalid data url"));
+            whatever!("Invalid image content");
         }
-        let decoded = general_purpose::STANDARD.decode(parts[1]).unwrap();
+        let decoded = general_purpose::STANDARD
+            .decode(parts[1])
+            .whatever_context("Unable to decode data url image")?;
         Ok(image::load_from_memory(&decoded).unwrap())
     }
 
@@ -41,22 +58,10 @@ impl Image {
         width: Mm,
         height: Mm,
         content: String,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, Error> {
         let content: DynamicImage = Self::decode_base64_to_image_buffer(&content)?;
         let base = BaseSchema::new(name, x, y, width, height);
 
-        Ok(Self { base, content })
-    }
-    pub fn from_json(json: JsonImageSchema) -> Result<Self, String> {
-        let content: DynamicImage = Self::decode_base64_to_image_buffer(&json.content)?;
-
-        let base = BaseSchema::new(
-            json.name,
-            Mm(json.position.x),
-            Mm(json.position.y),
-            Mm(json.width),
-            Mm(json.height),
-        );
         Ok(Self { base, content })
     }
 
@@ -80,7 +85,7 @@ impl Image {
             .base
             .get_matrix(page_height_in_mm, Some(Px(image.width)));
 
-        let ops = vec![Op::UseXObject {
+        let ops = vec![Op::UseXobject {
             id: image_x_object_id,
             transform,
         }];
@@ -100,7 +105,6 @@ impl Image {
     pub fn get_width(&self) -> Mm {
         self.base.width
     }
-
     pub fn get_height(&self) -> Mm {
         self.base.height
     }

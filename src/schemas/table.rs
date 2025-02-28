@@ -149,12 +149,8 @@ impl Table {
         let mut columns = Vec::new();
         for json_column in json.columns {
             let column = match json_column {
-                JsonColumn::Text(schema) => {
-                    Schema::Text(text::Text::from_json(schema, font_map).unwrap())
-                }
-                JsonColumn::QrCode(schema) => {
-                    Schema::QrCode(qrcode::QrCode::from_json(schema).unwrap())
-                }
+                JsonColumn::Text(schema) => Schema::Text(text::Text::from_json(schema, font_map)?),
+                JsonColumn::QrCode(schema) => schema.into(),
             };
 
             columns.push(column)
@@ -203,7 +199,7 @@ impl Table {
                         schema.set_width(width);
                         schema.set_content(col.to_string());
 
-                        let height = schema.get_height().unwrap();
+                        let height = schema.get_height()?;
                         max_height = max(max_height, height);
 
                         x += width;
@@ -248,8 +244,7 @@ impl Table {
         for (page_index, page) in pages.into_iter().enumerate() {
             for rows in page {
                 for cols in rows {
-                    cols.render(page_height_in_mm, None, doc, page_index, buffer)
-                        .unwrap();
+                    cols.render(page_height_in_mm, None, doc, page_index, buffer)?;
                 }
             }
         }

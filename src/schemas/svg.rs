@@ -2,13 +2,13 @@ use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder, Luma};
-use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
+use printpdf::{ExternalXObject, Mm, Op, PdfDocument, Px, RawImage};
 use serde::Deserialize;
 use snafu::ResultExt;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct JsonQrCodeSchema {
+pub struct JsonSvgSchema {
     name: String,
     position: JsonPosition,
     width: f32,
@@ -17,13 +17,16 @@ pub struct JsonQrCodeSchema {
 }
 
 #[derive(Debug, Clone)]
-pub struct QrCode {
+pub struct Svg {
     base: BaseSchema,
-    content: String,
+    content: ExternalXObject,
 }
 
-impl From<JsonQrCodeSchema> for Schema {
-    fn from(json: JsonQrCodeSchema) -> Self {
+impl TryFrom<JsonSvgSchema> for Schema {
+    type Error = Error;
+    fn try_from(json: JsonSvgSchema) -> Result<Self, Self::Error> {
+        let content = Svg::parse(&json.content)?;
+
         let base = BaseSchema::new(
             json.name,
             Mm(json.position.x),
@@ -31,50 +34,45 @@ impl From<JsonQrCodeSchema> for Schema {
             Mm(json.width),
             Mm(json.height),
         );
-        Schema::QrCode(QrCode {
-            base,
-            content: json.content,
-        })
+        Ok(Schema::Svg(Svg { base, content }))
     }
 }
-impl QrCode {
-    pub fn new(name: String, x: Mm, y: Mm, width: Mm, height: Mm, content: String) -> Self {
+
+impl Svg {
+    pub fn new(
+        name: String,
+        x: Mm,
+        y: Mm,
+        width: Mm,
+        height: Mm,
+        content: String,
+    ) -> Result<Self, Error> {
+        let content = Svg::parse(&content)?;
         let base = BaseSchema::new(name, x, y, width, height);
-        Self { base, content }
+        Ok(Self { base, content })
     }
 
-    pub fn draw(
+    fn parse(content: &str) -> Result<ExternalXObject, Error> {
+        printpdf::svg::Svg::parse(content).whatever_context("Invalid SVG File")
+    }
+
+    pub fn render(
         &self,
         page_height_in_mm: Mm,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
-        let qrcode_width = Px(256);
+        let svg_x_object_id = doc.add_xobject(&self.content);
 
-        let code =
-            qrcode::QrCode::new(&self.content).whatever_context("Failed to create a QR code")?;
-        let luma: image::ImageBuffer<Luma<u8>, Vec<u8>> = code.render::<Luma<u8>>().build();
-        let w = luma.width();
-        let h = luma.height();
-
-        let mut buf: Vec<u8> = Vec::new();
-        let encoder: PngEncoder<&mut Vec<u8>> = PngEncoder::new(&mut buf);
-        encoder
-            .write_image(&luma.into_raw(), w, h, ExtendedColorType::L8)
-            .unwrap();
-        let image =
-            RawImage::decode_from_bytes(&buf).whatever_context("Failed to decode QR code")?;
-
-        let image_x_object_id = doc.add_image(&image);
-
-        let transform = self.base.get_matrix(page_height_in_mm, Some(qrcode_width));
+        let transform = self.base.get_matrix(page_height_in_mm, self.content.width);
 
         let ops = vec![Op::UseXobject {
-            id: image_x_object_id,
+            id: svg_x_object_id,
             transform,
         }];
 
+        println!("SVG OPS {:?}", ops);
         buffer.insert(page, ops);
 
         Ok(())

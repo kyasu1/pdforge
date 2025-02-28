@@ -1,17 +1,20 @@
 pub mod base;
+pub mod dynamic_text;
 pub mod image;
 pub mod qrcode;
+pub mod svg;
 pub mod table;
 pub mod text;
 
-use crate::font::{self, FontMap};
+use crate::font::{self, DynamicFontSize, FontMap, FontSpec};
 use crate::utils::OpBuffer;
+use dynamic_text::DynamicText;
+use icu_segmenter::WordSegmenter;
+use printpdf::*;
 use printpdf::{Mm, PdfDocument, PdfPage, PdfSaveOptions};
-use qrcode::QrCode;
-// use rust_pdfme::font::*;
-use image::Image;
 use serde::Deserialize;
 use snafu::prelude::*;
+use std::cmp::max;
 use std::fs::File;
 use std::io::BufReader;
 use table::Table;
@@ -45,10 +48,11 @@ pub enum Error {
 #[serde(tag = "type", rename_all = "camelCase")]
 enum JsonSchema {
     Text(text::JsonTextSchema),
-    FlowingText(text::JsonTextSchema),
+    DynamicText(dynamic_text::JsonDynamicTextSchema),
     Table(table::JsonTableSchema),
     QrCode(qrcode::JsonQrCodeSchema),
     Image(image::JsonImageSchema),
+    Svg(svg::JsonSvgSchema),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -98,10 +102,11 @@ pub trait SchemaTrait {
 #[derive(Debug, Clone)]
 pub enum Schema {
     Text(text::Text),
-    DynamicText(text::DynamicText),
+    DynamicText(dynamic_text::DynamicText),
     Table(table::Table),
     QrCode(qrcode::QrCode),
     Image(image::Image),
+    Svg(svg::Svg),
 }
 
 impl SchemaTrait for Schema {
@@ -131,6 +136,10 @@ impl SchemaTrait for Schema {
             }
             Schema::Image(image) => {
                 image.render(page_height, doc, page, buffer)?;
+                Ok((page, current_top_mm))
+            }
+            Schema::Svg(svg) => {
+                svg.render(page_height, doc, page, buffer)?;
                 Ok((page, current_top_mm))
             }
         }
@@ -182,16 +191,15 @@ impl Template {
                 page.into_iter()
                     .map(|schema| match schema {
                         JsonSchema::Text(s) => Schema::Text(Text::from_json(s, font_map).unwrap()),
-                        JsonSchema::FlowingText(s) => {
-                            Schema::DynamicText(text::DynamicText::from_json(s, font_map).unwrap())
-                        }
+                        JsonSchema::DynamicText(s) => Schema::DynamicText(
+                            dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
+                        ),
                         JsonSchema::Table(json) => {
                             Schema::Table(Table::from_json(json, font_map).unwrap())
                         }
-                        JsonSchema::QrCode(json) => {
-                            Schema::QrCode(QrCode::from_json(json).unwrap())
-                        }
-                        JsonSchema::Image(json) => Schema::Image(Image::from_json(json).unwrap()),
+                        JsonSchema::QrCode(json) => json.into(),
+                        JsonSchema::Image(json) => json.try_into().unwrap(),
+                        JsonSchema::Svg(json) => json.try_into().unwrap(),
                     })
                     .collect()
             })
@@ -213,24 +221,22 @@ impl Template {
         for (page_index, page) in self.schemas.iter().enumerate() {
             for schema in page {
                 match schema.clone() {
-                    Schema::Text(mut text) => {
-                        println!("A");
-                        text.render(page_height, page_index, &mut buffer).unwrap();
+                    Schema::Text(mut obj) => {
+                        obj.render(page_height, page_index, &mut buffer)?;
                     }
-                    Schema::DynamicText(mut text) => {
-                        println!("B");
-                        (p, y) = text.render(page_height, p, y, &mut buffer).unwrap();
+                    Schema::DynamicText(mut obj) => {
+                        (p, y) = obj.render(page_height, p, y, &mut buffer)?;
                     }
-                    Schema::Table(mut table) => {
-                        println!("C");
-                        (p, y) = table.render(page_height, doc, p, y, &mut buffer).unwrap();
+                    Schema::Table(mut obj) => {
+                        (p, y) = obj.render(page_height, doc, p, y, &mut buffer)?;
                     }
                     Schema::QrCode(obj) => {
-                        println!("D");
-                        obj.draw(page_height, &mut doc, page_index, &mut buffer)
-                            .unwrap();
+                        obj.draw(page_height, &mut doc, page_index, &mut buffer)?;
                     }
                     Schema::Image(obj) => obj.render(page_height, doc, page_index, &mut buffer)?,
+                    Schema::Svg(obj) => {
+                        obj.render(page_height, &mut doc, page_index, &mut buffer)?
+                    }
                 }
 
                 println!("page {} next_y {:?}", p, y);
@@ -246,6 +252,7 @@ impl Template {
         let bytes = doc.with_pages(pages).save(&PdfSaveOptions {
             optimize: false,
             subset_fonts: false,
+            secure: false,
         });
         std::fs::write("./simple.pdf", bytes).unwrap();
 
@@ -266,4 +273,237 @@ pub enum Alignment {
     Center,
     Right,
     Justify,
+}
+
+#[derive(Debug, Clone)]
+pub struct TextUtil {}
+
+impl TextUtil {
+    fn split_text_to_size(
+        font: &FontSpec,
+        content: &str,
+        font_size: Pt,
+        box_width: Pt,
+        character_spacing: Pt,
+    ) -> Result<Vec<String>, Error> {
+        let mut splitted_paragraphs: Vec<Vec<String>> = Vec::new();
+
+        for paragraph in content.lines().collect::<Vec<&str>>() {
+            let lines = Self::get_splitted_lines_by_segmenter(
+                font,
+                String::from(paragraph),
+                font_size.clone(),
+                box_width.into(),
+                character_spacing.clone(),
+            )?;
+            splitted_paragraphs.push(lines);
+        }
+
+        Ok(splitted_paragraphs.concat())
+    }
+
+    fn get_splitted_lines_by_segmenter(
+        font: &FontSpec,
+        paragraph: String,
+        font_size: Pt,
+        box_width: Pt,
+        character_spacing: Pt,
+    ) -> Result<Vec<String>, Error> {
+        let segments = Self::split_text_by_segmenter(paragraph);
+
+        let mut lines: Vec<String> = vec![];
+        let mut line_count: usize = 0;
+        let mut current_text_size = Pt(0.0);
+
+        for segment in segments.iter() {
+            let text_width: Pt = font
+                .width_of_text_at_size(segment.clone(), font_size, character_spacing)
+                .context(FontSnafu)?;
+
+            if current_text_size + text_width <= box_width {
+                match lines.get(line_count) {
+                    Some(current) => {
+                        lines[line_count] = format!("{}{}", current, segment);
+                        current_text_size = current_text_size + text_width + character_spacing
+                    }
+                    None => {
+                        lines.push(String::from(segment));
+                        current_text_size = text_width + character_spacing
+                    }
+                }
+            } else if segment.is_empty() {
+                line_count += 1;
+                lines.push(String::from(""));
+                current_text_size = Pt(0.0);
+            } else if text_width <= box_width {
+                line_count += 1;
+                lines.push(String::from(segment));
+                current_text_size = text_width + character_spacing;
+            } else {
+                for char in segment.chars() {
+                    let size = font
+                        .width_of_text_at_size(
+                            char.clone().to_string(),
+                            font_size,
+                            character_spacing,
+                        )
+                        .context(FontSnafu)?;
+
+                    if current_text_size + size <= box_width {
+                        match lines.get(line_count) {
+                            Some(current) => {
+                                lines[line_count] = format!("{}{}", current, char);
+                                current_text_size = current_text_size + size + character_spacing;
+                            }
+                            None => {
+                                lines.push(char.to_string());
+                                current_text_size = size + character_spacing;
+                            }
+                        }
+                    } else {
+                        line_count += 1;
+                        lines.push(char.to_string());
+                        current_text_size = size + character_spacing;
+                    }
+                }
+            }
+        }
+
+        Ok(lines)
+    }
+
+    fn split_text_by_segmenter(paragraph: String) -> Vec<String> {
+        let segmenter = WordSegmenter::new_auto();
+        let breakpoints: Vec<usize> = segmenter.segment_str(&paragraph).collect();
+
+        let mut segments: Vec<String> = vec![];
+        let mut last_breakpoint = 0;
+        for breakpoint in breakpoints {
+            segments.push(paragraph[last_breakpoint..breakpoint].to_string());
+            last_breakpoint = breakpoint;
+        }
+
+        if segments.is_empty() {
+            vec![]
+        } else {
+            segments.remove(0);
+            segments
+        }
+    }
+
+    fn calculate_dynamic_font_size(
+        font: &FontSpec,
+        dynamic: DynamicFontSize,
+        line_height: Option<f32>,
+        character_spacing: Pt,
+        width: Mm,
+        height: Mm,
+        content: &str,
+    ) -> Result<Pt, Error> {
+        let mut font_size = dynamic.get_min();
+        let (mut total_width_in_mm, mut total_height_in_mm) = Self::calculate_constraints(
+            font,
+            font_size,
+            line_height,
+            character_spacing,
+            width.clone(),
+            dynamic.clone(),
+            content,
+        )?;
+
+        while dynamic.should_font_grow_to_fit(
+            font_size.clone(),
+            width,
+            height,
+            total_width_in_mm,
+            total_height_in_mm,
+        ) {
+            font_size += Pt(0.25);
+            let (new_total_width_in_mm, new_total_height_in_mm) = Self::calculate_constraints(
+                font,
+                font_size.clone(),
+                line_height,
+                character_spacing,
+                width.clone(),
+                dynamic.clone(),
+                content,
+            )?;
+            if new_total_height_in_mm <= total_height_in_mm {
+                total_width_in_mm = new_total_width_in_mm;
+                total_height_in_mm = new_total_height_in_mm
+            } else {
+                font_size -= Pt(0.25);
+                break;
+            }
+        }
+
+        while dynamic.should_font_shrink_to_fit(
+            font_size.clone(),
+            width.clone(),
+            height.clone(),
+            total_width_in_mm,
+            total_height_in_mm,
+        ) {
+            font_size -= Pt(0.25);
+            (total_width_in_mm, total_height_in_mm) = Self::calculate_constraints(
+                font,
+                font_size,
+                line_height,
+                character_spacing,
+                width.clone(),
+                dynamic.clone(),
+                content,
+            )?;
+        }
+
+        Ok(font_size)
+    }
+
+    fn calculate_constraints(
+        font: &FontSpec,
+        font_size: Pt,
+        line_height: Option<f32>,
+        character_spacing: Pt,
+        width: Mm,
+        dynamic: DynamicFontSize,
+        content: &str,
+    ) -> Result<(Mm, Mm), Error> {
+        let mut total_width_in_mm: Mm = Mm(0.0);
+        let mut total_height_in_mm: Mm = Mm(0.0);
+        let line_height: f32 = line_height.unwrap_or(1.0);
+        let first_line_text_height: Pt = font.height_of_font_at_size(font_size);
+        let first_line_height_in_mm: Mm = (first_line_text_height * line_height).into();
+        let other_row_height_in_mm: Mm = (font_size * line_height).into();
+        let character_spacing = character_spacing;
+        let splitted_paragraphs = Self::split_text_to_size(
+            font,
+            content,
+            font_size,
+            width.clone().into(),
+            character_spacing,
+        )?;
+
+        for (line_index, line) in splitted_paragraphs.into_iter().enumerate() {
+            if dynamic.is_fit_verfical() {
+                let text_width = font
+                    .width_of_text_at_size(line.replace("\n", ""), font_size, character_spacing)
+                    .context(FontSnafu)?;
+                total_width_in_mm = max(total_width_in_mm, text_width.into());
+            }
+            if line_index == 0 {
+                total_height_in_mm += first_line_height_in_mm;
+            } else {
+                total_height_in_mm += other_row_height_in_mm;
+            }
+
+            if dynamic.is_fit_horizontal() {
+                let text_width = font
+                    .width_of_text_at_size(line.to_string(), font_size, character_spacing)
+                    .context(FontSnafu)?;
+                total_width_in_mm = max(total_width_in_mm, text_width.into());
+            }
+        }
+
+        Ok((total_width_in_mm, total_height_in_mm))
+    }
 }
