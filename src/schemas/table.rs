@@ -1,6 +1,6 @@
 use std::cmp::max;
 
-use super::{base::BaseSchema, InvalidColorStringSnafu, Schema};
+use super::{base::BaseSchema, BasePdf, InvalidColorStringSnafu, Schema};
 use super::{qrcode, SchemaTrait};
 use crate::font::FontMap;
 use crate::schemas::text;
@@ -168,17 +168,17 @@ impl Table {
     }
     pub fn render(
         &mut self,
-        page_height_in_mm: Mm,
+        base_pdf: &BasePdf,
         doc: &mut PdfDocument,
         current_page: usize,
         current_top_mm: Option<Mm>,
         buffer: &mut OpBuffer,
     ) -> Result<(usize, Option<Mm>), Error> {
-        let top_margin_in_mm = Mm(20.0);
-        let bottom_margin_in_mm = Mm(20.0);
-        let mut page_counter = 0;
+        let top_margin_in_mm = base_pdf.padding.top;
+        let bottom_margin_in_mm = base_pdf.padding.bottom;
+        let mut internal_page_counter = 0;
         let y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
-        let y_bottom_mm = page_height_in_mm - bottom_margin_in_mm;
+        let y_bottom_mm = base_pdf.height - bottom_margin_in_mm;
         let y_offset: Pt = Pt(0.0);
         let mut y_line_mm: Mm = y_top_mm;
         let cell_widths = self.cell_widths();
@@ -205,23 +205,23 @@ impl Table {
                         x += width;
                         cols.push(Schema::Text(schema));
                     }
-                    Schema::QrCode(mut qrcode) => {
-                        qrcode.set_x(x);
-                        qrcode.set_y(y_line_mm);
-                        max_height = max(max_height, qrcode.get_height());
+                    Schema::QrCode(mut qr_code) => {
+                        qr_code.set_x(x);
+                        qr_code.set_y(y_line_mm);
+                        max_height = max(max_height, qr_code.get_height());
 
                         x += width;
-                        cols.push(Schema::QrCode(qrcode));
+                        cols.push(Schema::QrCode(qr_code));
                     }
                     _ => {
-                        // unimplemented!();
+                        unimplemented!();
                     }
                 }
             }
             y_line_mm = y_line_mm + max_height;
 
             if y_line_mm > y_bottom_mm {
-                page_counter += 1;
+                internal_page_counter += 1;
                 // colsのyをリセットする必要がある
                 let updated: Vec<Schema> = cols
                     .into_iter()
@@ -233,7 +233,7 @@ impl Table {
                 pages.push(vec![updated]);
                 y_line_mm = top_margin_in_mm + max_height;
             } else {
-                if let Some(page) = pages.get_mut(page_counter) {
+                if let Some(page) = pages.get_mut(internal_page_counter) {
                     page.push(cols);
                 } else {
                     pages.push(vec![cols])
@@ -244,11 +244,11 @@ impl Table {
         for (page_index, page) in pages.into_iter().enumerate() {
             for rows in page {
                 for cols in rows {
-                    cols.render(page_height_in_mm, None, doc, page_index, buffer)?;
+                    cols.render(base_pdf, None, doc, page_index, buffer)?;
                 }
             }
         }
 
-        Ok((current_page + page_counter, Some(y_line_mm)))
+        Ok((current_page + internal_page_counter, Some(y_line_mm)))
     }
 }

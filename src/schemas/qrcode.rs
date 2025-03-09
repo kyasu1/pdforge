@@ -1,3 +1,4 @@
+use super::BasePdf;
 use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
@@ -43,9 +44,9 @@ impl QrCode {
         Self { base, content }
     }
 
-    pub fn draw(
+    pub fn render(
         &self,
-        page_height_in_mm: Mm,
+        base_pdf: &BasePdf,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
@@ -63,17 +64,23 @@ impl QrCode {
         encoder
             .write_image(&luma.into_raw(), w, h, ExtendedColorType::L8)
             .unwrap();
-        let image =
-            RawImage::decode_from_bytes(&buf).whatever_context("Failed to decode QR code")?;
+
+        let mut warnings = Vec::new();
+        let image = RawImage::decode_from_bytes(&buf, &mut warnings)
+            .whatever_context("Failed to decode QR code")?;
 
         let image_x_object_id = doc.add_image(&image);
 
-        let transform = self.base.get_matrix(page_height_in_mm, Some(qrcode_width));
+        let transform = self.base.get_matrix(base_pdf.height, Some(qrcode_width));
 
-        let ops = vec![Op::UseXobject {
-            id: image_x_object_id,
-            transform,
-        }];
+        let ops = vec![
+            Op::SaveGraphicsState,
+            Op::UseXobject {
+                id: image_x_object_id,
+                transform,
+            },
+            Op::RestoreGraphicsState,
+        ];
 
         buffer.insert(page, ops);
 

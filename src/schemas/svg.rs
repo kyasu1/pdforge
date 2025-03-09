@@ -1,10 +1,10 @@
 use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
 use crate::utils::OpBuffer;
-use image::codecs::png::PngEncoder;
-use image::{ExtendedColorType, ImageEncoder, Luma};
-use printpdf::{ExternalXObject, Mm, Op, PdfDocument, Px, RawImage};
+use printpdf::{ExternalXObject, Mm, Op, PdfDocument};
 use serde::Deserialize;
 use snafu::ResultExt;
+
+use super::BasePdf;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -53,26 +53,27 @@ impl Svg {
     }
 
     fn parse(content: &str) -> Result<ExternalXObject, Error> {
-        printpdf::svg::Svg::parse(content).whatever_context("Invalid SVG File")
+        let mut warnings = Vec::new();
+        printpdf::svg::Svg::parse(content, &mut warnings)
+            .with_whatever_context(|err| format!("Invalid SVG file {}", err))
     }
 
     pub fn render(
         &self,
-        page_height_in_mm: Mm,
+        base_pdf: &BasePdf,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
         let svg_x_object_id = doc.add_xobject(&self.content);
 
-        let transform = self.base.get_matrix(page_height_in_mm, self.content.width);
+        let transform = self.base.get_matrix(base_pdf.height, self.content.width);
 
         let ops = vec![Op::UseXobject {
             id: svg_x_object_id,
             transform,
         }];
 
-        println!("SVG OPS {:?}", ops);
         buffer.insert(page, ops);
 
         Ok(())

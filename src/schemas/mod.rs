@@ -33,8 +33,11 @@ pub enum Error {
     #[snafu(display("Invalid HEX color string specified"))]
     InvalidColorString { source: palette::rgb::FromHexError },
 
-    #[snafu(display("Font erro"))]
+    #[snafu(display("Font error"))]
     FontError { source: font::Error },
+
+    #[snafu(display("Invalid BasePDF"))]
+    InvalidBasePdf,
 
     #[snafu(whatever, display("{message}"))]
     Whatever {
@@ -88,7 +91,7 @@ impl JsonTemplate {
 pub trait SchemaTrait {
     fn render(
         &self,
-        page_height: Mm,
+        base_pdf: &BasePdf,
         current_top_mm: Option<Mm>,
         doc: &mut PdfDocument,
         page: usize,
@@ -112,7 +115,7 @@ pub enum Schema {
 impl SchemaTrait for Schema {
     fn render(
         &self,
-        page_height: Mm,
+        base_pdf: &BasePdf,
         current_top_mm: Option<Mm>,
         doc: &mut PdfDocument,
         page: usize,
@@ -120,26 +123,24 @@ impl SchemaTrait for Schema {
     ) -> Result<(usize, Option<Mm>), Error> {
         match self.clone() {
             Schema::Text(mut schema) => {
-                schema.render(page_height, page, buffer)?;
+                schema.render(&base_pdf, page, buffer)?;
                 Ok((page, current_top_mm))
             }
             Schema::DynamicText(mut schema) => {
-                schema.render(page_height, page, current_top_mm, buffer)?;
+                schema.render(&base_pdf, page, current_top_mm, buffer)?;
                 Ok((page, current_top_mm))
             }
-            Schema::Table(mut table) => {
-                table.render(page_height, doc, page, current_top_mm, buffer)
-            }
+            Schema::Table(mut table) => table.render(&base_pdf, doc, page, current_top_mm, buffer),
             Schema::QrCode(qr_code) => {
-                qr_code.draw(page_height, doc, page, buffer)?;
+                qr_code.render(&base_pdf, doc, page, buffer)?;
                 Ok((page, current_top_mm))
             }
             Schema::Image(image) => {
-                image.render(page_height, doc, page, buffer)?;
+                image.render(&base_pdf, doc, page, buffer)?;
                 Ok((page, current_top_mm))
             }
             Schema::Svg(svg) => {
-                svg.render(page_height, doc, page, buffer)?;
+                svg.render(&base_pdf, doc, page, buffer)?;
                 Ok((page, current_top_mm))
             }
         }
@@ -165,7 +166,27 @@ impl SchemaTrait for Schema {
 pub struct BasePdf {
     width: Mm,
     height: Mm,
-    padding: Vec<Mm>,
+    padding: Frame,
+}
+
+#[derive(Debug, Clone)]
+pub struct Frame {
+    top: Mm,
+    right: Mm,
+    bottom: Mm,
+    left: Mm,
+}
+
+impl TryFrom<Vec<f32>> for Frame {
+    type Error = Error;
+    fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
+        Ok(Frame {
+            top: Mm(value.get(0).context(InvalidBasePdfSnafu)?.clone()),
+            right: Mm(value.get(1).context(InvalidBasePdfSnafu)?.clone()),
+            bottom: Mm(value.get(2).context(InvalidBasePdfSnafu)?.clone()),
+            left: Mm(value.get(3).context(InvalidBasePdfSnafu)?.clone()),
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -182,7 +203,7 @@ impl Template {
         let base_pdf = BasePdf {
             width: Mm(json.base_pdf.width),
             height: Mm(json.base_pdf.height),
-            padding: json.base_pdf.padding.into_iter().map(|v| Mm(v)).collect(),
+            padding: json.base_pdf.padding.try_into()?,
         };
         let schemas = json
             .schemas
@@ -217,25 +238,27 @@ impl Template {
 
         let mut p = 0;
         let mut y: Option<Mm> = None;
-        let page_height = self.base_pdf.height;
+
         for (page_index, page) in self.schemas.iter().enumerate() {
             for schema in page {
                 match schema.clone() {
                     Schema::Text(mut obj) => {
-                        obj.render(page_height, page_index, &mut buffer)?;
+                        obj.render(&self.base_pdf, page_index, &mut buffer)?;
                     }
                     Schema::DynamicText(mut obj) => {
-                        (p, y) = obj.render(page_height, p, y, &mut buffer)?;
+                        (p, y) = obj.render(&self.base_pdf, p, y, &mut buffer)?;
                     }
                     Schema::Table(mut obj) => {
-                        (p, y) = obj.render(page_height, doc, p, y, &mut buffer)?;
+                        (p, y) = obj.render(&self.base_pdf, doc, p, y, &mut buffer)?;
                     }
                     Schema::QrCode(obj) => {
-                        obj.draw(page_height, &mut doc, page_index, &mut buffer)?;
+                        obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?;
                     }
-                    Schema::Image(obj) => obj.render(page_height, doc, page_index, &mut buffer)?,
+                    Schema::Image(obj) => {
+                        obj.render(&self.base_pdf, doc, page_index, &mut buffer)?
+                    }
                     Schema::Svg(obj) => {
-                        obj.render(page_height, &mut doc, page_index, &mut buffer)?
+                        obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?
                     }
                 }
 
@@ -249,11 +272,16 @@ impl Template {
             pages.push(page)
         }
 
-        let bytes = doc.with_pages(pages).save(&PdfSaveOptions {
-            optimize: false,
-            subset_fonts: false,
-            secure: false,
-        });
+        let mut warn = Vec::new();
+        let bytes = doc.with_pages(pages).save(
+            &PdfSaveOptions {
+                optimize: false,
+                subset_fonts: false,
+                secure: false,
+                image_optimization: None,
+            },
+            &mut warn,
+        );
         std::fs::write("./simple.pdf", bytes).unwrap();
 
         Ok(())

@@ -8,6 +8,8 @@ use serde::Deserialize;
 use snafu::{whatever, ResultExt};
 use std::io::Cursor;
 
+use super::BasePdf;
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonImageSchema {
@@ -67,7 +69,7 @@ impl Image {
 
     pub fn render(
         &self,
-        page_height_in_mm: Mm,
+        base_pdf: &BasePdf,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
@@ -77,18 +79,21 @@ impl Image {
         let mut buf = Cursor::new(Vec::new());
         rgb_image.write_to(&mut buf, ImageFormat::Jpeg).unwrap();
 
-        let image = RawImage::decode_from_bytes(&buf.get_ref()).unwrap();
+        let mut warnings = Vec::new();
+        let image = RawImage::decode_from_bytes(&buf.get_ref(), &mut warnings).unwrap();
 
         let image_x_object_id = doc.add_image(&image);
 
-        let transform = self
-            .base
-            .get_matrix(page_height_in_mm, Some(Px(image.width)));
+        let transform = self.base.get_matrix(base_pdf.height, Some(Px(image.width)));
 
-        let ops = vec![Op::UseXobject {
-            id: image_x_object_id,
-            transform,
-        }];
+        let ops = vec![
+            Op::SaveGraphicsState,
+            Op::UseXobject {
+                id: image_x_object_id,
+                transform,
+            },
+            Op::RestoreGraphicsState,
+        ];
 
         buffer.insert(page, ops);
 

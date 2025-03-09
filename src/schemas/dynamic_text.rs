@@ -6,6 +6,8 @@ use printpdf::*;
 use serde::Deserialize;
 use snafu::prelude::*;
 
+use super::BasePdf;
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonDynamicTextSchema {
@@ -95,20 +97,20 @@ impl DynamicText {
     }
     pub fn render(
         &mut self,
-        page_height_in_mm: Mm,
+        base_pdf: &BasePdf,
         current_page: usize,
         current_top_mm: Option<Mm>,
         buffer: &mut OpBuffer,
     ) -> Result<(usize, Option<Mm>), Error> {
-        let top_margin_in_mm = Mm(20.0);
-        let bottom_margin_in_mm = Mm(20.0);
-        let page_height: Pt = page_height_in_mm.into();
+        let top_margin_in_mm = base_pdf.padding.top;
+        let bottom_margin_in_mm = base_pdf.padding.bottom;
+        let page_height: Pt = base_pdf.height.into();
 
         let mut index_offset = 0;
         let mut page_counter = 0;
         let mut y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
         // let mut y_bottom_mm = self.schema.base.get_y() + self.schema.base.get_height();
-        let y_bottom_mm = page_height_in_mm - bottom_margin_in_mm;
+        let y_bottom_mm = base_pdf.height - bottom_margin_in_mm;
 
         let line_height = Pt(self.line_height.unwrap_or(1.0) * self.font_size.0);
 
@@ -145,13 +147,14 @@ impl DynamicText {
             },
         );
 
-        let next_y_line_mm = page_height_in_mm - y_line.into() + self.font_size.into();
+        let next_y_line_mm = base_pdf.height - y_line.into() + self.font_size.into();
 
         let mut pages_increased = 0;
         let mut y_start = page_height - (current_top_mm.unwrap_or(self.base.y).into());
 
         for (page_index, page) in lines_splitted_to_pages.into_iter().enumerate() {
             let mut ops: Vec<Op> = vec![
+                Op::SaveGraphicsState,
                 Op::StartTextSection,
                 Op::SetTextCursor {
                     pos: Point {
@@ -164,21 +167,32 @@ impl DynamicText {
                     // multiplier: character_spacing.clone(),
                     multiplier: 0.0,
                 },
+                Op::SetFillColor {
+                    col: Color::Rgb(Rgb {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        icc_profile: None,
+                    }),
+                },
+                Op::SetFontSize {
+                    size: self.font_size.clone(),
+                    font: self.font_id.clone(),
+                },
             ];
 
             for line in page {
                 let line_ops = vec![
                     Op::WriteText {
-                        text: line.to_string(),
+                        items: vec![TextItem::Text(line.clone())],
                         font: self.font_id.clone(),
-                        size: self.font_size.clone(),
                     },
                     Op::AddLineBreak,
                 ];
                 ops.extend_from_slice(&line_ops);
             }
 
-            ops.extend_from_slice(&[Op::EndTextSection]);
+            ops.extend_from_slice(&[Op::EndTextSection, Op::RestoreGraphicsState]);
             buffer.insert(current_page + page_index, ops);
             pages_increased += 1;
             y_start = page_height - top_margin_in_mm.into();

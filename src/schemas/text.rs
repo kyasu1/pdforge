@@ -1,3 +1,4 @@
+use super::BasePdf;
 use crate::font::{FontMap, FontSize, FontSpec};
 use crate::schemas::base::BaseSchema;
 use crate::schemas::{Error, JsonPosition, TextUtil};
@@ -96,7 +97,7 @@ impl Text {
 
     pub fn render(
         &mut self,
-        page_height_in_mm: Mm,
+        base_pdf: &BasePdf,
         current_page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
@@ -113,11 +114,12 @@ impl Text {
         let line_height = Pt(self.line_height.unwrap_or(1.0) * font_size.0);
 
         let mut ops: Vec<Op> = vec![
+            Op::SaveGraphicsState,
             Op::StartTextSection,
             Op::SetTextCursor {
                 pos: Point {
                     x: self.base.x.into(),
-                    y: (page_height_in_mm - self.base.y).into(),
+                    y: (base_pdf.height - self.base.y).into(),
                 },
             },
             Op::SetLineHeight { lh: line_height },
@@ -125,21 +127,32 @@ impl Text {
                 // multiplier: character_spacing.clone(),
                 multiplier: 0.0,
             },
+            Op::SetFillColor {
+                col: Color::Rgb(Rgb {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    icc_profile: None,
+                }),
+            },
+            Op::SetFontSize {
+                size: font_size.clone(),
+                font: self.font_id.clone(),
+            },
         ];
 
         for line in splitted_paragraphs {
             let line_ops = vec![
                 Op::WriteText {
-                    text: line.to_string(),
+                    items: vec![TextItem::Text(line)],
                     font: self.font_id.clone(),
-                    size: font_size.clone(),
                 },
                 Op::AddLineBreak,
             ];
             ops.extend_from_slice(&line_ops);
         }
 
-        ops.extend_from_slice(&[Op::EndTextSection]);
+        ops.extend_from_slice(&[Op::EndTextSection, Op::RestoreGraphicsState]);
         buffer.insert(current_page, ops);
 
         Ok(())
