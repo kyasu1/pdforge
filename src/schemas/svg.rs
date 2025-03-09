@@ -52,6 +52,10 @@ impl Svg {
         Ok(Self { base, content })
     }
 
+    pub fn get_base(&self) -> &BaseSchema {
+        &self.base
+    }
+
     fn parse(content: &str) -> Result<ExternalXObject, Error> {
         let mut warnings = Vec::new();
         printpdf::svg::Svg::parse(content, &mut warnings)
@@ -86,6 +90,11 @@ impl Svg {
     pub fn set_y(&mut self, y: Mm) {
         self.base.y = y;
     }
+
+    pub fn set_height(&mut self, height: Mm) {
+        self.base.height = height;
+    }
+
     pub fn get_width(&self) -> Mm {
         self.base.width
     }

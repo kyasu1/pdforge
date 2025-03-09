@@ -18,6 +18,7 @@ fn main() {
     font_map.add_font(String::from("NotoSans"), font_id.clone(), &parsed_font);
 
     let template =
-        rust_pdfme::schemas::Template::read_from_file("./templates/svg.json", &font_map).unwrap();
+        rust_pdfme::schemas::Template::read_from_file("./templates/table-test.json", &font_map)
+            .unwrap();
     template.render(&mut doc).unwrap();
 }

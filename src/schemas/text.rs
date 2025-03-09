@@ -60,6 +60,10 @@ impl Text {
         })
     }
 
+    pub fn get_base(&self) -> &BaseSchema {
+        &self.base
+    }
+
     pub fn from_json(json: JsonTextSchema, font_map: &FontMap) -> Result<Text, Error> {
         let (font_id, font) = font_map
             .find(json.font_name.clone())
@@ -166,6 +170,9 @@ impl Text {
     }
     pub fn set_width(&mut self, width: Mm) {
         self.base.width = width;
+    }
+    pub fn set_height(&mut self, height: Mm) {
+        self.base.height = height;
     }
 
     pub fn set_content(&mut self, content: String) {

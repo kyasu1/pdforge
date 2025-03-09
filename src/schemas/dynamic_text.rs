@@ -95,6 +95,11 @@ impl DynamicText {
 
         Ok(text)
     }
+
+    pub fn get_base(&self) -> &BaseSchema {
+        &self.base
+    }
+
     pub fn render(
         &mut self,
         base_pdf: &BasePdf,
@@ -207,5 +212,9 @@ impl DynamicText {
 
     pub fn set_y(&mut self, y: Mm) {
         self.base.y = y;
+    }
+
+    pub fn set_height(&mut self, height: Mm) {
+        self.base.height = height;
     }
 }

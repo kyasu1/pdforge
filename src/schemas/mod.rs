@@ -8,6 +8,7 @@ pub mod text;
 
 use crate::font::{self, DynamicFontSize, FontMap, FontSpec};
 use crate::utils::OpBuffer;
+use base::BaseSchema;
 use dynamic_text::DynamicText;
 use icu_segmenter::WordSegmenter;
 use printpdf::*;
@@ -99,6 +100,8 @@ pub trait SchemaTrait {
     ) -> Result<(usize, Option<Mm>), Error>;
     // fn set_x(&mut self, x: Mm);
     fn set_y(&mut self, y: Mm);
+    fn set_height(&mut self, height: Mm);
+
     // fn get_width(&self) -> Mm;
 }
 
@@ -110,6 +113,19 @@ pub enum Schema {
     QrCode(qrcode::QrCode),
     Image(image::Image),
     Svg(svg::Svg),
+}
+
+impl Schema {
+    pub fn get_base(&self) -> &BaseSchema {
+        match self {
+            Schema::Text(text) => text.get_base(),
+            Schema::DynamicText(text) => text.get_base(),
+            Schema::Table(table) => table.get_base(),
+            Schema::QrCode(qr_code) => qr_code.get_base(),
+            Schema::Image(image) => image.get_base(),
+            Schema::Svg(svg) => svg.get_base(),
+        }
+    }
 }
 
 impl SchemaTrait for Schema {
@@ -152,6 +168,17 @@ impl SchemaTrait for Schema {
             Schema::DynamicText(text) => text.set_y(y),
             Schema::QrCode(qr_code) => {
                 qr_code.set_y(y);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn set_height(&mut self, height: Mm) {
+        match self {
+            Schema::Text(text) => text.set_height(height),
+            Schema::DynamicText(text) => text.set_height(height),
+            Schema::QrCode(qr_code) => {
+                qr_code.set_height(height);
             }
             _ => unimplemented!(),
         }

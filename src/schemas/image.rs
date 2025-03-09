@@ -67,6 +67,10 @@ impl Image {
         Ok(Self { base, content })
     }
 
+    pub fn get_base(&self) -> &BaseSchema {
+        &self.base
+    }
+
     pub fn render(
         &self,
         base_pdf: &BasePdf,

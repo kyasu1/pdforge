@@ -44,6 +44,10 @@ impl QrCode {
         Self { base, content }
     }
 
+    pub fn get_base(&self) -> &BaseSchema {
+        &self.base
+    }
+
     pub fn render(
         &self,
         base_pdf: &BasePdf,
@@ -94,6 +98,11 @@ impl QrCode {
     pub fn set_y(&mut self, y: Mm) {
         self.base.y = y;
     }
+
+    pub fn set_height(&mut self, height: Mm) {
+        self.base.height = height;
+    }
+
     pub fn get_width(&self) -> Mm {
         self.base.width
     }

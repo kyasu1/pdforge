@@ -9,7 +9,10 @@ use crate::{
     utils::OpBuffer,
 };
 use palette::Srgb;
-use printpdf::{Mm, PdfDocument, Pt};
+use printpdf::{
+    Color, LinePoint, Mm, Op, PaintMode, PdfDocument, Point, Polygon, PolygonRing, Pt, Rgb,
+    WindingOrder,
+};
 use serde::Deserialize;
 use snafu::prelude::*;
 
@@ -166,6 +169,11 @@ impl Table {
         };
         Ok(table)
     }
+
+    pub fn get_base(&self) -> &BaseSchema {
+        &self.base
+    }
+
     pub fn render(
         &mut self,
         base_pdf: &BasePdf,
@@ -227,24 +235,96 @@ impl Table {
                     .into_iter()
                     .map(|mut col| {
                         col.set_y(top_margin_in_mm);
+                        col.set_height(max_height);
                         return col;
                     })
                     .collect();
                 pages.push(vec![updated]);
                 y_line_mm = top_margin_in_mm + max_height;
             } else {
+                let updated: Vec<Schema> = cols
+                    .into_iter()
+                    .map(|mut col| {
+                        col.set_height(max_height);
+                        return col;
+                    })
+                    .collect();
+
                 if let Some(page) = pages.get_mut(internal_page_counter) {
-                    page.push(cols);
+                    page.push(updated);
                 } else {
-                    pages.push(vec![cols])
+                    pages.push(vec![updated])
                 }
             }
         }
 
         for (page_index, page) in pages.into_iter().enumerate() {
             for rows in page {
-                for cols in rows {
-                    cols.render(base_pdf, None, doc, page_index, buffer)?;
+                for (col_index, schema) in rows.into_iter().enumerate() {
+                    let base = schema.get_base();
+                    schema.render(base_pdf, None, doc, page_index, buffer)?;
+
+                    let width = cell_widths[col_index];
+                    let polygon = Polygon {
+                        rings: vec![PolygonRing {
+                            points: vec![
+                                LinePoint {
+                                    p: Point {
+                                        x: base.x.into(),
+                                        y: (base_pdf.height - base.y).into(),
+                                    },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point {
+                                        x: (base.x + width).into(),
+                                        y: (base_pdf.height - base.y).into(),
+                                    },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point {
+                                        x: (base.x + width).into(),
+                                        y: (base_pdf.height - base.y + base.height).into(),
+                                    },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point {
+                                        x: (base.x).into(),
+                                        y: (base_pdf.height - base.y + base.height).into(),
+                                    },
+                                    bezier: false,
+                                },
+                            ],
+                        }],
+                        mode: PaintMode::Fill,
+                        winding_order: WindingOrder::NonZero,
+                    };
+
+                    let ops: Vec<Op> = vec![
+                        Op::SaveGraphicsState,
+                        Op::SetOutlineColor {
+                            col: Color::Rgb(Rgb {
+                                r: 0.2,
+                                g: 0.2,
+                                b: 0.8,
+                                icc_profile: None,
+                            }),
+                        },
+                        Op::SetFillColor {
+                            col: Color::Rgb(Rgb {
+                                r: 0.9,
+                                g: 0.9,
+                                b: 0.9,
+                                icc_profile: None,
+                            }),
+                        },
+                        Op::SetOutlineThickness { pt: Mm(0.1).into() },
+                        Op::DrawPolygon { polygon },
+                        Op::RestoreGraphicsState,
+                    ];
+                    buffer.insert(page_index, ops);
                 }
             }
         }
