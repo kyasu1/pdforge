@@ -118,7 +118,6 @@ impl Text {
         let line_height = Pt(self.line_height.unwrap_or(1.0) * font_size.0);
 
         let mut ops: Vec<Op> = vec![
-            Op::SaveGraphicsState,
             Op::StartTextSection,
             Op::SetTextCursor {
                 pos: Point {
@@ -156,7 +155,7 @@ impl Text {
             ops.extend_from_slice(&line_ops);
         }
 
-        ops.extend_from_slice(&[Op::EndTextSection, Op::RestoreGraphicsState]);
+        ops.extend_from_slice(&[Op::EndTextSection]);
         buffer.insert(current_page, ops);
 
         Ok(())

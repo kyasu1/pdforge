@@ -243,7 +243,7 @@ impl Template {
                             dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
                         ),
                         JsonSchema::Table(json) => {
-                            Schema::Table(Table::from_json(json, font_map).unwrap())
+                            Schema::Table(Table::from_json(json, font_map, &base_pdf).unwrap())
                         }
                         JsonSchema::QrCode(json) => json.into(),
                         JsonSchema::Image(json) => json.try_into().unwrap(),

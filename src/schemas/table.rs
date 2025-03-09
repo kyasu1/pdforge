@@ -106,6 +106,7 @@ impl TableStyles {
 
 #[derive(Debug, Clone)]
 pub struct Table {
+    base_pdf: Box<BasePdf>,
     base: BaseSchema,
     content: String,
     show_head: bool,
@@ -125,7 +126,11 @@ impl Table {
             .collect()
     }
 
-    pub fn from_json(json: JsonTableSchema, font_map: &FontMap) -> Result<Self, Error> {
+    pub fn from_json(
+        json: JsonTableSchema,
+        font_map: &FontMap,
+        base_pdf: &BasePdf,
+    ) -> Result<Self, Error> {
         let base = BaseSchema::new(
             json.name,
             Mm(json.position.x),
@@ -159,6 +164,7 @@ impl Table {
             columns.push(column)
         }
         let table = Table {
+            base_pdf: Box::new(base_pdf.clone()),
             base,
             content: json.content,
             show_head: json.show_head,
@@ -258,6 +264,13 @@ impl Table {
             }
         }
 
+        let gray = Color::Rgb(Rgb {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            icc_profile: None,
+        });
+
         for (page_index, page) in pages.into_iter().enumerate() {
             for rows in page {
                 for (col_index, schema) in rows.into_iter().enumerate() {
@@ -265,70 +278,101 @@ impl Table {
                     schema.render(base_pdf, None, doc, page_index, buffer)?;
 
                     let width = cell_widths[col_index];
-                    let polygon = Polygon {
-                        rings: vec![PolygonRing {
-                            points: vec![
-                                LinePoint {
-                                    p: Point {
-                                        x: base.x.into(),
-                                        y: (base_pdf.height - base.y).into(),
-                                    },
-                                    bezier: false,
-                                },
-                                LinePoint {
-                                    p: Point {
-                                        x: (base.x + width).into(),
-                                        y: (base_pdf.height - base.y).into(),
-                                    },
-                                    bezier: false,
-                                },
-                                LinePoint {
-                                    p: Point {
-                                        x: (base.x + width).into(),
-                                        y: (base_pdf.height - base.y + base.height).into(),
-                                    },
-                                    bezier: false,
-                                },
-                                LinePoint {
-                                    p: Point {
-                                        x: (base.x).into(),
-                                        y: (base_pdf.height - base.y + base.height).into(),
-                                    },
-                                    bezier: false,
-                                },
-                            ],
-                        }],
-                        mode: PaintMode::Fill,
-                        winding_order: WindingOrder::NonZero,
+                    let rect = DrawRectangle {
+                        x: base.x,
+                        y: base.y,
+                        width,
+                        height: base.height,
+                        page_height: base_pdf.height,
+                        color: Some(gray.clone()),
+                        border_width: Some(self.table_styles.border_width),
+                        border_color: None,
                     };
+                    let ops = draw_rectangle(rect);
 
-                    let ops: Vec<Op> = vec![
-                        Op::SaveGraphicsState,
-                        Op::SetOutlineColor {
-                            col: Color::Rgb(Rgb {
-                                r: 0.2,
-                                g: 0.2,
-                                b: 0.8,
-                                icc_profile: None,
-                            }),
-                        },
-                        Op::SetFillColor {
-                            col: Color::Rgb(Rgb {
-                                r: 0.9,
-                                g: 0.9,
-                                b: 0.9,
-                                icc_profile: None,
-                            }),
-                        },
-                        Op::SetOutlineThickness { pt: Mm(0.1).into() },
-                        Op::DrawPolygon { polygon },
-                        Op::RestoreGraphicsState,
-                    ];
                     buffer.insert(page_index, ops);
+
+                    schema.render(base_pdf, None, doc, page_index, buffer)?;
                 }
             }
         }
 
         Ok((current_page + internal_page_counter, Some(y_line_mm)))
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct DrawRectangle {
+    x: Mm,
+    y: Mm,
+    width: Mm,
+    height: Mm,
+    page_height: Mm,
+    color: Option<Color>,
+    border_width: Option<Mm>,
+    border_color: Option<Color>,
+}
+fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
+    let mode = match props.color {
+        Some(_) => PaintMode::FillStroke,
+        None => PaintMode::Stroke,
+    };
+
+    let color = props.color.unwrap_or(Color::Rgb(Rgb {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        icc_profile: None,
+    }));
+
+    let border_color = props.border_color.unwrap_or(Color::Rgb(Rgb {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        icc_profile: None,
+    }));
+
+    let border_width = props.border_width.unwrap_or(Mm(0.1));
+
+    let x1: Pt = props.x.into();
+    let y1: Pt = (props.page_height - props.y).into();
+    let x2: Pt = (props.x + props.width).into();
+    let y2: Pt = (props.page_height - props.y + props.height).into();
+
+    let polygon = Polygon {
+        rings: vec![PolygonRing {
+            points: vec![
+                LinePoint {
+                    p: Point { x: x1, y: y1 },
+                    bezier: false,
+                },
+                LinePoint {
+                    p: Point { x: x2, y: y1 },
+                    bezier: false,
+                },
+                LinePoint {
+                    p: Point { x: x2, y: y2 },
+                    bezier: false,
+                },
+                LinePoint {
+                    p: Point { x: x1, y: y2 },
+                    bezier: false,
+                },
+            ],
+        }],
+        mode,
+        winding_order: WindingOrder::NonZero,
+    };
+
+    let ops: Vec<Op> = vec![
+        Op::SetOutlineColor { col: border_color },
+        Op::SetFillColor { col: color },
+        Op::SetOutlineThickness {
+            pt: border_width.into(),
+        },
+        Op::DrawPolygon {
+            polygon: polygon.clone(),
+        },
+    ];
+    ops
 }
