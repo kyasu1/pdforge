@@ -278,7 +278,19 @@ impl Table {
                     schema.render(base_pdf, None, doc, page_index, buffer)?;
 
                     let width = cell_widths[col_index];
-                    let rect = DrawRectangle {
+                    // let rect = DrawRectangle {
+                    //     x: base.x,
+                    //     y: base.y,
+                    //     width,
+                    //     height: base.height,
+                    //     page_height: base_pdf.height,
+                    //     color: Some(gray.clone()),
+                    //     border_width: Some(self.table_styles.border_width),
+                    //     border_color: None,
+                    // };
+                    // let ops = draw_rectangle(rect);
+
+                    let rect = DrawRoundedRectangle {
                         x: base.x,
                         y: base.y,
                         width,
@@ -287,9 +299,9 @@ impl Table {
                         color: Some(gray.clone()),
                         border_width: Some(self.table_styles.border_width),
                         border_color: None,
+                        radius: Mm(2.0),
                     };
-                    let ops = draw_rectangle(rect);
-
+                    let ops = draw_rounded_rectangle(rect);
                     buffer.insert(page_index, ops);
 
                     schema.render(base_pdf, None, doc, page_index, buffer)?;
@@ -356,6 +368,216 @@ fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
                 },
                 LinePoint {
                     p: Point { x: x1, y: y2 },
+                    bezier: false,
+                },
+            ],
+        }],
+        mode,
+        winding_order: WindingOrder::NonZero,
+    };
+
+    let ops: Vec<Op> = vec![
+        Op::SetOutlineColor { col: border_color },
+        Op::SetFillColor { col: color },
+        Op::SetOutlineThickness {
+            pt: border_width.into(),
+        },
+        Op::DrawPolygon {
+            polygon: polygon.clone(),
+        },
+    ];
+    ops
+}
+
+#[derive(Debug, Clone)]
+pub struct DrawRoundedRectangle {
+    x: Mm,
+    y: Mm,
+    width: Mm,
+    height: Mm,
+    page_height: Mm,
+    color: Option<Color>,
+    border_width: Option<Mm>,
+    border_color: Option<Color>,
+    radius: Mm,
+}
+
+fn draw_rounded_rectangle(props: DrawRoundedRectangle) -> Vec<Op> {
+    if props.radius.0 > props.width.0 / 2.0 || props.radius.0 > props.height.0 / 2.0 {
+        return vec![];
+    }
+
+    const C: f32 = 0.551915024494;
+    let kappa: Mm = Mm(C * props.radius.0);
+
+    let mode = match props.color {
+        Some(_) => PaintMode::FillStroke,
+        None => PaintMode::Stroke,
+    };
+
+    let color = props.color.unwrap_or(Color::Rgb(Rgb {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        icc_profile: None,
+    }));
+
+    let border_color = props.border_color.unwrap_or(Color::Rgb(Rgb {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        icc_profile: None,
+    }));
+
+    let border_width = props.border_width.unwrap_or(Mm(0.1));
+
+    let bottom_y = props.page_height - props.y;
+    let top_y = bottom_y + props.height;
+    let right_x = props.x + props.width;
+
+    // start drawing from lower left corner of the box
+    let p10 = Point {
+        x: (props.x).into(),
+        y: (bottom_y + props.radius).into(),
+    };
+    let p11 = Point {
+        x: (props.x).into(),
+        y: (bottom_y + props.radius - kappa).into(),
+    };
+    let p12 = Point {
+        x: (props.x + props.radius - kappa).into(),
+        y: (bottom_y).into(),
+    };
+    let p13 = Point {
+        x: (props.x + props.radius).into(),
+        y: (bottom_y).into(),
+    };
+
+    let p20 = Point {
+        x: (right_x - props.radius).into(),
+        y: (bottom_y).into(),
+    };
+
+    let p21 = Point {
+        x: (right_x - props.radius + kappa).into(),
+        y: (bottom_y).into(),
+    };
+
+    let p22 = Point {
+        x: (right_x).into(),
+        y: (bottom_y + props.radius - kappa).into(),
+    };
+
+    let p23 = Point {
+        x: (right_x).into(),
+        y: (bottom_y + props.radius).into(),
+    };
+
+    let p30 = Point {
+        x: (right_x).into(),
+        y: (top_y - props.radius).into(),
+    };
+
+    let p31 = Point {
+        x: (right_x).into(),
+        y: (top_y - props.radius + kappa).into(),
+    };
+
+    let p32 = Point {
+        x: (right_x - props.radius + kappa).into(),
+        y: (top_y).into(),
+    };
+
+    let p33 = Point {
+        x: (right_x - props.radius).into(),
+        y: (top_y).into(),
+    };
+
+    let p40 = Point {
+        x: (props.x + props.radius).into(),
+        y: (top_y).into(),
+    };
+
+    let p41 = Point {
+        x: (props.x + props.radius - kappa).into(),
+        y: (top_y).into(),
+    };
+
+    let p42 = Point {
+        x: (props.x).into(),
+        y: (top_y - props.radius + kappa).into(),
+    };
+
+    let p43 = Point {
+        x: (props.x).into(),
+        y: (top_y - props.radius).into(),
+    };
+
+    let polygon = Polygon {
+        rings: vec![PolygonRing {
+            points: vec![
+                LinePoint {
+                    p: p10,
+                    bezier: false,
+                },
+                LinePoint {
+                    p: p11,
+                    bezier: true,
+                },
+                LinePoint {
+                    p: p12,
+                    bezier: true,
+                },
+                LinePoint {
+                    p: p13,
+                    bezier: false,
+                },
+                LinePoint {
+                    p: p20,
+                    bezier: false,
+                },
+                LinePoint {
+                    p: p21,
+                    bezier: true,
+                },
+                LinePoint {
+                    p: p22,
+                    bezier: true,
+                },
+                LinePoint {
+                    p: p23,
+                    bezier: false,
+                },
+                LinePoint {
+                    p: p30,
+                    bezier: false,
+                },
+                LinePoint {
+                    p: p31,
+                    bezier: true,
+                },
+                LinePoint {
+                    p: p32,
+                    bezier: true,
+                },
+                LinePoint {
+                    p: p33,
+                    bezier: false,
+                },
+                LinePoint {
+                    p: p40,
+                    bezier: false,
+                },
+                LinePoint {
+                    p: p41,
+                    bezier: true,
+                },
+                LinePoint {
+                    p: p42,
+                    bezier: true,
+                },
+                LinePoint {
+                    p: p43,
                     bezier: false,
                 },
             ],
