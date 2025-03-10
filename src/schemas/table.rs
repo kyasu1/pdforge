@@ -278,19 +278,7 @@ impl Table {
                     schema.render(base_pdf, None, doc, page_index, buffer)?;
 
                     let width = cell_widths[col_index];
-                    // let rect = DrawRectangle {
-                    //     x: base.x,
-                    //     y: base.y,
-                    //     width,
-                    //     height: base.height,
-                    //     page_height: base_pdf.height,
-                    //     color: Some(gray.clone()),
-                    //     border_width: Some(self.table_styles.border_width),
-                    //     border_color: None,
-                    // };
-                    // let ops = draw_rectangle(rect);
-
-                    let rect = DrawRoundedRectangle {
+                    let rect = DrawRectangle {
                         x: base.x,
                         y: base.y,
                         width,
@@ -299,9 +287,21 @@ impl Table {
                         color: Some(gray.clone()),
                         border_width: Some(self.table_styles.border_width),
                         border_color: None,
-                        radius: Mm(2.0),
                     };
-                    let ops = draw_rounded_rectangle(rect);
+                    let ops = draw_rectangle(rect);
+
+                    // let rect = DrawRoundedRectangle {
+                    //     x: base.x,
+                    //     y: base.y,
+                    //     width,
+                    //     height: base.height,
+                    //     page_height: base_pdf.height,
+                    //     color: Some(gray.clone()),
+                    //     border_width: Some(self.table_styles.border_width),
+                    //     border_color: None,
+                    //     radius: Mm(1.0),
+                    // };
+                    // let ops = draw_rounded_rectangle(rect);
                     buffer.insert(page_index, ops);
 
                     schema.render(base_pdf, None, doc, page_index, buffer)?;
@@ -435,7 +435,7 @@ fn draw_rounded_rectangle(props: DrawRoundedRectangle) -> Vec<Op> {
     let top_y = bottom_y + props.height;
     let right_x = props.x + props.width;
 
-    // start drawing from lower left corner of the box
+    // start drawing from lower left corner of the box counter clockwise direction
     let p10 = Point {
         x: (props.x).into(),
         y: (bottom_y + props.radius).into(),

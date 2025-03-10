@@ -1,7 +1,7 @@
-use super::BasePdf;
+use super::{Alignment, BasePdf, VerticalAlignment};
 use crate::font::{FontMap, FontSize, FontSpec};
 use crate::schemas::base::BaseSchema;
-use crate::schemas::{Error, JsonPosition, TextUtil};
+use crate::schemas::{Error, FontSnafu, JsonPosition, TextUtil};
 use crate::utils::OpBuffer;
 use printpdf::*;
 use serde::Deserialize;
@@ -16,6 +16,8 @@ pub struct JsonTextSchema {
     height: f32,
     content: String,
     font_name: String,
+    alignment: Option<Alignment>,
+    vertical_alignment: Option<VerticalAlignment>,
     character_spacing: Option<f32>,
     line_height: Option<f32>,
     font_size: Option<f32>,
@@ -25,6 +27,8 @@ pub struct JsonTextSchema {
 pub struct Text {
     base: BaseSchema,
     content: String,
+    alignment: Alignment,
+    vertical_alignment: VerticalAlignment,
     character_spacing: Pt,
     line_height: Option<f32>,
     font_size: FontSize,
@@ -52,6 +56,8 @@ impl Text {
         Ok(Self {
             base,
             content,
+            alignment: Alignment::Left,
+            vertical_alignment: VerticalAlignment::Top,
             character_spacing: Pt(0.0),
             line_height: None,
             font_size: FontSize::Fixed(font_size),
@@ -86,10 +92,14 @@ impl Text {
                 unimplemented!()
             }
         };
+        let alignment = json.alignment.unwrap_or(Alignment::Left);
+        let vertical_alignment = json.vertical_alignment.unwrap_or(VerticalAlignment::Top);
         let text = Text {
             base,
             content: json.content,
             character_spacing,
+            alignment,
+            vertical_alignment,
             line_height,
             font_size,
             font_id: font_id.clone(),
@@ -115,21 +125,18 @@ impl Text {
             self.character_spacing,
         )?;
 
-        let line_height = Pt(self.line_height.unwrap_or(1.0) * font_size.0);
+        let line_height: Pt = font_size * self.line_height.unwrap_or(1.0);
+        let total_height: Pt = line_height * (splitted_paragraphs.len() as f32);
+
+        let y_offset: Mm = match self.vertical_alignment {
+            VerticalAlignment::Top => self.get_base().height - total_height.into(),
+            VerticalAlignment::Middle => (self.get_base().height - total_height.into()) / 2.0,
+            VerticalAlignment::Bottom => Mm(0.0),
+        };
 
         let mut ops: Vec<Op> = vec![
             Op::StartTextSection,
-            Op::SetTextCursor {
-                pos: Point {
-                    x: self.base.x.into(),
-                    y: (base_pdf.height - self.base.y).into(),
-                },
-            },
             Op::SetLineHeight { lh: line_height },
-            Op::SetCharacterSpacing {
-                // multiplier: character_spacing.clone(),
-                multiplier: 0.0,
-            },
             Op::SetFillColor {
                 col: Color::Rgb(Rgb {
                     r: 0.0,
@@ -145,7 +152,44 @@ impl Text {
         ];
 
         for line in splitted_paragraphs {
+            let line_width: Mm = self
+                .font_spec
+                .width_of_text_at_size(line.clone(), font_size, self.character_spacing)
+                .context(FontSnafu)?
+                .into();
+
+            let residual: Mm = self.base.width - line_width;
+
+            let x_line: Mm = match self.alignment {
+                Alignment::Left => self.base.x,
+                Alignment::Center => self.base.x + residual / 2.0,
+                Alignment::Right => self.base.x + residual,
+                Alignment::Justify => self.base.x,
+            };
+
+            let character_spacing: Pt = match self.alignment {
+                Alignment::Justify => {
+                    if line.ends_with('\n') {
+                        self.character_spacing
+                    } else {
+                        self.character_spacing
+                            + TextUtil::calculate_character_spacing(line.clone(), residual).into()
+                    }
+                }
+                _ => self.character_spacing,
+            };
+
             let line_ops = vec![
+                Op::SetTextCursor {
+                    pos: Point {
+                        x: x_line.into(),
+                        y: (base_pdf.height - self.base.y + y_offset).into(),
+                    },
+                },
+                Op::SetCharacterSpacing {
+                    // multiplier: character_spacing.clone(),
+                    multiplier: character_spacing.0,
+                },
                 Op::WriteText {
                     items: vec![TextItem::Text(line)],
                     font: self.font_id.clone(),

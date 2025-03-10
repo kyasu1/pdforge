@@ -20,5 +20,7 @@ fn main() {
     let template =
         rust_pdfme::schemas::Template::read_from_file("./templates/table-test.json", &font_map)
             .unwrap();
-    template.render(&mut doc).unwrap();
+    let bytes = template.render(&mut doc).unwrap();
+
+    std::fs::write("./simple.pdf", bytes).unwrap();
 }

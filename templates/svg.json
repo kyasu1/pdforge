@@ -4,7 +4,7 @@
       {
         "name": "field1",
         "type": "svg",
-        "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"500\" height=\"500\">\n<circle cx=\"250\" cy=\"250\" r=\"210\" fill=\"#333\" stroke=\"#555\" stroke-width=\"8\"/>\n</svg>\n",
+        "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"500\" height=\"500\">\n<circle cx=\"250\" cy=\"250\" r=\"210\" fill=\"#333\" stroke-miterlimit=\"1\" stroke=\"#555\" stroke-width=\"8\"/>\n</svg>\n",
         "position": {
           "x": 50,
           "y": 50

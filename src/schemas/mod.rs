@@ -260,7 +260,7 @@ impl Template {
         Ok(template)
     }
 
-    pub fn render(&self, mut doc: &mut PdfDocument) -> Result<(), Error> {
+    pub fn render(&self, mut doc: &mut PdfDocument) -> Result<Vec<u8>, Error> {
         let mut buffer = OpBuffer::default();
 
         let mut p = 0;
@@ -309,9 +309,8 @@ impl Template {
             },
             &mut warn,
         );
-        std::fs::write("./simple.pdf", bytes).unwrap();
 
-        Ok(())
+        Ok(bytes)
     }
 }
 
@@ -328,6 +327,14 @@ pub enum Alignment {
     Center,
     Right,
     Justify,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum VerticalAlignment {
+    Top,
+    Middle,
+    Bottom,
 }
 
 #[derive(Debug, Clone)]
@@ -560,5 +567,12 @@ impl TextUtil {
         }
 
         Ok((total_width_in_mm, total_height_in_mm))
+    }
+
+    fn calculate_character_spacing(text: String, residual: Mm) -> Mm {
+        use icu_segmenter::GraphemeClusterSegmenter;
+        let segmenter = GraphemeClusterSegmenter::new();
+        let len = segmenter.segment_str(&text).count() as f32;
+        residual / len
     }
 }
