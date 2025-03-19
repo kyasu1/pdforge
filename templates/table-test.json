@@ -3,18 +3,6 @@
     [
       {
         "name": "field1",
-        "type": "svg",
-        "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"500\" height=\"500\">\n<circle cx=\"250\" cy=\"250\" r=\"210\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"8\"/>\n</svg>\n",
-        "position": {
-          "x": 100,
-          "y": 150
-        },
-        "width": 50,
-        "height": 50,
-        "required": false
-      },
-      {
-        "name": "field1",
         "type": "table",
         "position": {
           "x": 10,
@@ -24,8 +12,28 @@
         "height": 52.932,
         "content": "[[\"Alice\",\"New York\",\"Alice is a freelance web designer and developer\"],[\"Bob\",\"Paris\",\"Bob is a freelance illustrator and graphic designer\"]]",
         "showHead": true,
-        "head": ["Name", "Party", "Generation"],
-        "headWidthPercentages": [80, 10, 10],
+        "head": [
+          "Name",
+          "Party",
+          "Generation"
+        ],
+        "headWidthPercentages": [
+          {
+            "content": "Name",
+            "percent": 80,
+            "alignment": "center"
+          },
+          {
+            "content": "Party",
+            "percent": 10,
+            "alignment": "center"
+          },
+          {
+            "content": "Generation",
+            "percent": 10,
+            "alignment": "right"
+          }
+        ],
         "tableStyles": {
           "borderWidth": 0.3,
           "borderColor": "#000000"
@@ -89,7 +97,7 @@
             },
             "width": 0,
             "height": 0,
-            "alignment": "justify",
+            "alignment": "center",
             "verticalAlign": "bottom",
             "fontName": "NotoSerif",
             "fontSize": 24
@@ -119,59 +127,243 @@
               "x": 0,
               "y": 0
             },
-            "alignment": "right",
+            "alignment": "center",
             "verticalAlign": "top",
             "fontName": "NotoSans",
             "fontSize": 24
           }
         ],
         "fields": [
-          ["George Washington", "Independent", "1"],
-          ["John Adams", "Federalist", "2"],
-          ["Thomas Jefferson", "Democratic-Republican", "3"],
-          ["James Madison", "Democratic-Republican", "4"],
-          ["James Monroe", "Democratic-Republican", "5"],
-          ["John Quincy Adams", "Democratic-Republican", "6"],
-          ["Andrew Jackson", "Democratic", "7"],
-          ["Martin Van Buren", "Democratic", "8"],
-          ["William Henry Harrison", "Whig", "9"],
-          ["John Tyler", "Whig", "10"],
-          ["James K. Polk", "Democratic", "11"],
-          ["Zachary Taylor", "Whig", "12"],
-          ["Millard Fillmore", "Whig", "13"],
-          ["Franklin Pierce", "Democratic", "14"],
-          ["James Buchanan", "Democratic", "15"],
-          ["Abraham Lincoln", "Republican", "16"],
-          ["Andrew Johnson", "National Union", "17"],
-          ["Ulysses S. Grant", "Republican", "18"],
-          ["Rutherford B. Hayes", "Republican", "19"],
-          ["James A. Garfield", "Republican", "20"],
-          ["Chester A. Arthur", "Republican", "21"],
-          ["Grover Cleveland", "Democratic", "22"],
-          ["Benjamin Harrison", "Republican", "23"],
-          ["Grover Cleveland", "Democratic", "24"],
-          ["William McKinley", "Republican", "25"],
-          ["Theodore Roosevelt", "Republican", "26"],
-          ["William Howard Taft", "Republican", "27"],
-          ["Woodrow Wilson", "Democratic", "28"],
-          ["Warren G. Harding", "Republican", "29"],
-          ["Calvin Coolidge", "Republican", "30"],
-          ["Herbert Hoover", "Republican", "31"],
-          ["Franklin D. Roosevelt", "Democratic", "32"],
-          ["Harry S. Truman", "Democratic", "33"],
-          ["Dwight D. Eisenhower", "Republican", "34"],
-          ["John F. Kennedy", "Democratic", "35"],
-          ["Lyndon B. Johnson", "Democratic", "36"],
-          ["Richard Nixon", "Republican", "37"],
-          ["Gerald Ford", "Republican", "38"],
-          ["Jimmy Carter", "Democratic", "39"],
-          ["Ronald Reagan", "Republican", "40"],
-          ["George H. W. Bush", "Republican", "41"],
-          ["Bill Clinton", "Democratic", "42"],
-          ["George W. Bush", "Republican", "43"],
-          ["Barack Obama", "Democratic", "44"],
-          ["Donald Trump", "Republican", "45"],
-          ["Joe Biden", "Democratic", "46"]
+          [
+            "George Washington",
+            "Independent",
+            "1"
+          ],
+          [
+            "John Adams",
+            "Federalist",
+            "2"
+          ],
+          [
+            "Thomas Jefferson",
+            "Democratic-Republican",
+            "3"
+          ],
+          [
+            "James Madison",
+            "Democratic-Republican",
+            "4"
+          ],
+          [
+            "James Monroe",
+            "Democratic-Republican",
+            "5"
+          ],
+          [
+            "John Quincy Adams",
+            "Democratic-Republican",
+            "6"
+          ],
+          [
+            "Andrew Jackson",
+            "Democratic",
+            "7"
+          ],
+          [
+            "Martin Van Buren",
+            "Democratic",
+            "8"
+          ],
+          [
+            "William Henry Harrison",
+            "Whig",
+            "9"
+          ],
+          [
+            "John Tyler",
+            "Whig",
+            "10"
+          ],
+          [
+            "James K. Polk",
+            "Democratic",
+            "11"
+          ],
+          [
+            "Zachary Taylor",
+            "Whig",
+            "12"
+          ],
+          [
+            "Millard Fillmore",
+            "Whig",
+            "13"
+          ],
+          [
+            "Franklin Pierce",
+            "Democratic",
+            "14"
+          ],
+          [
+            "James Buchanan",
+            "Democratic",
+            "15"
+          ],
+          [
+            "Abraham Lincoln",
+            "Republican",
+            "16"
+          ],
+          [
+            "Andrew Johnson",
+            "National Union",
+            "17"
+          ],
+          [
+            "Ulysses S. Grant",
+            "Republican",
+            "18"
+          ],
+          [
+            "Rutherford B. Hayes",
+            "Republican",
+            "19"
+          ],
+          [
+            "James A. Garfield",
+            "Republican",
+            "20"
+          ],
+          [
+            "Chester A. Arthur",
+            "Republican",
+            "21"
+          ],
+          [
+            "Grover Cleveland",
+            "Democratic",
+            "22"
+          ],
+          [
+            "Benjamin Harrison",
+            "Republican",
+            "23"
+          ],
+          [
+            "Grover Cleveland",
+            "Democratic",
+            "24"
+          ],
+          [
+            "William McKinley",
+            "Republican",
+            "25"
+          ],
+          [
+            "Theodore Roosevelt",
+            "Republican",
+            "26"
+          ],
+          [
+            "William Howard Taft",
+            "Republican",
+            "27"
+          ],
+          [
+            "Woodrow Wilson",
+            "Democratic",
+            "28"
+          ],
+          [
+            "Warren G. Harding",
+            "Republican",
+            "29"
+          ],
+          [
+            "Calvin Coolidge",
+            "Republican",
+            "30"
+          ],
+          [
+            "Herbert Hoover",
+            "Republican",
+            "31"
+          ],
+          [
+            "Franklin D. Roosevelt",
+            "Democratic",
+            "32"
+          ],
+          [
+            "Harry S. Truman",
+            "Democratic",
+            "33"
+          ],
+          [
+            "Dwight D. Eisenhower",
+            "Republican",
+            "34"
+          ],
+          [
+            "John F. Kennedy",
+            "Democratic",
+            "35"
+          ],
+          [
+            "Lyndon B. Johnson",
+            "Democratic",
+            "36"
+          ],
+          [
+            "Richard Nixon",
+            "Republican",
+            "37"
+          ],
+          [
+            "Gerald Ford",
+            "Republican",
+            "38"
+          ],
+          [
+            "Jimmy Carter",
+            "Democratic",
+            "39"
+          ],
+          [
+            "Ronald Reagan",
+            "Republican",
+            "40"
+          ],
+          [
+            "George H. W. Bush",
+            "Republican",
+            "41"
+          ],
+          [
+            "Bill Clinton",
+            "Democratic",
+            "42"
+          ],
+          [
+            "George W. Bush",
+            "Republican",
+            "43"
+          ],
+          [
+            "Barack Obama",
+            "Democratic",
+            "44"
+          ],
+          [
+            "Donald Trump",
+            "Republican",
+            "45"
+          ],
+          [
+            "Joe Biden",
+            "Democratic",
+            "46"
+          ]
         ]
       },
       {
@@ -352,7 +544,12 @@
   "basePdf": {
     "width": 210,
     "height": 297,
-    "padding": [20, 10, 20, 10]
+    "padding": [
+      20,
+      10,
+      20,
+      10
+    ]
   },
   "pdfmeVersion": "5.3.8"
 }

@@ -1,7 +1,7 @@
 use std::cmp::max;
 
 use super::{base::BaseSchema, BasePdf, InvalidColorStringSnafu, Schema};
-use super::{qrcode, SchemaTrait};
+use super::{qrcode, Frame, SchemaTrait, VerticalAlignment};
 use crate::font::FontMap;
 use crate::schemas::text;
 use crate::{
@@ -56,11 +56,11 @@ pub struct JsonHeadStyles {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonBodyStyles {
-    font_size: f32,
-    character_spacing: f32,
     alignment: Alignment,
-    line_height: f32,
+    vertical_alignment: VerticalAlignment,
     border_width: JsonSides,
+    border_color: String,
+    background_color: String,
     padding: JsonSides,
 }
 
@@ -102,6 +102,15 @@ impl TableStyles {
             border_color,
         })
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Cell {
+    schema: Schema,
+    height: Option<Mm>,
+    padding: Frame,
+    alignment: Alignment,
+    vertical_alignment: VerticalAlignment,
 }
 
 #[derive(Debug, Clone)]
@@ -205,18 +214,18 @@ impl Table {
 
             for (col_index, col) in row.into_iter().enumerate() {
                 let cell = self.columns[col_index].clone();
-                let width = cell_widths[col_index];
+                let cell_width = cell_widths[col_index];
                 match cell.clone() {
                     Schema::Text(mut schema) => {
                         schema.set_x(x);
                         schema.set_y(y_line_mm);
-                        schema.set_width(width);
+                        schema.set_width(cell_width);
                         schema.set_content(col.to_string());
 
                         let height = schema.get_height()?;
                         max_height = max(max_height, height);
 
-                        x += width;
+                        x += cell_width;
                         cols.push(Schema::Text(schema));
                     }
                     Schema::QrCode(mut qr_code) => {
@@ -224,7 +233,7 @@ impl Table {
                         qr_code.set_y(y_line_mm);
                         max_height = max(max_height, qr_code.get_height());
 
-                        x += width;
+                        x += cell_width;
                         cols.push(Schema::QrCode(qr_code));
                     }
                     _ => {
