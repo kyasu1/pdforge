@@ -11,10 +11,10 @@ use snafu::ResultExt;
 #[serde(rename_all = "camelCase")]
 pub struct JsonQrCodeSchema {
     name: String,
+    content: String,
     position: JsonPosition,
     width: f32,
     height: f32,
-    content: String,
 }
 
 #[derive(Debug, Clone)]

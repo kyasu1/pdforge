@@ -17,10 +17,14 @@ fn main() {
     let font_id = doc.add_font(&parsed_font);
     font_map.add_font(String::from("NotoSans"), font_id.clone(), &parsed_font);
 
-    let template =
-        rust_pdfme::schemas::Template::read_from_file("./templates/table-test.json", &font_map)
-            .unwrap();
-    let bytes = template.render(&mut doc).unwrap();
+    match rust_pdfme::schemas::Template::read_from_file("./templates/table-test.json", &font_map) {
+        Ok(template) => {
+            let bytes = template.render(&mut doc).unwrap();
 
-    std::fs::write("./simple.pdf", bytes).unwrap();
+            std::fs::write("./simple.pdf", bytes).unwrap();
+        }
+        Err(err) => {
+            println!("{}", err);
+        }
+    }
 }

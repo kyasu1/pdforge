@@ -28,8 +28,11 @@ pub enum Error {
         source: std::io::Error,
         filename: String,
     },
-    #[snafu(display("Could not parse json file"))]
-    TemplateDeserialize { source: serde_json::Error },
+    #[snafu(display("Could not parse json file {message}"))]
+    TemplateDeserialize {
+        source: serde_json::Error,
+        message: String,
+    },
 
     #[snafu(display("Invalid HEX color string specified"))]
     InvalidColorString { source: palette::rgb::FromHexError },
@@ -79,7 +82,9 @@ impl JsonTemplate {
         let file = File::open(filename).context(TemplateFileSnafu { filename })?;
         let reader = BufReader::new(file);
         let template: JsonTemplate =
-            serde_json::from_reader(reader).context(TemplateDeserializeSnafu)?;
+            serde_json::from_reader(reader).with_context(|e| TemplateDeserializeSnafu {
+                message: e.to_string(),
+            })?;
 
         Ok(template)
     }

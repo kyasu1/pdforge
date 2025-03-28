@@ -2,7 +2,7 @@ use std::cmp::max;
 
 use super::{base::BaseSchema, BasePdf, InvalidColorStringSnafu, Schema};
 use super::{qrcode, Frame, SchemaTrait, VerticalAlignment};
-use crate::font::FontMap;
+use crate::font::{FontMap, FontSize};
 use crate::schemas::text;
 use crate::{
     schemas::{Alignment, Error, JsonPosition},
@@ -18,7 +18,13 @@ use snafu::prelude::*;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct JsonColumnStyles {}
+pub struct JsonCellStyle {
+    schema: JsonSchema,
+    height: Option<f32>,
+    padding: JsonSides,
+    alignment: Alignment,
+    vertical_align: VerticalAlignment,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,7 +43,7 @@ pub struct JsonTableStyles {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-pub enum JsonColumn {
+pub enum JsonSchema {
     Text(text::JsonTextSchema),
     QrCode(qrcode::JsonQrCodeSchema),
 }
@@ -45,19 +51,21 @@ pub enum JsonColumn {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonHeadStyles {
+    percent: f32,
+    content: String,
     font_size: f32,
     character_spacing: f32,
     alignment: Alignment,
-    line_height: f32,
-    border_width: JsonSides,
-    padding: JsonSides,
+    // line_height: f32,
+    // border_width: JsonSides,
+    // padding: JsonSides,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonBodyStyles {
     alignment: Alignment,
-    vertical_alignment: VerticalAlignment,
+    vertical_align: VerticalAlignment,
     border_width: JsonSides,
     border_color: String,
     background_color: String,
@@ -73,15 +81,10 @@ pub struct JsonTableSchema {
     height: f32,
     content: String,
     show_head: bool,
-    head: Vec<String>,
-    head_width_percentages: Vec<f32>,
+    head_width_percentages: Vec<JsonHeadStyles>,
     table_styles: JsonTableStyles,
-    head_styles: JsonHeadStyles,
-    body_styles: JsonBodyStyles,
-    column_styles: JsonColumnStyles,
-
     //
-    columns: Vec<JsonColumn>,
+    columns: Vec<JsonCellStyle>,
     fields: Vec<Vec<String>>,
 }
 
@@ -110,7 +113,19 @@ pub struct Cell {
     height: Option<Mm>,
     padding: Frame,
     alignment: Alignment,
-    vertical_alignment: VerticalAlignment,
+    vertical_align: VerticalAlignment,
+}
+
+#[derive(Debug, Clone)]
+pub struct Head {
+    percent: f32,
+    content: String,
+    font_size: FontSize,
+    character_spacing: f32,
+    alignment: Alignment,
+    // line_height: f32,
+    // border_width: JsonSides,
+    // padding: JsonSides,
 }
 
 #[derive(Debug, Clone)]
@@ -119,9 +134,10 @@ pub struct Table {
     base: BaseSchema,
     content: String,
     show_head: bool,
-    head_width_percentages: Vec<f32>,
+    head_width_percentages: Vec<Head>,
     table_styles: TableStyles,
-    columns: Vec<Schema>,
+    // columns: Vec<Schema>,
+    columns: Vec<Cell>,
     fields: Vec<Vec<String>>,
 }
 
@@ -131,7 +147,7 @@ impl Table {
         self.head_width_percentages
             .clone()
             .into_iter()
-            .map(|percent| Mm(box_width.0 * percent / 100.0))
+            .map(|head| Mm(box_width.0 * head.percent / 100.0))
             .collect()
     }
 
@@ -159,15 +175,47 @@ impl Table {
         // };
         //
         //
-        if json.head_width_percentages.iter().sum::<f32>() != 100.0 {
+        if json
+            .head_width_percentages
+            .iter()
+            .map(|json| json.percent)
+            .sum::<f32>()
+            != 100.0
+        {
             whatever!("total of column width must be 100%");
         }
+        let heads = json
+            .head_width_percentages
+            .into_iter()
+            .map(|json| Head {
+                percent: json.percent,
+                content: json.content,
+                font_size: FontSize::Fixed(Pt(json.font_size)),
+                character_spacing: json.character_spacing,
+                alignment: json.alignment,
+            })
+            .collect();
 
         let mut columns = Vec::new();
         for json_column in json.columns {
-            let column = match json_column {
-                JsonColumn::Text(schema) => Schema::Text(text::Text::from_json(schema, font_map)?),
-                JsonColumn::QrCode(schema) => schema.into(),
+            let schema = match json_column.schema {
+                JsonSchema::Text(schema) => Schema::Text(text::Text::from_json(schema, font_map)?),
+                JsonSchema::QrCode(schema) => schema.into(),
+            };
+            let padding = Frame::try_from(vec![
+                json_column.padding.top,
+                json_column.padding.right,
+                json_column.padding.bottom,
+                json_column.padding.left,
+            ])
+            .with_whatever_context(|_| format!("table columns padding"))?;
+
+            let column = Cell {
+                schema,
+                height: json_column.height.map(|f| Mm(f)),
+                padding,
+                alignment: json_column.alignment,
+                vertical_align: json_column.vertical_align,
             };
 
             columns.push(column)
@@ -177,7 +225,7 @@ impl Table {
             base,
             content: json.content,
             show_head: json.show_head,
-            head_width_percentages: json.head_width_percentages,
+            head_width_percentages: heads,
             table_styles,
             columns,
             fields: json.fields.clone(),
@@ -208,25 +256,26 @@ impl Table {
 
         let mut pages = vec![];
         for row in self.fields.iter() {
-            let mut cols: Vec<Schema> = vec![];
+            let mut cols: Vec<Cell> = vec![];
             let mut x = self.base.x;
             let mut max_height = Mm(0.0);
 
             for (col_index, col) in row.into_iter().enumerate() {
-                let cell = self.columns[col_index].clone();
+                let mut cell = self.columns[col_index].clone();
                 let cell_width = cell_widths[col_index];
-                match cell.clone() {
+                match cell.schema.clone() {
                     Schema::Text(mut schema) => {
-                        schema.set_x(x);
+                        schema.set_x(x + cell.padding.left);
                         schema.set_y(y_line_mm);
-                        schema.set_width(cell_width);
+                        schema.set_width(cell_width - (cell.padding.left + cell.padding.right));
                         schema.set_content(col.to_string());
 
                         let height = schema.get_height()?;
                         max_height = max(max_height, height);
 
                         x += cell_width;
-                        cols.push(Schema::Text(schema));
+                        cell.schema = Schema::Text(schema);
+                        cols.push(cell);
                     }
                     Schema::QrCode(mut qr_code) => {
                         qr_code.set_x(x);
@@ -234,7 +283,8 @@ impl Table {
                         max_height = max(max_height, qr_code.get_height());
 
                         x += cell_width;
-                        cols.push(Schema::QrCode(qr_code));
+                        cell.schema = Schema::QrCode(qr_code);
+                        cols.push(cell);
                     }
                     _ => {
                         unimplemented!();
@@ -246,21 +296,21 @@ impl Table {
             if y_line_mm > y_bottom_mm {
                 internal_page_counter += 1;
                 // colsのyをリセットする必要がある
-                let updated: Vec<Schema> = cols
+                let updated: Vec<Cell> = cols
                     .into_iter()
                     .map(|mut col| {
-                        col.set_y(top_margin_in_mm);
-                        col.set_height(max_height);
+                        col.schema.set_y(top_margin_in_mm);
+                        col.schema.set_height(max_height);
                         return col;
                     })
                     .collect();
                 pages.push(vec![updated]);
                 y_line_mm = top_margin_in_mm + max_height;
             } else {
-                let updated: Vec<Schema> = cols
+                let updated: Vec<Cell> = cols
                     .into_iter()
                     .map(|mut col| {
-                        col.set_height(max_height);
+                        col.schema.set_height(max_height);
                         return col;
                     })
                     .collect();
@@ -282,9 +332,10 @@ impl Table {
 
         for (page_index, page) in pages.into_iter().enumerate() {
             for rows in page {
-                for (col_index, schema) in rows.into_iter().enumerate() {
-                    let base = schema.get_base();
-                    schema.render(base_pdf, None, doc, page_index, buffer)?;
+                for (col_index, cell) in rows.into_iter().enumerate() {
+                    let base = cell.schema.get_base();
+                    cell.schema
+                        .render(base_pdf, None, doc, page_index, buffer)?;
 
                     let width = cell_widths[col_index];
                     let rect = DrawRectangle {
@@ -313,7 +364,8 @@ impl Table {
                     // let ops = draw_rounded_rectangle(rect);
                     buffer.insert(page_index, ops);
 
-                    schema.render(base_pdf, None, doc, page_index, buffer)?;
+                    cell.schema
+                        .render(base_pdf, None, doc, page_index, buffer)?;
                 }
             }
         }
