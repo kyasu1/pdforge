@@ -61,7 +61,8 @@ impl FontSpec {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "type")]
+// #[serde(tag = "type")]
+#[serde(untagged)]
 pub enum JsonFontSize {
     Fixed(f32),
     Dynamic {
@@ -95,6 +96,13 @@ pub struct DynamicFontSize {
     min: Pt,
     max: Pt,
     fit: DynamicFontSizeFit,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum DynamicFontSizeFit {
+    Horizontal,
+    Vertical,
 }
 
 impl DynamicFontSize {
@@ -134,19 +142,13 @@ impl DynamicFontSize {
         self.min
     }
 
-    pub fn is_fit_verfical(&self) -> bool {
+    pub fn is_fit_vertical(&self) -> bool {
         self.fit == DynamicFontSizeFit::Vertical
     }
 
     pub fn is_fit_horizontal(&self) -> bool {
         self.fit == DynamicFontSizeFit::Horizontal
     }
-}
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum DynamicFontSizeFit {
-    Horizontal,
-    Vertical,
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]

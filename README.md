@@ -6,6 +6,8 @@ qpdf svg.pdf --stream-data=uncompress --decode-level=all --normalize-content=n -
 
 qpdf font.pdf --stream-data=uncompress --decode-level=all --normalize-content=n --qdf font-out.pdf
 
+https://pdfcrowd.com/inspect-pdf/
+
 CID Type 0C (OT)
 
 pdffonts font.pdf
@@ -130,3 +132,51 @@ Some(
 )
 Ok(Some(3))
 ```
+
+        let cmap_content = r##"%!PS-Adobe-3.0 Resource-CMap
+
+%%DocumentNeededResources: ProcSet (CIDInit)
+%%IncludeResource: ProcSet (CIDInit)
+%%BeginResource: CMap (FontSpecific-CMap)
+%%Title: (FontSpecific-CMap Adobe Identity 0)
+%%Version: 1.0
+%%EndComments
+
+/CIDInit /ProcSet findresource begin
+
+12 dict begin
+
+begincmap
+
+/CMapName /FontSpecific-CMap def
+/CMapType 1 def
+
+/CIDSystemInfo 3 dict dup begin
+/Registry (Adobe) def
+/Ordering (Identity) def
+/Supplement 0 def
+end def
+
+/WMode 0 def
+
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+
+7 begincidchar
+<0001> 1
+<0002> 34
+<0003> 35
+<0004> 36
+<0005> 37
+<0006> 20616
+<0007> 21156
+endcidchar
+
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+"##;
+
+Adobe Acrobat / Safari / Preview.app (Mac)

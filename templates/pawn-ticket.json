@@ -1,0 +1,308 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "name",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 0
+                },
+                "required": false,
+                "content": "{{name}} 様",
+                "width": 58.928,
+                "height": 4.064,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": {
+                    "min": 4,
+                    "max": 72,
+                    "fit": "vertical"
+                },
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "pawnDate",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 4.1
+                },
+                "required": false,
+                "content": "質契約日 {{pawnDate}}",
+                "width": 58.928,
+                "height": 4.064,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 10,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "expiryDateBackground",
+                "type": "rectangle",
+                "position": {
+                    "x": 1,
+                    "y": 8.1
+                },
+                "width": 34,
+                "height": 4.4,
+                "rotate": 0,
+                "opacity": 1,
+                "borderWidth": 1,
+                "borderColor": "#000000",
+                "color": "#000000",
+                "readOnly": true,
+                "radius": 10,
+                "required": false
+            },
+            {
+                "name": "expiryDate",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 8.2
+                },
+                "required": false,
+                "content": "流質期限 {{expiryDate}}",
+                "width": 58.928,
+                "height": 4.064,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 10,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#FFFFFF",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "amount",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 12.6
+                },
+                "required": false,
+                "content": "金額 {{amount}}円",
+                "width": 58.928,
+                "height": 4.064,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 10,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "interest",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 16.8
+                },
+                "required": false,
+                "content": "質料 {{interest}}/月",
+                "width": 58.928,
+                "height": 4.064,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 10,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "count",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 21
+                },
+                "required": false,
+                "content": "数量 {{count}}点",
+                "width": 58.928,
+                "height": 4.064,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 10,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "item",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 25.2
+                },
+                "required": false,
+                "content": "{{item}}",
+                "width": 58.928,
+                "height": 8,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": {
+                    "min": 8,
+                    "max": 10,
+                    "fit": "vertical"
+                },
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "message1",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 33.6
+                },
+                "required": false,
+                "content": "{{message1}}",
+                "width": 58.928,
+                "height": 8,
+                "rotate": 0,
+                "alignment": "center",
+                "verticalAlignment": "top",
+                "fontSize": {
+                    "min": 8,
+                    "max": 10,
+                    "fit": "vertical"
+                },
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "message2",
+                "type": "text",
+                "position": {
+                    "x": 1.016,
+                    "y": 37.8
+                },
+                "required": false,
+                "content": "{{message2}}",
+                "width": 58.928,
+                "height": 8,
+                "rotate": 0,
+                "alignment": "center",
+                "verticalAlignment": "top",
+                "fontSize": {
+                    "min": 8,
+                    "max": 10,
+                    "fit": "vertical"
+                },
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "pawnSequence",
+                "type": "text",
+                "position": {
+                    "x": 42,
+                    "y": 16.8
+                },
+                "required": false,
+                "content": "{{pawnSequence}}",
+                "width": 20,
+                "height": 8,
+                "rotate": 0,
+                "alignment": "center",
+                "verticalAlignment": "top",
+                "fontSize": {
+                    "min": 8,
+                    "max": 10,
+                    "fit": "vertical"
+                },
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "qrCode",
+                "type": "qrCode",
+                "position": {
+                    "x": 45,
+                    "y": 16
+                },
+                "required": false,
+                "content": "{{qrCode}}",
+                "width": 10,
+                "height": 10,
+                "rotate": 0,
+                "alignment": "center",
+                "verticalAlignment": "top",
+                "fontSize": 24,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSans",
+                "backgroundColor": "",
+                "opacity": 1,
+                "readOnly": false
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 60.96,
+        "height": 44.02666666667,
+        "padding": [
+            0,
+            0,
+            0,
+            0
+        ]
+    },
+    "pdfmeVersion": "5.3.5"
+}

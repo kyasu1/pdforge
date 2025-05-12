@@ -1,5 +1,5 @@
-use super::{Alignment, BasePdf, VerticalAlignment};
-use crate::font::{FontMap, FontSize, FontSpec};
+use super::{Alignment, BasePdf, InvalidColorSnafu, VerticalAlignment};
+use crate::font::{DynamicFontSize, FontMap, FontSize, FontSpec, JsonFontSize};
 use crate::schemas::base::BaseSchema;
 use crate::schemas::{Error, FontSnafu, JsonPosition, TextUtil};
 use crate::utils::OpBuffer;
@@ -20,7 +20,8 @@ pub struct JsonTextSchema {
     vertical_alignment: Option<VerticalAlignment>,
     character_spacing: Option<f32>,
     line_height: Option<f32>,
-    font_size: Option<f32>,
+    font_size: JsonFontSize,
+    font_color: String,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +35,7 @@ pub struct Text {
     font_size: FontSize,
     font_id: FontId,
     font_spec: FontSpec,
+    font_color: csscolorparser::Color,
 }
 
 impl Text {
@@ -63,6 +65,9 @@ impl Text {
             font_size: FontSize::Fixed(font_size),
             font_id: font_id.clone(),
             font_spec: font_spec.clone(),
+            font_color: "#000"
+                .parse::<csscolorparser::Color>()
+                .context(InvalidColorSnafu)?,
         })
     }
 
@@ -87,13 +92,17 @@ impl Text {
         let character_spacing = json.character_spacing.map(|f| Pt(f)).unwrap_or(Pt(0.0));
         let line_height = json.line_height;
         let font_size = match json.font_size {
-            Some(f) => FontSize::Fixed(Pt(f)),
-            None => {
-                unimplemented!()
+            JsonFontSize::Dynamic { min, max, fit } => {
+                FontSize::Dynamic(DynamicFontSize::new(Pt(min), Pt(max), fit))
             }
+            JsonFontSize::Fixed(f) => FontSize::Fixed(Pt(f)),
         };
+
         let alignment = json.alignment.unwrap_or(Alignment::Left);
         let vertical_alignment = json.vertical_alignment.unwrap_or(VerticalAlignment::Top);
+
+        let font_color = csscolorparser::parse(&json.font_color).context(InvalidColorSnafu)?;
+
         let text = Text {
             base,
             content: json.content,
@@ -104,6 +113,7 @@ impl Text {
             font_size,
             font_id: font_id.clone(),
             font_spec: font_spec.clone(),
+            font_color,
         };
 
         Ok(text)
@@ -126,32 +136,33 @@ impl Text {
         )?;
 
         let line_height: Pt = font_size * self.line_height.unwrap_or(1.0);
+        let line_height_in_mm: Mm = line_height.into();
         let total_height: Pt = line_height * (splitted_paragraphs.len() as f32);
 
         let y_offset: Mm = match self.vertical_alignment {
-            VerticalAlignment::Top => self.get_base().height - total_height.into(),
+            VerticalAlignment::Top => Mm(0.0),
             VerticalAlignment::Middle => (self.get_base().height - total_height.into()) / 2.0,
-            VerticalAlignment::Bottom => Mm(0.0),
+            VerticalAlignment::Bottom => self.get_base().height - total_height.into(),
         };
 
         let mut ops: Vec<Op> = vec![
-            Op::StartTextSection,
-            Op::SetLineHeight { lh: line_height },
-            Op::SetFillColor {
-                col: Color::Rgb(Rgb {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    icc_profile: None,
-                }),
-            },
-            Op::SetFontSize {
-                size: font_size.clone(),
-                font: self.font_id.clone(),
-            },
+            // Op::StartTextSection,
+            // Op::SetLineHeight { lh: line_height },
+            // Op::SetFillColor {
+            //     col: Color::Rgb(Rgb {
+            //         r: 0.0,
+            //         g: 0.0,
+            //         b: 0.0,
+            //         icc_profile: None,
+            //     }),
+            // },
+            // Op::SetFontSize {
+            //     size: font_size.clone(),
+            //     font: self.font_id.clone(),
+            // },
         ];
 
-        for line in splitted_paragraphs {
+        for (index, line) in splitted_paragraphs.iter().enumerate() {
             let line_width: Mm = self
                 .font_spec
                 .width_of_text_at_size(line.clone(), font_size, self.character_spacing)
@@ -179,11 +190,29 @@ impl Text {
                 _ => self.character_spacing,
             };
 
+            let y = (base_pdf.height
+                - (self.base.y + y_offset)
+                - line_height_in_mm * (index as i32 + 1) as f32);
+
             let line_ops = vec![
+                Op::StartTextSection,
+                Op::SetLineHeight { lh: line_height },
+                Op::SetFillColor {
+                    col: Color::Rgb(Rgb {
+                        r: self.font_color.r,
+                        g: self.font_color.g,
+                        b: self.font_color.b,
+                        icc_profile: None,
+                    }),
+                },
+                Op::SetFontSize {
+                    size: font_size.clone(),
+                    font: self.font_id.clone(),
+                },
                 Op::SetTextCursor {
                     pos: Point {
                         x: x_line.into(),
-                        y: (base_pdf.height - self.base.y + y_offset).into(),
+                        y: y.into(),
                     },
                 },
                 Op::SetCharacterSpacing {
@@ -191,15 +220,16 @@ impl Text {
                     multiplier: character_spacing.0,
                 },
                 Op::WriteText {
-                    items: vec![TextItem::Text(line)],
+                    items: vec![TextItem::Text(line.clone())],
                     font: self.font_id.clone(),
                 },
-                Op::AddLineBreak,
+                // Op::AddLineBreak,
+                Op::EndTextSection,
             ];
             ops.extend_from_slice(&line_ops);
         }
 
-        ops.extend_from_slice(&[Op::EndTextSection]);
+        // ops.extend_from_slice(&[Op::EndTextSection]);
         buffer.insert(current_page, ops);
 
         Ok(())
@@ -238,9 +268,9 @@ impl Text {
     fn get_font_size(&self) -> Result<Pt, Error> {
         match self.font_size.clone() {
             FontSize::Fixed(font_size) => Ok(font_size),
-            FontSize::Dynamic(dynamic) => TextUtil::calculate_dynamic_font_size(
+            FontSize::Dynamic(dynamic_font_size) => TextUtil::calculate_dynamic_font_size(
                 &self.font_spec,
-                dynamic,
+                dynamic_font_size,
                 self.line_height,
                 self.character_spacing,
                 self.base.width,

@@ -2,6 +2,7 @@ pub mod base;
 pub mod dynamic_text;
 pub mod image;
 pub mod qrcode;
+pub mod rect;
 pub mod svg;
 pub mod table;
 pub mod text;
@@ -9,11 +10,10 @@ pub mod text;
 use crate::font::{self, DynamicFontSize, FontMap, FontSpec};
 use crate::utils::OpBuffer;
 use base::BaseSchema;
-use dynamic_text::DynamicText;
 use icu_segmenter::WordSegmenter;
 use printpdf::*;
 use printpdf::{Mm, PdfDocument, PdfPage, PdfSaveOptions};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use snafu::prelude::*;
 use std::cmp::max;
 use std::fs::File;
@@ -43,6 +43,10 @@ pub enum Error {
     #[snafu(display("Invalid BasePDF"))]
     InvalidBasePdf,
 
+    InvalidColor {
+        source: csscolorparser::ParseColorError,
+    },
+
     #[snafu(whatever, display("{message}"))]
     Whatever {
         message: String,
@@ -60,9 +64,10 @@ enum JsonSchema {
     QrCode(qrcode::JsonQrCodeSchema),
     Image(image::JsonImageSchema),
     Svg(svg::JsonSvgSchema),
+    Rectangle(rect::JsonRectSchema),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct JsonBasePdf {
     width: f32,
     height: f32,
@@ -82,6 +87,27 @@ impl JsonTemplate {
         let file = File::open(filename).context(TemplateFileSnafu { filename })?;
         let reader = BufReader::new(file);
         let template: JsonTemplate =
+            serde_json::from_reader(reader).with_context(|e| TemplateDeserializeSnafu {
+                message: e.to_string(),
+            })?;
+
+        Ok(template)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonTemplate2 {
+    schemas: Vec<serde_json::Value>,
+    base_pdf: JsonBasePdf,
+    #[serde(rename = "pdfmeVersion")]
+    version: String,
+}
+impl JsonTemplate2 {
+    fn read_from_file(filename: &str) -> Result<JsonTemplate2, Error> {
+        let file = File::open(filename).context(TemplateFileSnafu { filename })?;
+        let reader = BufReader::new(file);
+        let template: JsonTemplate2 =
             serde_json::from_reader(reader).with_context(|e| TemplateDeserializeSnafu {
                 message: e.to_string(),
             })?;
@@ -118,6 +144,7 @@ pub enum Schema {
     QrCode(qrcode::QrCode),
     Image(image::Image),
     Svg(svg::Svg),
+    Rect(rect::Rect),
 }
 
 impl Schema {
@@ -129,6 +156,7 @@ impl Schema {
             Schema::QrCode(qr_code) => qr_code.get_base(),
             Schema::Image(image) => image.get_base(),
             Schema::Svg(svg) => svg.get_base(),
+            Schema::Rect(rect) => rect.get_base(),
         }
     }
 }
@@ -162,6 +190,10 @@ impl SchemaTrait for Schema {
             }
             Schema::Svg(svg) => {
                 svg.render(&base_pdf, doc, page, buffer)?;
+                Ok((page, current_top_mm))
+            }
+            Schema::Rect(rect) => {
+                rect.render(&base_pdf, doc, page, buffer)?;
                 Ok((page, current_top_mm))
             }
         }
@@ -229,6 +261,78 @@ pub struct Template {
 }
 
 impl Template {
+    pub fn pages(&self) -> Vec<Schema> {
+        self.schemas
+            .iter()
+            .flat_map(|page| page.iter().cloned())
+            .collect()
+    }
+}
+
+impl Template {
+    pub fn from_str(
+        font_map: &FontMap,
+        filename: &str,
+        inputs: Vec<tera::Context>,
+    ) -> Result<Template, Error> {
+        let raw = std::fs::read_to_string(filename).context(TemplateFileSnafu { filename })?;
+
+        let pre: JsonTemplate2 = serde_json::from_str(&raw).context(TemplateDeserializeSnafu {
+            message: "Failed to parse JSON",
+        })?;
+
+        let schema = serde_json::to_string(&pre.schemas[0]).unwrap();
+
+        let mut tera = tera::Tera::default();
+        tera.add_raw_template("schema_template", &schema).unwrap();
+
+        let mut schemas: Vec<Vec<JsonSchema>> = Vec::new();
+        for context in inputs {
+            let rendered = tera.render("schema_template", &context).unwrap();
+            let parsed: Vec<JsonSchema> = serde_json::from_str(&rendered).unwrap();
+            schemas.push(parsed);
+        }
+
+        let json = JsonTemplate {
+            schemas,
+            base_pdf: pre.base_pdf.clone(),
+            version: pre.version.clone(),
+        };
+
+        let base_pdf = BasePdf {
+            width: Mm(json.base_pdf.width),
+            height: Mm(json.base_pdf.height),
+            padding: json.base_pdf.padding.try_into()?,
+        };
+        let schemas = json
+            .schemas
+            .into_iter()
+            .map(|page| {
+                page.into_iter()
+                    .map(|schema| match schema {
+                        JsonSchema::Text(s) => Schema::Text(Text::from_json(s, font_map).unwrap()),
+                        JsonSchema::DynamicText(s) => Schema::DynamicText(
+                            dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
+                        ),
+                        JsonSchema::Table(json) => {
+                            Schema::Table(Table::from_json(json, font_map, &base_pdf).unwrap())
+                        }
+                        JsonSchema::QrCode(json) => json.into(),
+                        JsonSchema::Image(json) => json.try_into().unwrap(),
+                        JsonSchema::Svg(json) => json.try_into().unwrap(),
+                        JsonSchema::Rectangle(json) => json.try_into().unwrap(),
+                    })
+                    .collect()
+            })
+            .collect();
+        let template = Template {
+            schemas,
+            base_pdf,
+            version: json.version,
+        };
+        Ok(template)
+    }
+
     pub fn read_from_file(filename: &str, font_map: &FontMap) -> Result<Template, Error> {
         let json = JsonTemplate::read_from_file(filename)?;
 
@@ -253,6 +357,7 @@ impl Template {
                         JsonSchema::QrCode(json) => json.into(),
                         JsonSchema::Image(json) => json.try_into().unwrap(),
                         JsonSchema::Svg(json) => json.try_into().unwrap(),
+                        JsonSchema::Rectangle(json) => json.try_into().unwrap(),
                     })
                     .collect()
             })
@@ -292,15 +397,17 @@ impl Template {
                     Schema::Svg(obj) => {
                         obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?
                     }
+                    Schema::Rect(obj) => {
+                        obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?
+                    }
                 }
-
-                println!("page {} next_y {:?}", p, y);
             }
         }
 
         let mut pages: Vec<PdfPage> = Vec::new();
+
         for ops in buffer.buffer {
-            let page = PdfPage::new(Mm(210.0), Mm(297.0), ops.to_vec());
+            let page = PdfPage::new(self.base_pdf.width, self.base_pdf.height, ops.to_vec());
             pages.push(page)
         }
 
@@ -467,7 +574,7 @@ impl TextUtil {
         height: Mm,
         content: &str,
     ) -> Result<Pt, Error> {
-        let mut font_size = dynamic.get_min();
+        let mut font_size: Pt = dynamic.get_min();
         let (mut total_width_in_mm, mut total_height_in_mm) = Self::calculate_constraints(
             font,
             font_size,
@@ -495,7 +602,7 @@ impl TextUtil {
                 dynamic.clone(),
                 content,
             )?;
-            if new_total_height_in_mm <= total_height_in_mm {
+            if new_total_height_in_mm < width {
                 total_width_in_mm = new_total_width_in_mm;
                 total_height_in_mm = new_total_height_in_mm
             } else {
@@ -551,7 +658,7 @@ impl TextUtil {
         )?;
 
         for (line_index, line) in splitted_paragraphs.into_iter().enumerate() {
-            if dynamic.is_fit_verfical() {
+            if dynamic.is_fit_vertical() {
                 let text_width = font
                     .width_of_text_at_size(line.replace("\n", ""), font_size, character_spacing)
                     .context(FontSnafu)?;

@@ -1,26 +1,23 @@
-use std::io::Write;
-
 use printpdf::*;
 
 fn main() {
     let mut doc = PdfDocument::new("TEST");
 
     // let font_slice = include_bytes!("../assets/fonts/NotoSansCJKjp-Regular.otf");
-    let font_slice = include_bytes!("../assets/fonts/NotoSansJP-Regular.ttf");
+    let font_slice = include_bytes!("../assets/fonts/NotoSansJP-Regular.otf");
 
     let parsed_font = ParsedFont::from_bytes(font_slice, 0, &mut vec![]).unwrap();
     let font_id = doc.add_font(&parsed_font);
 
     let texts = [
-        "日本ABCD",
-        // "中文［sighs］",
-        // "中文Aah!",
-        // "中文HOME Sweet Home.",
-        // "中文Well, time for breakfast.",
-        // "中文［sniffing］",
-        // "中文［sighing］ Ah!",
-        // "日本語 中国語 韓国語",
-        // "ab",
+        "日本語 中国語 韓国語",
+        "012 abc ABC XYZ   @#$",
+        "中文［sighs］",
+        "中文Aah!",
+        "中文HOME Sweet Home.",
+        "中文Well, time for breakfast.",
+        "中文［sniffing］",
+        "中文［sighing］ Ah!",
     ];
 
     let mut ops = vec![
