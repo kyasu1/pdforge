@@ -106,7 +106,7 @@
               "height": 0,
               "alignment": "center",
               "verticalAlign": "bottom",
-              "fontName": "NotoSerif",
+              "fontName": "NotoSerifJP",
               "fontSize": 24
             },
             "height": 5.0,
@@ -154,7 +154,7 @@
               },
               "alignment": "center",
               "verticalAlign": "top",
-              "fontName": "NotoSans",
+              "fontName": "NotoSansJP",
               "fontSize": 24
             },
             "height": 5.0,
@@ -419,7 +419,7 @@
         "lineHeight": 1,
         "characterSpacing": 0,
         "fontColor": "#000000",
-        "fontName": "NotoSans",
+        "fontName": "NotoSansJP",
         "backgroundColor": "",
         "opacity": 1,
         "readOnly": false
@@ -442,7 +442,7 @@
         "lineHeight": 1,
         "characterSpacing": 0,
         "fontColor": "#000000",
-        "fontName": "NotoSerif",
+        "fontName": "NotoSerifJP",
         "backgroundColor": "",
         "opacity": 1,
         "readOnly": false
@@ -465,7 +465,7 @@
         "lineHeight": 1,
         "characterSpacing": 0,
         "fontColor": "#000000",
-        "fontName": "NotoSerif",
+        "fontName": "NotoSerifJP",
         "backgroundColor": "",
         "opacity": 1,
         "readOnly": false
@@ -488,7 +488,7 @@
         "lineHeight": 1,
         "characterSpacing": 0,
         "fontColor": "#000000",
-        "fontName": "NotoSans",
+        "fontName": "NotoSansJP",
         "backgroundColor": "",
         "opacity": 1,
         "readOnly": false
@@ -511,7 +511,7 @@
         "lineHeight": 1,
         "characterSpacing": 0,
         "fontColor": "#000000",
-        "fontName": "NotoSans",
+        "fontName": "NotoSansJP",
         "backgroundColor": "",
         "opacity": 1,
         "readOnly": false
@@ -534,7 +534,7 @@
         "lineHeight": 1,
         "characterSpacing": 0,
         "fontColor": "#000000",
-        "fontName": "NotoSans",
+        "fontName": "NotoSansJP",
         "backgroundColor": "",
         "opacity": 1,
         "readOnly": false
@@ -557,7 +557,7 @@
         "lineHeight": 1,
         "characterSpacing": 0,
         "fontColor": "#000000",
-        "fontName": "NotoSans",
+        "fontName": "NotoSansJP",
         "backgroundColor": "",
         "opacity": 1,
         "readOnly": false

@@ -16,8 +16,11 @@ use printpdf::{Mm, PdfDocument, PdfPage, PdfSaveOptions};
 use serde::{Deserialize, Serialize};
 use snafu::prelude::*;
 use std::cmp::max;
+use std::collections::HashMap;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::BufReader;
+use std::task::Context;
 use table::Table;
 use text::Text;
 
@@ -74,26 +77,26 @@ struct JsonBasePdf {
     padding: Vec<f32>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct JsonTemplate {
-    schemas: Vec<Vec<JsonSchema>>,
-    base_pdf: JsonBasePdf,
-    #[serde(rename = "pdfmeVersion")]
-    version: String,
-}
-impl JsonTemplate {
-    fn read_from_file(filename: &str) -> Result<JsonTemplate, Error> {
-        let file = File::open(filename).context(TemplateFileSnafu { filename })?;
-        let reader = BufReader::new(file);
-        let template: JsonTemplate =
-            serde_json::from_reader(reader).with_context(|e| TemplateDeserializeSnafu {
-                message: e.to_string(),
-            })?;
+// #[derive(Debug, Clone, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// struct JsonTemplate {
+//     schemas: Vec<Vec<JsonSchema>>,
+//     base_pdf: JsonBasePdf,
+//     #[serde(rename = "pdfmeVersion")]
+//     version: String,
+// }
+// impl JsonTemplate {
+//     fn read_from_file(filename: &str) -> Result<JsonTemplate, Error> {
+//         let file = File::open(filename).context(TemplateFileSnafu { filename })?;
+//         let reader = BufReader::new(file);
+//         let template: JsonTemplate =
+//             serde_json::from_reader(reader).with_context(|e| TemplateDeserializeSnafu {
+//                 message: e.to_string(),
+//             })?;
 
-        Ok(template)
-    }
-}
+//         Ok(template)
+//     }
+// }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -222,10 +225,6 @@ impl SchemaTrait for Schema {
     }
 }
 
-// impl Schema {
-//     pub from_json()
-// }
-
 #[derive(Debug, Clone)]
 pub struct BasePdf {
     width: Mm,
@@ -261,19 +260,10 @@ pub struct Template {
 }
 
 impl Template {
-    pub fn pages(&self) -> Vec<Schema> {
-        self.schemas
-            .iter()
-            .flat_map(|page| page.iter().cloned())
-            .collect()
-    }
-}
-
-impl Template {
-    pub fn from_str(
+    pub fn read_from_file(
         font_map: &FontMap,
         filename: &str,
-        inputs: Vec<tera::Context>,
+        inputs: Vec<HashMap<&'static str, String>>,
     ) -> Result<Template, Error> {
         let raw = std::fs::read_to_string(filename).context(TemplateFileSnafu { filename })?;
 
@@ -287,25 +277,22 @@ impl Template {
         tera.add_raw_template("schema_template", &schema).unwrap();
 
         let mut schemas: Vec<Vec<JsonSchema>> = Vec::new();
-        for context in inputs {
+        for input in inputs {
+            let mut context = tera::Context::new();
+            for (key, value) in input.iter() {
+                context.insert(*key, value);
+            }
             let rendered = tera.render("schema_template", &context).unwrap();
             let parsed: Vec<JsonSchema> = serde_json::from_str(&rendered).unwrap();
             schemas.push(parsed);
         }
 
-        let json = JsonTemplate {
-            schemas,
-            base_pdf: pre.base_pdf.clone(),
-            version: pre.version.clone(),
-        };
-
         let base_pdf = BasePdf {
-            width: Mm(json.base_pdf.width),
-            height: Mm(json.base_pdf.height),
-            padding: json.base_pdf.padding.try_into()?,
+            width: Mm(pre.base_pdf.width),
+            height: Mm(pre.base_pdf.height),
+            padding: pre.base_pdf.padding.try_into()?,
         };
-        let schemas = json
-            .schemas
+        let schemas = schemas
             .into_iter()
             .map(|page| {
                 page.into_iter()
@@ -328,47 +315,47 @@ impl Template {
         let template = Template {
             schemas,
             base_pdf,
-            version: json.version,
+            version: pre.version,
         };
         Ok(template)
     }
 
-    pub fn read_from_file(filename: &str, font_map: &FontMap) -> Result<Template, Error> {
-        let json = JsonTemplate::read_from_file(filename)?;
+    // pub fn read_from_file(filename: &str, font_map: &FontMap) -> Result<Template, Error> {
+    //     let json = JsonTemplate::read_from_file(filename)?;
 
-        let base_pdf = BasePdf {
-            width: Mm(json.base_pdf.width),
-            height: Mm(json.base_pdf.height),
-            padding: json.base_pdf.padding.try_into()?,
-        };
-        let schemas = json
-            .schemas
-            .into_iter()
-            .map(|page| {
-                page.into_iter()
-                    .map(|schema| match schema {
-                        JsonSchema::Text(s) => Schema::Text(Text::from_json(s, font_map).unwrap()),
-                        JsonSchema::DynamicText(s) => Schema::DynamicText(
-                            dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
-                        ),
-                        JsonSchema::Table(json) => {
-                            Schema::Table(Table::from_json(json, font_map, &base_pdf).unwrap())
-                        }
-                        JsonSchema::QrCode(json) => json.into(),
-                        JsonSchema::Image(json) => json.try_into().unwrap(),
-                        JsonSchema::Svg(json) => json.try_into().unwrap(),
-                        JsonSchema::Rectangle(json) => json.try_into().unwrap(),
-                    })
-                    .collect()
-            })
-            .collect();
-        let template = Template {
-            schemas,
-            base_pdf,
-            version: json.version,
-        };
-        Ok(template)
-    }
+    //     let base_pdf = BasePdf {
+    //         width: Mm(json.base_pdf.width),
+    //         height: Mm(json.base_pdf.height),
+    //         padding: json.base_pdf.padding.try_into()?,
+    //     };
+    //     let schemas = json
+    //         .schemas
+    //         .into_iter()
+    //         .map(|page| {
+    //             page.into_iter()
+    //                 .map(|schema| match schema {
+    //                     JsonSchema::Text(s) => Schema::Text(Text::from_json(s, font_map).unwrap()),
+    //                     JsonSchema::DynamicText(s) => Schema::DynamicText(
+    //                         dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
+    //                     ),
+    //                     JsonSchema::Table(json) => {
+    //                         Schema::Table(Table::from_json(json, font_map, &base_pdf).unwrap())
+    //                     }
+    //                     JsonSchema::QrCode(json) => json.into(),
+    //                     JsonSchema::Image(json) => json.try_into().unwrap(),
+    //                     JsonSchema::Svg(json) => json.try_into().unwrap(),
+    //                     JsonSchema::Rectangle(json) => json.try_into().unwrap(),
+    //                 })
+    //                 .collect()
+    //         })
+    //         .collect();
+    //     let template = Template {
+    //         schemas,
+    //         base_pdf,
+    //         version: json.version,
+    //     };
+    //     Ok(template)
+    // }
 
     pub fn render(&self, mut doc: &mut PdfDocument) -> Result<Vec<u8>, Error> {
         let mut buffer = OpBuffer::default();

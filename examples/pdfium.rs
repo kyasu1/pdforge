@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use base64::prelude::*;
 use pdfium_render::prelude::*;
-use printpdf::{ParsedFont, PdfParseErrorSeverity};
+use printpdf::ParsedFont;
 use rust_pdfme::font::*;
 
 fn main() -> Result<(), PdfiumError> {
@@ -19,46 +21,46 @@ fn main() -> Result<(), PdfiumError> {
     let font_id = doc.add_font(&parsed_font);
     font_map.add_font(String::from("NotoSansJP"), font_id.clone(), &parsed_font);
 
-    let mut contexts = vec![];
+    let mut inputs = vec![];
 
-    let mut context = tera::Context::new();
-    context.insert("name", "小松原 康行");
-    context.insert("pawnDate", "2025-05-10");
-    context.insert("expiryDate", "2025-08-10");
-    context.insert("amount", "50,000");
-    context.insert("interest", "5%(2,500円)");
-    context.insert("count", "1");
-    context.insert("item", "K18 ネックレス 5.2g");
-    context.insert("message1", "夏季休業 Summer Holiday");
-    context.insert("message2", "2025-07-30 ~ 2025-08-06");
-    context.insert("pawnSequence", "31-0001");
-    context.insert(
+    let mut input: HashMap<&'static str, String> = HashMap::new();
+    input.insert("name", "小松原 康行".to_string());
+    input.insert("pawnDate", "2025-05-10".to_string());
+    input.insert("expiryDate", "2025-08-10".to_string());
+    input.insert("amount", "50,000".to_string());
+    input.insert("interest", "5%(2,500円)".to_string());
+    input.insert("count", "1".to_string());
+    input.insert("item", "K18 ネックレス 5.2g".to_string());
+    input.insert("message1", "夏季休業 Summer Holiday".to_string());
+    input.insert("message2", "2025-07-30 ~ 2025-08-06".to_string());
+    input.insert("pawnSequence", "31-0001".to_string());
+    input.insert(
         "qrCode",
-        &BASE64_STANDARD.encode(r##"{"c": "31-0001", "p": "31-0001"}"##),
+        BASE64_STANDARD.encode(r##"{"c": "31-0001", "p": "31-0001"}"##),
     );
-    contexts.push(context);
+    inputs.push(input);
 
-    let mut context = tera::Context::new();
-    context.insert("name", "佐々木 ローズマリー");
-    context.insert("pawnDate", "2025-03-10");
-    context.insert("expiryDate", "");
-    context.insert("amount", "350,000");
-    context.insert("interest", "4%(14,000円)");
-    context.insert("count", "2");
-    context.insert("item", "K18 ネックレス・ブレスレット 箱付き");
-    context.insert("message1", "夏季休業 Summer Holiday");
-    context.insert("message2", "2025-07-30 ~ 2025-08-06");
-    context.insert("pawnSequence", "25-0001");
-    context.insert(
+    let mut input: HashMap<&'static str, String> = HashMap::new();
+    input.insert("name", "佐々木 ローズマリー".to_string());
+    input.insert("pawnDate", "2025-03-10".to_string());
+    input.insert("expiryDate", "".to_string());
+    input.insert("amount", "350,000".to_string());
+    input.insert("interest", "4%(14,000円)".to_string());
+    input.insert("count", "2".to_string());
+    input.insert("item", "K18 ネックレス・ブレスレット 箱付き".to_string());
+    input.insert("message1", "夏季休業 Summer Holiday".to_string());
+    input.insert("message2", "2025-07-30 ~ 2025-08-06".to_string());
+    input.insert("pawnSequence", "25-0001".to_string());
+    input.insert(
         "qrCode",
-        &BASE64_STANDARD.encode(r##"{"c": "25-0001", "p": "25-0001"}"##),
+        BASE64_STANDARD.encode(r##"{"c": "25-0001", "p": "25-0001"}"##),
     );
-    contexts.push(context);
+    inputs.push(input);
 
-    match rust_pdfme::schemas::Template::from_str(
+    match rust_pdfme::schemas::Template::read_from_file(
         &font_map,
         "./templates/pawn-ticket.json",
-        contexts,
+        inputs,
     ) {
         Ok(template) => {
             let bytes = template.render(&mut doc).unwrap();

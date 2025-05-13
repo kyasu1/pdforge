@@ -21,7 +21,7 @@ pub struct JsonTextSchema {
     character_spacing: Option<f32>,
     line_height: Option<f32>,
     font_size: JsonFontSize,
-    font_color: String,
+    font_color: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -101,7 +101,8 @@ impl Text {
         let alignment = json.alignment.unwrap_or(Alignment::Left);
         let vertical_alignment = json.vertical_alignment.unwrap_or(VerticalAlignment::Top);
 
-        let font_color = csscolorparser::parse(&json.font_color).context(InvalidColorSnafu)?;
+        let font_color = csscolorparser::parse(&json.font_color.unwrap_or("#000000".to_string()))
+            .context(InvalidColorSnafu)?;
 
         let text = Text {
             base,
