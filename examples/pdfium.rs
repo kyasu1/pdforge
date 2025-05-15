@@ -2,24 +2,13 @@ use std::collections::HashMap;
 
 use base64::prelude::*;
 use pdfium_render::prelude::*;
-use printpdf::ParsedFont;
-use rust_pdfme::font::*;
 
 fn main() -> Result<(), PdfiumError> {
-    let mut doc = printpdf::PdfDocument::new("TEST");
+    let mut pdfme = rust_pdfme::PDFme::new("TEST".to_string())
+        .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")
+        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf");
 
-    let mut font_map = FontMap::default();
-    let mut warnings = Vec::new();
-
-    let font_slice = include_bytes!(".././assets/fonts/NotoSerifJP-Regular.ttf");
-    let parsed_font = ParsedFont::from_bytes(font_slice, 0, &mut warnings).unwrap();
-    let font_id = doc.add_font(&parsed_font);
-    font_map.add_font(String::from("NotoSerifJP"), font_id.clone(), &parsed_font);
-
-    let font_slice = include_bytes!(".././assets/fonts/NotoSansJP-Regular.ttf");
-    let parsed_font = ParsedFont::from_bytes(font_slice, 0, &mut warnings).unwrap();
-    let font_id = doc.add_font(&parsed_font);
-    font_map.add_font(String::from("NotoSansJP"), font_id.clone(), &parsed_font);
+    pdfme.load_template("pawn-ticket", "./templates/pawn-ticket.json");
 
     let mut inputs = vec![];
 
@@ -57,41 +46,24 @@ fn main() -> Result<(), PdfiumError> {
     );
     inputs.push(input);
 
-    match rust_pdfme::schemas::Template::read_from_file(
-        &font_map,
-        "./templates/pawn-ticket.json",
-        inputs,
-    ) {
-        Ok(template) => {
-            let bytes = template.render(&mut doc).unwrap();
+    let bytes: Vec<u8> = pdfme.render_with_inputs("pawn-ticket", vec![inputs]);
 
-            std::fs::write("./pdfium.pdf", bytes.clone()).unwrap();
+    std::fs::write("./pdfium.pdf", bytes.clone()).unwrap();
 
-            let pdfium: Pdfium = Pdfium::default();
+    let pdfium: Pdfium = Pdfium::default();
 
-            let document = pdfium.load_pdf_from_byte_slice(&bytes, None)?;
-            let render_config = PdfRenderConfig::new().set_target_size(720, 1040);
+    let document = pdfium.load_pdf_from_byte_slice(&bytes, None)?;
+    let render_config = PdfRenderConfig::new().set_target_size(720, 1040);
 
-            for (index, page) in document.pages().iter().enumerate() {
-                page.render_with_config(&render_config)?
-                    .as_image()
-                    .into_luma8()
-                    .save_with_format(
-                        format!("pdfium-page-{}.png", index),
-                        image::ImageFormat::Png,
-                    )
-                    .map_err(|_| PdfiumError::ImageError)?;
-            }
-
-            // for warning in warnings {
-            //     if warning.severity != PdfParseErrorSeverity::Info {
-            //         println!("{:#?}", warning);
-            //     }
-            // }
-        }
-        Err(err) => {
-            println!("{}", err);
-        }
+    for (index, page) in document.pages().iter().enumerate() {
+        page.render_with_config(&render_config)?
+            .as_image()
+            .into_luma8()
+            .save_with_format(
+                format!("pdfium-page-{}.png", index),
+                image::ImageFormat::Png,
+            )
+            .map_err(|_| PdfiumError::ImageError)?;
     }
 
     Ok(())

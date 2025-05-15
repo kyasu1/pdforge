@@ -7,16 +7,16 @@ use std::collections::HashMap;
 
 use printpdf::{ParsedFont, PdfDocument};
 
-pub struct PDFMe {
+pub struct PDFme {
     name: String,
     doc: PdfDocument,
     font_map: font::FontMap,
     template_map: HashMap<String, schemas::Template>,
 }
 
-impl PDFMe {
+impl PDFme {
     pub fn new(name: String) -> Self {
-        PDFMe {
+        PDFme {
             name: name.clone(),
             doc: PdfDocument::new(&name),
             font_map: font::FontMap::default(),
@@ -24,12 +24,24 @@ impl PDFMe {
         }
     }
 
-    pub fn render(
-        &self,
+    pub fn render(&mut self, template_name: &str) -> Vec<u8> {
+        self.render_with_inputs(template_name, vec![vec![HashMap::new()]])
+    }
+
+    pub fn render_with_inputs(
+        &mut self,
         template_name: &str,
-        inputs: Vec<HashMap<&'static str, String>>,
+        inputs: Vec<Vec<HashMap<&'static str, String>>>,
     ) -> Vec<u8> {
-        Vec::new()
+        match self.template_map.get(template_name) {
+            Some(template) => template
+                .render(&mut self.doc, &self.font_map, inputs)
+                .unwrap(),
+            None => {
+                println!("Template not found: {}", template_name);
+                Vec::new()
+            }
+        }
     }
 
     pub fn add_font(mut self, font_name: &str, file_name: &str) -> Self {
@@ -43,7 +55,9 @@ impl PDFMe {
     }
 
     pub fn load_template(&mut self, template_name: &str, template: &str) {
-        // let template = schemas::Template::read_from_file(template, &self.font_map).unwrap();
-        // self.doc = template.render(&mut self.doc).unwrap();
+        let template = schemas::Template::new(template).unwrap();
+
+        self.template_map
+            .insert(template_name.to_string(), template);
     }
 }

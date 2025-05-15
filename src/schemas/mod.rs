@@ -18,9 +18,7 @@ use snafu::prelude::*;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::fs::File;
-use std::hash::Hash;
 use std::io::BufReader;
-use std::task::Context;
 use table::Table;
 use text::Text;
 
@@ -77,46 +75,13 @@ struct JsonBasePdf {
     padding: Vec<f32>,
 }
 
-// #[derive(Debug, Clone, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// struct JsonTemplate {
-//     schemas: Vec<Vec<JsonSchema>>,
-//     base_pdf: JsonBasePdf,
-//     #[serde(rename = "pdfmeVersion")]
-//     version: String,
-// }
-// impl JsonTemplate {
-//     fn read_from_file(filename: &str) -> Result<JsonTemplate, Error> {
-//         let file = File::open(filename).context(TemplateFileSnafu { filename })?;
-//         let reader = BufReader::new(file);
-//         let template: JsonTemplate =
-//             serde_json::from_reader(reader).with_context(|e| TemplateDeserializeSnafu {
-//                 message: e.to_string(),
-//             })?;
-
-//         Ok(template)
-//     }
-// }
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct JsonTemplate2 {
+struct JsonTemplate {
     schemas: Vec<serde_json::Value>,
     base_pdf: JsonBasePdf,
     #[serde(rename = "pdfmeVersion")]
     version: String,
-}
-impl JsonTemplate2 {
-    fn read_from_file(filename: &str) -> Result<JsonTemplate2, Error> {
-        let file = File::open(filename).context(TemplateFileSnafu { filename })?;
-        let reader = BufReader::new(file);
-        let template: JsonTemplate2 =
-            serde_json::from_reader(reader).with_context(|e| TemplateDeserializeSnafu {
-                message: e.to_string(),
-            })?;
-
-        Ok(template)
-    }
 }
 
 //
@@ -254,116 +219,106 @@ impl TryFrom<Vec<f32>> for Frame {
 
 #[derive(Debug, Clone)]
 pub struct Template {
-    pub schemas: Vec<Vec<Schema>>,
+    pub schemas: Vec<serde_json::Value>,
     base_pdf: BasePdf,
     version: String,
 }
 
 impl Template {
-    pub fn read_from_file(
-        font_map: &FontMap,
-        filename: &str,
-        inputs: Vec<HashMap<&'static str, String>>,
-    ) -> Result<Template, Error> {
+    pub fn new(filename: &str) -> Result<Template, Error> {
         let raw = std::fs::read_to_string(filename).context(TemplateFileSnafu { filename })?;
 
-        let pre: JsonTemplate2 = serde_json::from_str(&raw).context(TemplateDeserializeSnafu {
+        let json: JsonTemplate = serde_json::from_str(&raw).context(TemplateDeserializeSnafu {
             message: "Failed to parse JSON",
         })?;
 
-        let schema = serde_json::to_string(&pre.schemas[0]).unwrap();
-
-        let mut tera = tera::Tera::default();
-        tera.add_raw_template("schema_template", &schema).unwrap();
-
-        let mut schemas: Vec<Vec<JsonSchema>> = Vec::new();
-        for input in inputs {
-            let mut context = tera::Context::new();
-            for (key, value) in input.iter() {
-                context.insert(*key, value);
-            }
-            let rendered = tera.render("schema_template", &context).unwrap();
-            let parsed: Vec<JsonSchema> = serde_json::from_str(&rendered).unwrap();
-            schemas.push(parsed);
-        }
-
         let base_pdf = BasePdf {
-            width: Mm(pre.base_pdf.width),
-            height: Mm(pre.base_pdf.height),
-            padding: pre.base_pdf.padding.try_into()?,
+            width: Mm(json.base_pdf.width),
+            height: Mm(json.base_pdf.height),
+            padding: json.base_pdf.padding.try_into()?,
         };
-        let schemas = schemas
-            .into_iter()
-            .map(|page| {
-                page.into_iter()
-                    .map(|schema| match schema {
-                        JsonSchema::Text(s) => Schema::Text(Text::from_json(s, font_map).unwrap()),
-                        JsonSchema::DynamicText(s) => Schema::DynamicText(
-                            dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
-                        ),
-                        JsonSchema::Table(json) => {
-                            Schema::Table(Table::from_json(json, font_map, &base_pdf).unwrap())
-                        }
-                        JsonSchema::QrCode(json) => json.into(),
-                        JsonSchema::Image(json) => json.try_into().unwrap(),
-                        JsonSchema::Svg(json) => json.try_into().unwrap(),
-                        JsonSchema::Rectangle(json) => json.try_into().unwrap(),
-                    })
-                    .collect()
-            })
-            .collect();
+
         let template = Template {
-            schemas,
+            schemas: json.schemas,
             base_pdf,
-            version: pre.version,
+            version: json.version,
         };
         Ok(template)
     }
 
-    // pub fn read_from_file(filename: &str, font_map: &FontMap) -> Result<Template, Error> {
-    //     let json = JsonTemplate::read_from_file(filename)?;
+    /*
+       PDFmeのテンプレートは、複数のページを持つことができる。各ページはスキーマのリストにより構成される。
+       スキーマには、テキスト、QRコード、画像、SVGなどの要素がある。
+       テンプレートに含まれる各ページに対して、複数の入力データの集合を渡すことにより、データ集合毎にページを生成することができる。
 
-    //     let base_pdf = BasePdf {
-    //         width: Mm(json.base_pdf.width),
-    //         height: Mm(json.base_pdf.height),
-    //         padding: json.base_pdf.padding.try_into()?,
-    //     };
-    //     let schemas = json
-    //         .schemas
-    //         .into_iter()
-    //         .map(|page| {
-    //             page.into_iter()
-    //                 .map(|schema| match schema {
-    //                     JsonSchema::Text(s) => Schema::Text(Text::from_json(s, font_map).unwrap()),
-    //                     JsonSchema::DynamicText(s) => Schema::DynamicText(
-    //                         dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
-    //                     ),
-    //                     JsonSchema::Table(json) => {
-    //                         Schema::Table(Table::from_json(json, font_map, &base_pdf).unwrap())
-    //                     }
-    //                     JsonSchema::QrCode(json) => json.into(),
-    //                     JsonSchema::Image(json) => json.try_into().unwrap(),
-    //                     JsonSchema::Svg(json) => json.try_into().unwrap(),
-    //                     JsonSchema::Rectangle(json) => json.try_into().unwrap(),
-    //                 })
-    //                 .collect()
-    //         })
-    //         .collect();
-    //     let template = Template {
-    //         schemas,
-    //         base_pdf,
-    //         version: json.version,
-    //     };
-    //     Ok(template)
-    // }
+    */
+    pub fn render(
+        &self,
+        mut doc: &mut PdfDocument,
+        font_map: &FontMap,
+        inputs: Vec<Vec<HashMap<&'static str, String>>>,
+    ) -> Result<Vec<u8>, Error> {
+        if inputs.len() != self.schemas.len() {
+            return Err(Error::Whatever {
+                message: "Input length does not match page length".to_string(),
+                source: None,
+            });
+        }
 
-    pub fn render(&self, mut doc: &mut PdfDocument) -> Result<Vec<u8>, Error> {
+        let mut schemas: Vec<Vec<Schema>> = Vec::new();
+
+        for (index, group) in inputs.iter().enumerate() {
+            let json_schema = serde_json::to_string(&self.schemas[index]).unwrap();
+
+            // Teraを使ってテンプレートをレンダリングする
+            let mut tera = tera::Tera::default();
+            tera.add_raw_template("schema_template", &json_schema)
+                .unwrap();
+
+            let mut json_schemas: Vec<Vec<JsonSchema>> = Vec::new();
+            for input in group {
+                let mut context = tera::Context::new();
+                for (key, value) in input.iter() {
+                    context.insert(*key, value);
+                }
+                let rendered = tera.render("schema_template", &context).unwrap();
+                let parsed: Vec<JsonSchema> = serde_json::from_str(&rendered).unwrap();
+                json_schemas.push(parsed);
+            }
+
+            // JSONをSchemaに変換する
+            let converted: Vec<Vec<Schema>> = json_schemas
+                .into_iter()
+                .map(|page| {
+                    page.into_iter()
+                        .map(|schema| match schema {
+                            JsonSchema::Text(s) => {
+                                Schema::Text(Text::from_json(s, font_map).unwrap())
+                            }
+                            JsonSchema::DynamicText(s) => Schema::DynamicText(
+                                dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
+                            ),
+                            JsonSchema::Table(json) => Schema::Table(
+                                Table::from_json(json, font_map, &self.base_pdf).unwrap(),
+                            ),
+                            JsonSchema::QrCode(json) => json.into(),
+                            JsonSchema::Image(json) => json.try_into().unwrap(),
+                            JsonSchema::Svg(json) => json.try_into().unwrap(),
+                            JsonSchema::Rectangle(json) => json.try_into().unwrap(),
+                        })
+                        .collect::<Vec<Schema>>()
+                })
+                .collect();
+
+            schemas.extend(converted);
+        }
+
         let mut buffer = OpBuffer::default();
 
         let mut p = 0;
         let mut y: Option<Mm> = None;
 
-        for (page_index, page) in self.schemas.iter().enumerate() {
+        for (page_index, page) in schemas.iter().enumerate() {
             for schema in page {
                 match schema.clone() {
                     Schema::Text(mut obj) => {
