@@ -197,7 +197,7 @@ pub struct BasePdf {
     padding: Frame,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Frame {
     top: Mm,
     right: Mm,

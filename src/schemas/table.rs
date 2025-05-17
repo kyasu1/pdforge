@@ -21,9 +21,6 @@ use snafu::prelude::*;
 pub struct JsonCellStyle {
     schema: JsonSchema,
     height: Option<f32>,
-    padding: JsonSides,
-    alignment: Alignment,
-    vertical_align: VerticalAlignment,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -58,7 +55,6 @@ pub struct JsonHeadStyles {
     alignment: Alignment,
     // line_height: f32,
     // border_width: JsonSides,
-    // padding: JsonSides,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -111,9 +107,7 @@ impl TableStyles {
 pub struct Cell {
     schema: Schema,
     height: Option<Mm>,
-    padding: Frame,
-    alignment: Alignment,
-    vertical_align: VerticalAlignment,
+    // padding: Option<Frame>,
 }
 
 #[derive(Debug, Clone)]
@@ -202,20 +196,17 @@ impl Table {
                 JsonSchema::Text(schema) => Schema::Text(text::Text::from_json(schema, font_map)?),
                 JsonSchema::QrCode(schema) => schema.into(),
             };
-            let padding = Frame::try_from(vec![
-                json_column.padding.top,
-                json_column.padding.right,
-                json_column.padding.bottom,
-                json_column.padding.left,
-            ])
-            .with_whatever_context(|_| format!("table columns padding"))?;
+            // let padding = json_column.padding.map(|padding| Frame {
+            //     top: Mm(padding.top),
+            //     right: Mm(padding.right),
+            //     bottom: Mm(padding.bottom),
+            //     left: Mm(padding.left),
+            // });
 
             let column = Cell {
                 schema,
                 height: json_column.height.map(|f| Mm(f)),
-                padding,
-                alignment: json_column.alignment,
-                vertical_align: json_column.vertical_align,
+                // padding,
             };
 
             columns.push(column)
@@ -250,7 +241,6 @@ impl Table {
         let mut internal_page_counter = 0;
         let y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
         let y_bottom_mm = base_pdf.height - bottom_margin_in_mm;
-        let y_offset: Pt = Pt(0.0);
         let mut y_line_mm: Mm = y_top_mm;
         let cell_widths = self.cell_widths();
 
@@ -265,9 +255,9 @@ impl Table {
                 let cell_width = cell_widths[col_index];
                 match cell.schema.clone() {
                     Schema::Text(mut schema) => {
-                        schema.set_x(x + cell.padding.left);
+                        schema.set_x(x);
                         schema.set_y(y_line_mm);
-                        schema.set_width(cell_width - (cell.padding.left + cell.padding.right));
+                        schema.set_width(cell_width);
                         schema.set_content(col.to_string());
 
                         let height = schema.get_height()?;
@@ -334,8 +324,6 @@ impl Table {
             for rows in page {
                 for (col_index, cell) in rows.into_iter().enumerate() {
                     let base = cell.schema.get_base();
-                    cell.schema
-                        .render(base_pdf, None, doc, page_index, buffer)?;
 
                     let width = cell_widths[col_index];
                     let rect = DrawRectangle {
@@ -350,18 +338,6 @@ impl Table {
                     };
                     let ops = draw_rectangle(rect);
 
-                    // let rect = DrawRoundedRectangle {
-                    //     x: base.x,
-                    //     y: base.y,
-                    //     width,
-                    //     height: base.height,
-                    //     page_height: base_pdf.height,
-                    //     color: Some(gray.clone()),
-                    //     border_width: Some(self.table_styles.border_width),
-                    //     border_color: None,
-                    //     radius: Mm(1.0),
-                    // };
-                    // let ops = draw_rounded_rectangle(rect);
                     buffer.insert(page_index, ops);
 
                     cell.schema
@@ -410,7 +386,7 @@ fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
     let x1: Pt = props.x.into();
     let y1: Pt = (props.page_height - props.y).into();
     let x2: Pt = (props.x + props.width).into();
-    let y2: Pt = (props.page_height - props.y + props.height).into();
+    let y2: Pt = (props.page_height - props.y - props.height).into();
 
     let polygon = Polygon {
         rings: vec![PolygonRing {

@@ -1,4 +1,4 @@
-use super::{Alignment, BasePdf, InvalidColorSnafu, VerticalAlignment};
+use super::{Alignment, BasePdf, Frame, InvalidColorSnafu, VerticalAlignment};
 use crate::font::{DynamicFontSize, FontMap, FontSize, FontSpec, JsonFontSize};
 use crate::schemas::base::BaseSchema;
 use crate::schemas::{Error, FontSnafu, JsonPosition, TextUtil};
@@ -22,6 +22,7 @@ pub struct JsonTextSchema {
     line_height: Option<f32>,
     font_size: JsonFontSize,
     font_color: Option<String>,
+    padding: Option<Frame>,
 }
 
 #[derive(Debug, Clone)]
@@ -36,6 +37,7 @@ pub struct Text {
     font_id: FontId,
     font_spec: FontSpec,
     font_color: csscolorparser::Color,
+    padding: Option<Frame>,
 }
 
 impl Text {
@@ -68,6 +70,7 @@ impl Text {
             font_color: "#000"
                 .parse::<csscolorparser::Color>()
                 .context(InvalidColorSnafu)?,
+            padding: None,
         })
     }
 
@@ -115,6 +118,7 @@ impl Text {
             font_id: font_id.clone(),
             font_spec: font_spec.clone(),
             font_color,
+            padding: json.padding,
         };
 
         Ok(text)
@@ -128,40 +132,39 @@ impl Text {
     ) -> Result<(), Error> {
         let font_size = self.get_font_size()?;
 
+        // Calculates the effective width of the text box by subtracting horizontal padding from the base width.
+        // If padding is defined, subtracts the sum of left and right padding values from the base width.
+        // If padding is not defined, uses the full base width.
+        let box_width =
+            self.base.width - self.padding.as_ref().map_or(Mm(0.0), |p| p.left + p.right);
+
+        let box_height =
+            self.base.height - self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
+
         let splitted_paragraphs: Vec<String> = TextUtil::split_text_to_size(
             &self.font_spec,
             &self.content,
             font_size,
-            self.base.width.into(),
+            box_width.into(),
             self.character_spacing,
         )?;
 
         let line_height: Pt = font_size * self.line_height.unwrap_or(1.0);
         let line_height_in_mm: Mm = line_height.into();
-        let total_height: Pt = line_height * (splitted_paragraphs.len() as f32);
+        let total_height: Mm = line_height_in_mm * (splitted_paragraphs.len() as f32)
+            - self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
 
         let y_offset: Mm = match self.vertical_alignment {
             VerticalAlignment::Top => Mm(0.0),
-            VerticalAlignment::Middle => (self.get_base().height - total_height.into()) / 2.0,
-            VerticalAlignment::Bottom => self.get_base().height - total_height.into(),
+            VerticalAlignment::Middle => (box_height - total_height - line_height_in_mm) / 2.0,
+            VerticalAlignment::Bottom => self.base.height - total_height,
         };
+        println!(
+            "alignment {:?}, y_offset: {:?}, total_height: {:?}, box_height: {:?}",
+            self.vertical_alignment, y_offset, total_height, box_height
+        );
 
-        let mut ops: Vec<Op> = vec![
-            // Op::StartTextSection,
-            // Op::SetLineHeight { lh: line_height },
-            // Op::SetFillColor {
-            //     col: Color::Rgb(Rgb {
-            //         r: 0.0,
-            //         g: 0.0,
-            //         b: 0.0,
-            //         icc_profile: None,
-            //     }),
-            // },
-            // Op::SetFontSize {
-            //     size: font_size.clone(),
-            //     font: self.font_id.clone(),
-            // },
-        ];
+        let mut ops: Vec<Op> = vec![];
 
         for (index, line) in splitted_paragraphs.iter().enumerate() {
             let line_width: Mm = self
@@ -170,13 +173,31 @@ impl Text {
                 .context(FontSnafu)?
                 .into();
 
-            let residual: Mm = self.base.width - line_width;
+            let residual: Mm = box_width - line_width;
+
+            // let x_line: Mm = match self.alignment {
+            //     Alignment::Left => self.base.x,
+            //     Alignment::Center => self.base.x + residual / 2.0,
+            //     Alignment::Right => self.base.x + residual,
+            //     Alignment::Justify => self.base.x,
+            // };
 
             let x_line: Mm = match self.alignment {
-                Alignment::Left => self.base.x,
-                Alignment::Center => self.base.x + residual / 2.0,
-                Alignment::Right => self.base.x + residual,
-                Alignment::Justify => self.base.x,
+                Alignment::Left => self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
+                Alignment::Center => {
+                    self.base.x
+                        + residual / 2.0
+                        + self
+                            .padding
+                            .as_ref()
+                            .map_or(Mm(0.0), |p| (p.left - p.right) / 2.0)
+                }
+                Alignment::Right => {
+                    self.base.x + residual - self.padding.as_ref().map_or(Mm(0.0), |p| p.right)
+                }
+                Alignment::Justify => {
+                    self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
+                }
             };
 
             let character_spacing: Pt = match self.alignment {
@@ -191,9 +212,14 @@ impl Text {
                 _ => self.character_spacing,
             };
 
-            let y = (base_pdf.height
+            // let y = (base_pdf.height
+            //     - (self.base.y + y_offset)
+            //     - line_height_in_mm * (index as i32 + 1) as f32);
+
+            let y = base_pdf.height
                 - (self.base.y + y_offset)
-                - line_height_in_mm * (index as i32 + 1) as f32);
+                - line_height_in_mm * (index as i32 + 1) as f32
+                - self.padding.as_ref().map_or(Mm(0.0), |p| p.top);
 
             let line_ops = vec![
                 Op::StartTextSection,

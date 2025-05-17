@@ -29,7 +29,7 @@ impl BaseSchema {
         };
         XObjectTransform {
             translate_x: Some(self.x.into()),
-            translate_y: Some((page_height - self.y).into()),
+            translate_y: Some((page_height - self.y - self.height).into()),
             rotate: None,
             scale_x: Some(ratio * self.width.0),
             scale_y: Some(ratio * self.height.0),
