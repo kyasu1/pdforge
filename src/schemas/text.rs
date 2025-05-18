@@ -22,6 +22,7 @@ pub struct JsonTextSchema {
     line_height: Option<f32>,
     font_size: JsonFontSize,
     font_color: Option<String>,
+    background_color: Option<String>,
     padding: Option<Frame>,
 }
 
@@ -37,6 +38,7 @@ pub struct Text {
     font_id: FontId,
     font_spec: FontSpec,
     font_color: csscolorparser::Color,
+    background_color: Option<csscolorparser::Color>,
     padding: Option<Frame>,
 }
 
@@ -49,7 +51,10 @@ impl Text {
         font_name: String,
         font_size: Pt,
         content: String,
+        alignment: Alignment,
+        vertical_alignment: VerticalAlignment,
         font_map: &FontMap,
+        padding: Option<Frame>,
     ) -> Result<Self, Error> {
         let (font_id, font) = font_map
             .find(font_name.clone())
@@ -60,8 +65,8 @@ impl Text {
         Ok(Self {
             base,
             content,
-            alignment: Alignment::Left,
-            vertical_alignment: VerticalAlignment::Top,
+            alignment,
+            vertical_alignment,
             character_spacing: Pt(0.0),
             line_height: None,
             font_size: FontSize::Fixed(font_size),
@@ -70,7 +75,8 @@ impl Text {
             font_color: "#000"
                 .parse::<csscolorparser::Color>()
                 .context(InvalidColorSnafu)?,
-            padding: None,
+            background_color: None,
+            padding,
         })
     }
 
@@ -107,6 +113,12 @@ impl Text {
         let font_color = csscolorparser::parse(&json.font_color.unwrap_or("#000000".to_string()))
             .context(InvalidColorSnafu)?;
 
+        let background_color = json
+            .background_color
+            .as_ref()
+            .map(|c| csscolorparser::parse(c).context(InvalidColorSnafu))
+            .transpose()?;
+
         let text = Text {
             base,
             content: json.content,
@@ -118,6 +130,7 @@ impl Text {
             font_id: font_id.clone(),
             font_spec: font_spec.clone(),
             font_color,
+            background_color,
             padding: json.padding,
         };
 
@@ -151,13 +164,13 @@ impl Text {
 
         let line_height: Pt = font_size * self.line_height.unwrap_or(1.0);
         let line_height_in_mm: Mm = line_height.into();
-        let total_height: Mm = line_height_in_mm * (splitted_paragraphs.len() as f32)
-            - self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
+        let total_height: Mm = line_height_in_mm * (splitted_paragraphs.len() as f32);
+        // + self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
 
         let y_offset: Mm = match self.vertical_alignment {
             VerticalAlignment::Top => Mm(0.0),
-            VerticalAlignment::Middle => (box_height - total_height - line_height_in_mm) / 2.0,
-            VerticalAlignment::Bottom => self.base.height - total_height,
+            VerticalAlignment::Middle => (box_height - total_height) / 2.0,
+            VerticalAlignment::Bottom => box_height - total_height,
         };
         println!(
             "alignment {:?}, y_offset: {:?}, total_height: {:?}, box_height: {:?}",
@@ -175,25 +188,15 @@ impl Text {
 
             let residual: Mm = box_width - line_width;
 
-            // let x_line: Mm = match self.alignment {
-            //     Alignment::Left => self.base.x,
-            //     Alignment::Center => self.base.x + residual / 2.0,
-            //     Alignment::Right => self.base.x + residual,
-            //     Alignment::Justify => self.base.x,
-            // };
-
             let x_line: Mm = match self.alignment {
                 Alignment::Left => self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
                 Alignment::Center => {
                     self.base.x
                         + residual / 2.0
-                        + self
-                            .padding
-                            .as_ref()
-                            .map_or(Mm(0.0), |p| (p.left - p.right) / 2.0)
+                        + self.padding.as_ref().map_or(Mm(0.0), |p| (p.left))
                 }
                 Alignment::Right => {
-                    self.base.x + residual - self.padding.as_ref().map_or(Mm(0.0), |p| p.right)
+                    self.base.x + residual + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
                 }
                 Alignment::Justify => {
                     self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
@@ -212,14 +215,68 @@ impl Text {
                 _ => self.character_spacing,
             };
 
-            // let y = (base_pdf.height
-            //     - (self.base.y + y_offset)
-            //     - line_height_in_mm * (index as i32 + 1) as f32);
-
             let y = base_pdf.height
                 - (self.base.y + y_offset)
                 - line_height_in_mm * (index as i32 + 1) as f32
                 - self.padding.as_ref().map_or(Mm(0.0), |p| p.top);
+
+            let bg_ops = if let Some(bg_color) = self.background_color.clone() {
+                vec![
+                    Op::SaveGraphicsState,
+                    Op::SetFillColor {
+                        col: Color::Rgb(Rgb {
+                            r: bg_color.r,
+                            g: bg_color.g,
+                            b: bg_color.b,
+                            icc_profile: None,
+                        }),
+                    },
+                    Op::DrawPolygon {
+                        polygon: Polygon {
+                            rings: vec![PolygonRing {
+                                points: vec![
+                                    LinePoint {
+                                        p: Point {
+                                            x: self.base.x.into(),
+                                            y: (base_pdf.height - self.base.y).into(),
+                                        },
+                                        bezier: false,
+                                    },
+                                    LinePoint {
+                                        p: Point {
+                                            x: self.base.x.into(),
+                                            y: (base_pdf.height - self.base.y - self.base.height)
+                                                .into(),
+                                        },
+                                        bezier: false,
+                                    },
+                                    LinePoint {
+                                        p: Point {
+                                            x: (self.base.x + self.base.width).into(),
+                                            y: (base_pdf.height - self.base.y - self.base.height)
+                                                .into(),
+                                        },
+                                        bezier: false,
+                                    },
+                                    LinePoint {
+                                        p: Point {
+                                            x: (self.base.x + self.base.width).into(),
+                                            y: (base_pdf.height - self.base.y).into(),
+                                        },
+                                        bezier: false,
+                                    },
+                                ],
+                            }],
+                            mode: printpdf::PaintMode::Fill,
+                            winding_order: printpdf::WindingOrder::NonZero,
+                        },
+                    },
+                    Op::RestoreGraphicsState,
+                ]
+            } else {
+                vec![]
+            };
+            ops.extend_from_slice(&bg_ops);
 
             let line_ops = vec![
                 Op::StartTextSection,
@@ -289,7 +346,9 @@ impl Text {
             self.character_spacing,
         )?;
 
-        Ok(Pt(lines.len() as f32 * font_size.0).into())
+        let height_in_mm: Mm = Pt(lines.len() as f32 * font_size.0).into();
+
+        Ok(height_in_mm + self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom))
     }
 
     fn get_font_size(&self) -> Result<Pt, Error> {

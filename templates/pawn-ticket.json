@@ -24,7 +24,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -47,7 +46,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -88,7 +86,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#FFFFFF",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -111,7 +108,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -134,7 +130,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -157,7 +152,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -184,7 +178,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -211,7 +204,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -238,7 +230,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -247,7 +238,7 @@
                 "type": "text",
                 "position": {
                     "x": 42,
-                    "y": 16.8
+                    "y": 8.1
                 },
                 "required": false,
                 "content": "{{pawnSequence}}",
@@ -256,16 +247,11 @@
                 "rotate": 0,
                 "alignment": "center",
                 "verticalAlignment": "top",
-                "fontSize": {
-                    "min": 8,
-                    "max": 10,
-                    "fit": "vertical"
-                },
+                "fontSize": 10,
                 "lineHeight": 1,
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             },
@@ -288,7 +274,6 @@
                 "characterSpacing": 0,
                 "fontColor": "#000000",
                 "fontName": "NotoSans",
-                "backgroundColor": "",
                 "opacity": 1,
                 "readOnly": false
             }

@@ -17,8 +17,7 @@ use serde::{Deserialize, Serialize};
 use snafu::prelude::*;
 use std::cmp::max;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
+
 use table::Table;
 use text::Text;
 
@@ -34,9 +33,6 @@ pub enum Error {
         source: serde_json::Error,
         message: String,
     },
-
-    #[snafu(display("Invalid HEX color string specified"))]
-    InvalidColorString { source: palette::rgb::FromHexError },
 
     #[snafu(display("Font error"))]
     FontError { source: font::Error },
@@ -198,11 +194,31 @@ pub struct BasePdf {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsonFrame {
+    top: f32,
+    right: f32,
+    bottom: f32,
+    left: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Frame {
     top: Mm,
     right: Mm,
     bottom: Mm,
     left: Mm,
+}
+
+impl Frame {
+    pub fn from_json(json: JsonFrame) -> Result<Self, Error> {
+        Ok(Frame {
+            top: Mm(json.top),
+            right: Mm(json.right),
+            bottom: Mm(json.bottom),
+            left: Mm(json.left),
+        })
+    }
 }
 
 impl TryFrom<Vec<f32>> for Frame {
@@ -292,15 +308,15 @@ impl Template {
                 .map(|page| {
                     page.into_iter()
                         .map(|schema| match schema {
-                            JsonSchema::Text(s) => {
-                                Schema::Text(Text::from_json(s, font_map).unwrap())
+                            JsonSchema::Text(json) => {
+                                Schema::Text(Text::from_json(json, font_map).unwrap())
                             }
-                            JsonSchema::DynamicText(s) => Schema::DynamicText(
-                                dynamic_text::DynamicText::from_json(s, font_map).unwrap(),
+                            JsonSchema::DynamicText(json) => Schema::DynamicText(
+                                dynamic_text::DynamicText::from_json(json, font_map).unwrap(),
                             ),
-                            JsonSchema::Table(json) => Schema::Table(
-                                Table::from_json(json, font_map, &self.base_pdf).unwrap(),
-                            ),
+                            JsonSchema::Table(json) => {
+                                Schema::Table(Table::from_json(json, font_map).unwrap())
+                            }
                             JsonSchema::QrCode(json) => json.into(),
                             JsonSchema::Image(json) => json.try_into().unwrap(),
                             JsonSchema::Svg(json) => json.try_into().unwrap(),
