@@ -1,11 +1,14 @@
-use super::{Alignment, BasePdf, Frame, InvalidColorSnafu, VerticalAlignment};
-use crate::font::{DynamicFontSize, FontMap, FontSize, FontSpec, JsonFontSize};
+use super::{
+    Alignment, BasePdf, Error, FontSnafu, Frame, InvalidColorSnafu, JsonPosition, VerticalAlignment,
+};
+use crate::font::{DynamicFontSize, FontMap, FontSize, FontSpec, FontSpecTrait, JsonFontSize};
 use crate::schemas::base::BaseSchema;
-use crate::schemas::{Error, FontSnafu, JsonPosition, TextUtil};
+
 use crate::utils::OpBuffer;
 use printpdf::*;
 use serde::Deserialize;
 use snafu::prelude::*;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -36,7 +39,7 @@ pub struct Text {
     line_height: Option<f32>,
     font_size: FontSize,
     font_id: FontId,
-    font_spec: FontSpec,
+    font_spec: Arc<dyn FontSpecTrait>,
     font_color: csscolorparser::Color,
     background_color: Option<csscolorparser::Color>,
     padding: Option<Frame>,
@@ -71,7 +74,7 @@ impl Text {
             line_height: None,
             font_size: FontSize::Fixed(font_size),
             font_id: font_id.clone(),
-            font_spec: font_spec.clone(),
+            font_spec: Arc::new(font_spec.clone()),
             font_color: "#000"
                 .parse::<csscolorparser::Color>()
                 .context(InvalidColorSnafu)?,
@@ -128,7 +131,7 @@ impl Text {
             line_height,
             font_size,
             font_id: font_id.clone(),
-            font_spec: font_spec.clone(),
+            font_spec: Arc::new(font_spec.clone()),
             font_color,
             background_color,
             padding: json.padding,
@@ -144,41 +147,32 @@ impl Text {
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
         let font_size = self.get_font_size()?;
+        let (box_width, box_height) = self.get_effective_box_size();
 
-        // Calculates the effective width of the text box by subtracting horizontal padding from the base width.
-        // If padding is defined, subtracts the sum of left and right padding values from the base width.
-        // If padding is not defined, uses the full base width.
-        let box_width =
-            self.base.width - self.padding.as_ref().map_or(Mm(0.0), |p| p.left + p.right);
+        let splitted_paragraphs = self
+            .font_spec
+            .split_text_to_size(
+                &self.content,
+                font_size,
+                box_width.into(),
+                self.character_spacing,
+            )
+            .context(FontSnafu)?;
 
-        let box_height =
-            self.base.height - self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
-
-        let splitted_paragraphs: Vec<String> = TextUtil::split_text_to_size(
-            &self.font_spec,
-            &self.content,
-            font_size,
-            box_width.into(),
-            self.character_spacing,
-        )?;
-
-        let line_height: Pt = font_size * self.line_height.unwrap_or(1.0);
+        let line_height = font_size * self.line_height.unwrap_or(1.0);
         let line_height_in_mm: Mm = line_height.into();
         let total_height: Mm = line_height_in_mm * (splitted_paragraphs.len() as f32);
-        // + self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
 
-        let y_offset: Mm = match self.vertical_alignment {
-            VerticalAlignment::Top => Mm(0.0),
-            VerticalAlignment::Middle => (box_height - total_height) / 2.0,
-            VerticalAlignment::Bottom => box_height - total_height,
-        };
-        println!(
-            "alignment {:?}, y_offset: {:?}, total_height: {:?}, box_height: {:?}",
-            self.vertical_alignment, y_offset, total_height, box_height
-        );
+        let y_offset = self.calculate_vertical_offset(box_height, total_height);
 
         let mut ops: Vec<Op> = vec![];
 
+        // 背景色があれば背景を描画
+        if let Some(bg_ops) = self.create_background_ops(base_pdf) {
+            ops.extend_from_slice(&bg_ops);
+        }
+
+        // 各行のテキストを描画
         for (index, line) in splitted_paragraphs.iter().enumerate() {
             let line_width: Mm = self
                 .font_spec
@@ -186,137 +180,187 @@ impl Text {
                 .context(FontSnafu)?
                 .into();
 
-            let residual: Mm = box_width - line_width;
+            let (x_line, character_spacing) =
+                self.calculate_horizontal_alignment(box_width, line_width, line);
 
-            let x_line: Mm = match self.alignment {
-                Alignment::Left => self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
-                Alignment::Center => {
-                    self.base.x
-                        + residual / 2.0
-                        + self.padding.as_ref().map_or(Mm(0.0), |p| (p.left))
-                }
-                Alignment::Right => {
-                    self.base.x + residual + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
-                }
-                Alignment::Justify => {
-                    self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
-                }
-            };
+            let y = self.calculate_y_position(base_pdf, y_offset, line_height_in_mm, index);
 
-            let character_spacing: Pt = match self.alignment {
-                Alignment::Justify => {
-                    if line.ends_with('\n') {
-                        self.character_spacing
-                    } else {
-                        self.character_spacing
-                            + TextUtil::calculate_character_spacing(line.clone(), residual).into()
-                    }
-                }
-                _ => self.character_spacing,
-            };
-
-            let y = base_pdf.height
-                - (self.base.y + y_offset)
-                - line_height_in_mm * (index as i32 + 1) as f32
-                - self.padding.as_ref().map_or(Mm(0.0), |p| p.top);
-
-            let bg_ops = if let Some(bg_color) = self.background_color.clone() {
-                vec![
-                    Op::SaveGraphicsState,
-                    Op::SetFillColor {
-                        col: Color::Rgb(Rgb {
-                            r: bg_color.r,
-                            g: bg_color.g,
-                            b: bg_color.b,
-                            icc_profile: None,
-                        }),
-                    },
-                    Op::DrawPolygon {
-                        polygon: Polygon {
-                            rings: vec![PolygonRing {
-                                points: vec![
-                                    LinePoint {
-                                        p: Point {
-                                            x: self.base.x.into(),
-                                            y: (base_pdf.height - self.base.y).into(),
-                                        },
-                                        bezier: false,
-                                    },
-                                    LinePoint {
-                                        p: Point {
-                                            x: self.base.x.into(),
-                                            y: (base_pdf.height - self.base.y - self.base.height)
-                                                .into(),
-                                        },
-                                        bezier: false,
-                                    },
-                                    LinePoint {
-                                        p: Point {
-                                            x: (self.base.x + self.base.width).into(),
-                                            y: (base_pdf.height - self.base.y - self.base.height)
-                                                .into(),
-                                        },
-                                        bezier: false,
-                                    },
-                                    LinePoint {
-                                        p: Point {
-                                            x: (self.base.x + self.base.width).into(),
-                                            y: (base_pdf.height - self.base.y).into(),
-                                        },
-                                        bezier: false,
-                                    },
-                                ],
-                            }],
-                            mode: printpdf::PaintMode::Fill,
-                            winding_order: printpdf::WindingOrder::NonZero,
-                        },
-                    },
-                    Op::RestoreGraphicsState,
-                ]
-            } else {
-                vec![]
-            };
-            ops.extend_from_slice(&bg_ops);
-
-            let line_ops = vec![
-                Op::StartTextSection,
-                Op::SetLineHeight { lh: line_height },
-                Op::SetFillColor {
-                    col: Color::Rgb(Rgb {
-                        r: self.font_color.r,
-                        g: self.font_color.g,
-                        b: self.font_color.b,
-                        icc_profile: None,
-                    }),
-                },
-                Op::SetFontSize {
-                    size: font_size.clone(),
-                    font: self.font_id.clone(),
-                },
-                Op::SetTextCursor {
-                    pos: Point {
-                        x: x_line.into(),
-                        y: y.into(),
-                    },
-                },
-                Op::SetCharacterSpacing {
-                    // multiplier: character_spacing.clone(),
-                    multiplier: character_spacing.0,
-                },
-                Op::WriteText {
-                    items: vec![TextItem::Text(line.clone())],
-                    font: self.font_id.clone(),
-                },
-                // Op::AddLineBreak,
-                Op::EndTextSection,
-            ];
+            let line_ops = self.create_text_ops(font_size, x_line, y, character_spacing, line);
             ops.extend_from_slice(&line_ops);
         }
 
-        // ops.extend_from_slice(&[Op::EndTextSection]);
         buffer.insert(current_page, ops);
-
         Ok(())
+    }
+
+    // パディングを考慮したボックスの有効サイズを計算
+    fn get_effective_box_size(&self) -> (Mm, Mm) {
+        let box_width =
+            self.base.width - self.padding.as_ref().map_or(Mm(0.0), |p| p.left + p.right);
+
+        let box_height =
+            self.base.height - self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
+
+        (box_width, box_height)
+    }
+
+    // 垂直方向の配置オフセットを計算
+    fn calculate_vertical_offset(&self, box_height: Mm, total_height: Mm) -> Mm {
+        match self.vertical_alignment {
+            VerticalAlignment::Top => Mm(0.0),
+            VerticalAlignment::Middle => (box_height - total_height) / 2.0,
+            VerticalAlignment::Bottom => box_height - total_height,
+        }
+    }
+
+    // 水平方向の配置とキャラクタ間隔を計算
+    fn calculate_horizontal_alignment(
+        &self,
+        box_width: Mm,
+        line_width: Mm,
+        line: &str,
+    ) -> (Mm, Pt) {
+        let residual: Mm = box_width - line_width;
+
+        let x_line = match self.alignment {
+            Alignment::Left => self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
+            Alignment::Center => {
+                self.base.x + residual / 2.0 + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
+            }
+            Alignment::Right => {
+                self.base.x + residual + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
+            }
+            Alignment::Justify => self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
+        };
+
+        let character_spacing = match self.alignment {
+            Alignment::Justify => {
+                if line.ends_with('\n') {
+                    self.character_spacing
+                } else {
+                    self.character_spacing
+                        + FontSpec::calculate_character_spacing(line.to_string(), residual).into()
+                }
+            }
+            _ => self.character_spacing,
+        };
+
+        (x_line, character_spacing)
+    }
+
+    // Y座標を計算
+    fn calculate_y_position(
+        &self,
+        base_pdf: &BasePdf,
+        y_offset: Mm,
+        line_height_in_mm: Mm,
+        line_index: usize,
+    ) -> Mm {
+        base_pdf.height
+            - (self.base.y + y_offset)
+            - line_height_in_mm * (line_index as i32 + 1) as f32
+            - self.padding.as_ref().map_or(Mm(0.0), |p| p.top)
+    }
+
+    // 背景色のオペレーションを作成
+    fn create_background_ops(&self, base_pdf: &BasePdf) -> Option<Vec<Op>> {
+        self.background_color.clone().map(|bg_color| {
+            vec![
+                Op::SaveGraphicsState,
+                Op::SetFillColor {
+                    col: Color::Rgb(Rgb {
+                        r: bg_color.r,
+                        g: bg_color.g,
+                        b: bg_color.b,
+                        icc_profile: None,
+                    }),
+                },
+                Op::DrawPolygon {
+                    polygon: Polygon {
+                        rings: vec![PolygonRing {
+                            points: vec![
+                                LinePoint {
+                                    p: Point {
+                                        x: self.base.x.into(),
+                                        y: (base_pdf.height - self.base.y).into(),
+                                    },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point {
+                                        x: self.base.x.into(),
+                                        y: (base_pdf.height - self.base.y - self.base.height)
+                                            .into(),
+                                    },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point {
+                                        x: (self.base.x + self.base.width).into(),
+                                        y: (base_pdf.height - self.base.y - self.base.height)
+                                            .into(),
+                                    },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point {
+                                        x: (self.base.x + self.base.width).into(),
+                                        y: (base_pdf.height - self.base.y).into(),
+                                    },
+                                    bezier: false,
+                                },
+                            ],
+                        }],
+                        mode: printpdf::PaintMode::Fill,
+                        winding_order: printpdf::WindingOrder::NonZero,
+                    },
+                },
+                Op::RestoreGraphicsState,
+            ]
+        })
+    }
+
+    // テキスト描画のオペレーションを作成
+    fn create_text_ops(
+        &self,
+        font_size: Pt,
+        x_line: Mm,
+        y: Mm,
+        character_spacing: Pt,
+        line: &str,
+    ) -> Vec<Op> {
+        vec![
+            Op::StartTextSection,
+            Op::SetLineHeight {
+                lh: font_size * self.line_height.unwrap_or(1.0),
+            },
+            Op::SetFillColor {
+                col: Color::Rgb(Rgb {
+                    r: self.font_color.r,
+                    g: self.font_color.g,
+                    b: self.font_color.b,
+                    icc_profile: None,
+                }),
+            },
+            Op::SetFontSize {
+                size: font_size.clone(),
+                font: self.font_id.clone(),
+            },
+            Op::SetTextCursor {
+                pos: Point {
+                    x: x_line.into(),
+                    y: y.into(),
+                },
+            },
+            Op::SetCharacterSpacing {
+                multiplier: character_spacing.0,
+            },
+            Op::WriteText {
+                items: vec![TextItem::Text(line.to_string())],
+                font: self.font_id.clone(),
+            },
+            Op::EndTextSection,
+        ]
     }
 
     pub fn set_x(&mut self, x: Mm) {
@@ -338,13 +382,15 @@ impl Text {
     pub fn get_height(&self) -> Result<Mm, Error> {
         let font_size = self.get_font_size()?;
 
-        let lines: Vec<String> = TextUtil::split_text_to_size(
-            &self.font_spec,
-            &self.content,
-            font_size,
-            self.base.width.into(),
-            self.character_spacing,
-        )?;
+        let lines: Vec<String> = self
+            .font_spec
+            .split_text_to_size(
+                &self.content,
+                font_size,
+                self.base.width.into(),
+                self.character_spacing,
+            )
+            .context(FontSnafu)?;
 
         let height_in_mm: Mm = Pt(lines.len() as f32 * font_size.0).into();
 
@@ -354,15 +400,207 @@ impl Text {
     fn get_font_size(&self) -> Result<Pt, Error> {
         match self.font_size.clone() {
             FontSize::Fixed(font_size) => Ok(font_size),
-            FontSize::Dynamic(dynamic_font_size) => TextUtil::calculate_dynamic_font_size(
-                &self.font_spec,
-                dynamic_font_size,
-                self.line_height,
-                self.character_spacing,
-                self.base.width,
-                self.base.height,
-                &self.content,
-            ),
+            FontSize::Dynamic(dynamic_font_size) => self
+                .font_spec
+                .calculate_dynamic_font_size(
+                    dynamic_font_size,
+                    self.line_height,
+                    self.character_spacing,
+                    self.base.width,
+                    self.base.height,
+                    &self.content,
+                )
+                .context(FontSnafu),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use printpdf::{FontId, Mm, Pt};
+
+    pub struct MockFontSpec {
+        pub width_result: Pt,
+        pub height: Pt,
+    }
+
+    impl MockFontSpec {
+        pub fn new(width_result: Pt, height: Pt) -> Self {
+            MockFontSpec {
+                width_result,
+                height,
+            }
+        }
+    }
+
+    impl FontSpecTrait for MockFontSpec {
+        fn split_text_to_size(
+            &self,
+            _text: &str,
+            _font_size: Pt,
+            _width: Pt,
+            _character_spacing: Pt,
+        ) -> Result<Vec<String>, crate::font::Error> {
+            Ok(vec!["Test line".to_string()])
+        }
+
+        fn width_of_text_at_size(
+            &self,
+            _text: String,
+            _font_size: Pt,
+            _character_spacing: Pt,
+        ) -> Result<Pt, crate::font::Error> {
+            Ok(self.width_result)
+        }
+
+        fn calculate_dynamic_font_size(
+            &self,
+            _dynamic_font_size: DynamicFontSize,
+            _line_height: Option<f32>,
+            _character_spacing: Pt,
+            _width: Mm,
+            _height: Mm,
+            _content: &str,
+        ) -> Result<Pt, crate::font::Error> {
+            Ok(self.height)
+        }
+    }
+
+    fn create_test_text() -> Text {
+        let base = BaseSchema::new("test".to_string(), Mm(10.0), Mm(10.0), Mm(100.0), Mm(50.0));
+        let font_id = FontId::new();
+        let font_spec = MockFontSpec {
+            width_result: Pt(20.0),
+            height: Pt(12.0),
+        };
+
+        Text {
+            base,
+            content: "Test content".to_string(),
+            alignment: Alignment::Left,
+            vertical_alignment: VerticalAlignment::Top,
+            character_spacing: Pt(0.0),
+            line_height: Some(1.2),
+            font_size: FontSize::Fixed(Pt(12.0)),
+            font_id,
+            font_spec: Arc::new(font_spec),
+            font_color: "#000".parse().unwrap(),
+            background_color: None,
+            padding: None,
+        }
+    }
+
+    #[test]
+    fn test_get_effective_box_size_no_padding() {
+        let text = create_test_text();
+        let (width, height) = text.get_effective_box_size();
+
+        assert_eq!(width, Mm(100.0));
+        assert_eq!(height, Mm(50.0));
+    }
+
+    #[test]
+    fn test_get_effective_box_size_with_padding() {
+        let mut text = create_test_text();
+        text.padding = Some(Frame {
+            top: Mm(5.0),
+            right: Mm(10.0),
+            bottom: Mm(5.0),
+            left: Mm(10.0),
+        });
+
+        let (width, height) = text.get_effective_box_size();
+
+        assert_eq!(width, Mm(80.0)); // 100 - (10 + 10)
+        assert_eq!(height, Mm(40.0)); // 50 - (5 + 5)
+    }
+
+    #[test]
+    fn test_vertical_alignment_top() {
+        let mut text = create_test_text();
+        text.vertical_alignment = VerticalAlignment::Top;
+
+        let offset = text.calculate_vertical_offset(Mm(50.0), Mm(30.0));
+        assert_eq!(offset, Mm(0.0));
+    }
+
+    #[test]
+    fn test_vertical_alignment_middle() {
+        let mut text = create_test_text();
+        text.vertical_alignment = VerticalAlignment::Middle;
+
+        let offset = text.calculate_vertical_offset(Mm(50.0), Mm(30.0));
+        assert_eq!(offset, Mm(10.0)); // (50 - 30) / 2
+    }
+
+    #[test]
+    fn test_vertical_alignment_bottom() {
+        let mut text = create_test_text();
+        text.vertical_alignment = VerticalAlignment::Bottom;
+
+        let offset = text.calculate_vertical_offset(Mm(50.0), Mm(30.0));
+        assert_eq!(offset, Mm(20.0)); // 50 - 30
+    }
+
+    #[test]
+    fn test_horizontal_alignment_left() {
+        let mut text = create_test_text();
+        text.alignment = Alignment::Left;
+
+        let (x, spacing) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
+        assert_eq!(x, Mm(10.0)); // base.x (padding.left = 0)
+        assert_eq!(spacing, Pt(0.0));
+    }
+
+    #[test]
+    fn test_horizontal_alignment_center() {
+        let mut text = create_test_text();
+        text.alignment = Alignment::Center;
+
+        let (x, spacing) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
+        assert_eq!(x, Mm(25.0)); // 10 + (100 - 70) / 2
+        assert_eq!(spacing, Pt(0.0));
+    }
+
+    #[test]
+    fn test_horizontal_alignment_right() {
+        let mut text = create_test_text();
+        text.alignment = Alignment::Right;
+
+        let (x, spacing) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
+        assert_eq!(x, Mm(40.0)); // 10 + (100 - 70)
+        assert_eq!(spacing, Pt(0.0));
+    }
+
+    #[test]
+    fn test_horizontal_alignment_justify() {
+        let mut text = create_test_text();
+        text.alignment = Alignment::Justify;
+
+        // モッキングが必要かもしれませんが、基本的なテスト
+        let (x, _) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
+        assert_eq!(x, Mm(10.0)); // base.x
+                                 // 文字間隔は実際の計算結果に依存するため、ここではテストしない
+    }
+
+    #[test]
+    fn test_y_position_calculation() {
+        let text = create_test_text();
+        let base_pdf = BasePdf {
+            width: Mm(210.0),
+            height: Mm(297.0),
+            padding: Frame {
+                top: Mm(0.0),
+                right: Mm(0.0),
+                bottom: Mm(0.0),
+                left: Mm(0.0),
+            },
+        };
+
+        let y = text.calculate_y_position(&base_pdf, Mm(5.0), Mm(14.4), 0);
+
+        // 297 - (10 + 5) - 14.4 - 0 = 267.6
+        assert_eq!(y, Mm(267.6));
     }
 }

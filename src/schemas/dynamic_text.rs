@@ -1,6 +1,8 @@
-use crate::font::{FontMap, FontSpec};
+use std::sync::Arc;
+
+use crate::font::{FontMap, FontSpec, FontSpecTrait};
 use crate::schemas::base::BaseSchema;
-use crate::schemas::{Error, JsonPosition, TextUtil};
+use crate::schemas::{Error, FontSnafu, JsonPosition};
 use crate::utils::OpBuffer;
 use printpdf::*;
 use serde::Deserialize;
@@ -30,7 +32,7 @@ pub struct DynamicText {
     line_height: Option<f32>,
     font_size: Pt,
     font_id: FontId,
-    font_spec: FontSpec,
+    font_spec: Arc<dyn FontSpecTrait>,
 }
 
 impl DynamicText {
@@ -57,7 +59,7 @@ impl DynamicText {
             line_height: None,
             font_size,
             font_id: font_id.clone(),
-            font_spec: font_spec.clone(),
+            font_spec: Arc::new(font_spec.clone()),
         })
     }
 
@@ -90,7 +92,7 @@ impl DynamicText {
             line_height,
             font_size,
             font_id: font_id.clone(),
-            font_spec: font_spec.clone(),
+            font_spec: Arc::new(font_spec.clone()),
         };
 
         Ok(text)
@@ -121,13 +123,15 @@ impl DynamicText {
 
         let character_spacing = self.character_spacing;
 
-        let lines: Vec<String> = TextUtil::split_text_to_size(
-            &self.font_spec,
-            &self.content,
-            self.font_size.clone(),
-            self.base.width.into(),
-            character_spacing,
-        )?;
+        let lines: Vec<String> = self
+            .font_spec
+            .split_text_to_size(
+                &self.content,
+                self.font_size.clone(),
+                self.base.width.into(),
+                character_spacing,
+            )
+            .context(FontSnafu)?;
 
         let y_offset: Pt = Pt(0.0);
         let mut y_line: Pt = Pt(0.0);

@@ -2,13 +2,12 @@ use std::cmp::max;
 
 use super::{base::BaseSchema, BasePdf, InvalidColorSnafu, Schema};
 use super::{qrcode, Frame, JsonFrame, SchemaTrait, VerticalAlignment};
-use crate::font::{FontMap, FontSize};
+use crate::font::FontMap;
 use crate::schemas::text;
 use crate::{
     schemas::{Alignment, Error, JsonPosition},
     utils::OpBuffer,
 };
-use palette::Srgb;
 use printpdf::{
     Color, LinePoint, Mm, Op, PaintMode, PdfDocument, Point, Polygon, PolygonRing, Pt, Rgb,
     WindingOrder,
