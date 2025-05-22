@@ -30,11 +30,6 @@
                 "height": 52.932,
                 "content": "[[\"Alice\",\"New York\",\"Alice is a freelance web designer and developer\"],[\"Bob\",\"Paris\",\"Bob is a freelance illustrator and graphic designer\"]]",
                 "showHead": true,
-                "head": [
-                    "Name",
-                    "Party",
-                    "Generation"
-                ],
                 "headWidthPercentages": [
                     {
                         "content": "Top",

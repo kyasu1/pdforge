@@ -12,31 +12,23 @@
         "height": 52.932,
         "content": "[[\"Alice\",\"New York\",\"Alice is a freelance web designer and developer\"],[\"Bob\",\"Paris\",\"Bob is a freelance illustrator and graphic designer\"]]",
         "showHead": true,
-        "head": [
-          "Name",
-          "Party",
-          "Generation"
-        ],
         "headWidthPercentages": [
           {
             "content": "Name",
-            "percent": 80,
+            "percent": 70,
             "fontSize": 12,
-            "characterSpacing": 0.0,
             "alignment": "center"
           },
           {
-            "percent": 10,
+            "percent": 15,
             "content": "Party",
             "fontSize": 12,
-            "characterSpacing": 0.0,
             "alignment": "center"
           },
           {
-            "percent": 10,
-            "content": "Generation",
+            "percent": 15,
+            "content": "Gen",
             "fontSize": 12,
-            "characterSpacing": 0.0,
             "alignment": "right"
           }
         ],
@@ -46,6 +38,7 @@
         },
         "headStyles": {
           "fontSize": 13,
+          "fontName": "NotoSansJP",
           "characterSpacing": 0,
           "alignment": "left",
           "verticalAlignment": "middle",
@@ -68,6 +61,7 @@
         },
         "bodyStyles": {
           "fontSize": 13,
+          "fontName": "NotoSansJP",
           "characterSpacing": 0,
           "alignment": "left",
           "verticalAlignment": "middle",
@@ -75,7 +69,7 @@
           "fontColor": "#000000",
           "borderColor": "#888888",
           "backgroundColor": "#FFFFFF",
-          "alternateBackgroundColor": "#f5f5f5",
+          "alternateBackgroundColor": "#f8f8f8",
           "borderWidth": {
             "top": 0.1,
             "right": 0.1,
@@ -104,21 +98,18 @@
               },
               "width": 0,
               "height": 0,
-              "alignment": "center",
+              "alignment": "left",
               "verticalAlign": "top",
               "fontName": "NotoSerifJP",
               "fontColor": "#000000",
-              "fontSize": 24
-            },
-            "height": 5.0,
-            "padding": {
-              "top": 1,
-              "right": 1,
-              "bottom": 1,
-              "left": 1
-            },
-            "alignment": "left",
-            "verticalAlign": "top"
+              "fontSize": 24,
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
+            }
           },
           {
             "schema": {
@@ -130,17 +121,16 @@
                 "y": 0
               },
               "width": 10,
-              "height": 10
-            },
-            "height": 5.0,
-            "padding": {
-              "top": 0,
-              "right": 0,
-              "bottom": 0,
-              "left": 0
-            },
-            "alignment": "center",
-            "verticalAlign": "middle"
+              "height": 10,
+              "alignment": "center",
+              "verticalAlignment": "middle",
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
+            }
           },
           {
             "schema": {
@@ -153,20 +143,17 @@
                 "x": 0,
                 "y": 0
               },
-              "alignment": "center",
+              "alignment": "right",
               "verticalAlign": "top",
               "fontName": "NotoSansJP",
-              "fontSize": 24
-            },
-            "height": 5.0,
-            "padding": {
-              "top": 1,
-              "right": 1,
-              "bottom": 1,
-              "left": 1
-            },
-            "alignment": "left",
-            "verticalAlign": "top"
+              "fontSize": 24,
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
+            }
           }
         ],
         "fields": [
@@ -421,7 +408,7 @@
         "characterSpacing": 0,
         "fontColor": "#000000",
         "fontName": "NotoSansJP",
-        "backgroundColor": "",
+        "backgroundColor": "#FFFFFF",
         "opacity": 1,
         "readOnly": false
       },
@@ -444,7 +431,7 @@
         "characterSpacing": 0,
         "fontColor": "#000000",
         "fontName": "NotoSerifJP",
-        "backgroundColor": "",
+        "backgroundColor": "#FFFFFF",
         "opacity": 1,
         "readOnly": false
       },
@@ -467,7 +454,7 @@
         "characterSpacing": 0,
         "fontColor": "#000000",
         "fontName": "NotoSerifJP",
-        "backgroundColor": "",
+        "backgroundColor": "#FFFFFF",
         "opacity": 1,
         "readOnly": false
       },
@@ -480,17 +467,17 @@
         },
         "required": false,
         "content": "TOP",
-        "width": 100,
-        "height": 10,
+        "width": 50,
+        "height": 20,
         "rotate": 0,
         "alignment": "center",
         "verticalAlignment": "top",
         "fontSize": 24,
         "lineHeight": 1,
         "characterSpacing": 0,
-        "fontColor": "#000000",
+        "fontColor": "#FFFFFF",
         "fontName": "NotoSansJP",
-        "backgroundColor": "",
+        "backgroundColor": "#000000",
         "opacity": 1,
         "readOnly": false
       },
@@ -498,22 +485,22 @@
         "name": "field2",
         "type": "text",
         "position": {
-          "x": 50,
+          "x": 65,
           "y": 10
         },
         "required": false,
         "content": "MIDDLE",
-        "width": 100,
-        "height": 10,
+        "width": 50,
+        "height": 20,
         "rotate": 0,
         "alignment": "center",
         "verticalAlignment": "middle",
         "fontSize": 24,
         "lineHeight": 1,
         "characterSpacing": 0,
-        "fontColor": "#000000",
+        "fontColor": "#FFFFFF",
         "fontName": "NotoSansJP",
-        "backgroundColor": "",
+        "backgroundColor": "#000000",
         "opacity": 1,
         "readOnly": false
       },
@@ -521,22 +508,22 @@
         "name": "field2",
         "type": "text",
         "position": {
-          "x": 100,
+          "x": 120,
           "y": 10
         },
         "required": false,
         "content": "BOTTOM",
-        "width": 100,
-        "height": 10,
+        "width": 50,
+        "height": 20,
         "rotate": 0,
         "alignment": "center",
         "verticalAlignment": "bottom",
         "fontSize": 24,
         "lineHeight": 1,
         "characterSpacing": 0,
-        "fontColor": "#000000",
+        "fontColor": "#FFFFFF",
         "fontName": "NotoSansJP",
-        "backgroundColor": "",
+        "backgroundColor": "#000000",
         "opacity": 1,
         "readOnly": false
       },
@@ -545,7 +532,7 @@
         "type": "qrCode",
         "position": {
           "x": 10,
-          "y": 30
+          "y": 50
         },
         "required": false,
         "content": "https://pdfme.org",
@@ -559,7 +546,7 @@
         "characterSpacing": 0,
         "fontColor": "#000000",
         "fontName": "NotoSansJP",
-        "backgroundColor": "",
+        "backgroundColor": "#FFFFFF",
         "opacity": 1,
         "readOnly": false
       }

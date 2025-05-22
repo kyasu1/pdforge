@@ -109,7 +109,7 @@ pub enum Schema {
 }
 
 impl Schema {
-    pub fn get_base(&self) -> &BaseSchema {
+    pub fn get_base(self) -> BaseSchema {
         match self {
             Schema::Text(text) => text.get_base(),
             Schema::DynamicText(text) => text.get_base(),
@@ -402,4 +402,54 @@ pub enum VerticalAlignment {
     Top,
     Middle,
     Bottom,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsonBoundingBox {
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct BoundingBox {
+    pub x: Mm,
+    pub y: Mm,
+    pub width: Mm,
+    pub height: Mm,
+}
+
+impl BoundingBox {
+    pub fn new(x: Mm, y: Mm, width: Mm, height: Mm) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    pub fn from_json(json: JsonBoundingBox) -> Self {
+        Self {
+            x: Mm(json.x),
+            y: Mm(json.y),
+            width: Mm(json.width),
+            height: Mm(json.height),
+        }
+    }
+}
+
+impl TryFrom<JsonBoundingBox> for BoundingBox {
+    type Error = Error;
+
+    fn try_from(json: JsonBoundingBox) -> Result<Self, Self::Error> {
+        Ok(Self {
+            x: Mm(json.x),
+            y: Mm(json.y),
+            width: Mm(json.width),
+            height: Mm(json.height),
+        })
+    }
 }

@@ -32,7 +32,7 @@ fn main() -> Result<(), PdfiumError> {
     let mut input: HashMap<&'static str, String> = HashMap::new();
     input.insert("name", "佐々木 ローズマリー".to_string());
     input.insert("pawnDate", "2025-03-10".to_string());
-    input.insert("expiryDate", "".to_string());
+    input.insert("expiryDate", "右欄参照".to_string());
     input.insert("amount", "350,000".to_string());
     input.insert("interest", "4%(14,000円)".to_string());
     input.insert("count", "2".to_string());

@@ -1,8 +1,7 @@
 use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use base64::{engine::general_purpose, Engine as _};
-use image::codecs::png::{PngDecoder, PngEncoder};
-use image::{DynamicImage, EncodableLayout, ExtendedColorType, ImageFormat, Rgb};
+use image::{DynamicImage, ImageFormat};
 use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
 use serde::Deserialize;
 use snafu::{whatever, ResultExt};
@@ -67,8 +66,8 @@ impl Image {
         Ok(Self { base, content })
     }
 
-    pub fn get_base(&self) -> &BaseSchema {
-        &self.base
+    pub fn get_base(self) -> BaseSchema {
+        self.base
     }
 
     pub fn render(

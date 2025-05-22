@@ -52,8 +52,8 @@ impl Svg {
         Ok(Self { base, content })
     }
 
-    pub fn get_base(&self) -> &BaseSchema {
-        &self.base
+    pub fn get_base(self) -> BaseSchema {
+        self.base
     }
 
     fn parse(content: &str) -> Result<ExternalXObject, Error> {

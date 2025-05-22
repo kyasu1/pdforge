@@ -1,7 +1,7 @@
 use std::cmp::max;
 
 use super::{base::BaseSchema, BasePdf, InvalidColorSnafu, Schema};
-use super::{qrcode, Frame, JsonFrame, SchemaTrait, VerticalAlignment};
+use super::{qrcode, BoundingBox, Frame, JsonFrame, SchemaTrait, VerticalAlignment};
 use crate::font::FontMap;
 use crate::schemas::text;
 use crate::{
@@ -302,8 +302,8 @@ impl Table {
         Ok(table)
     }
 
-    pub fn get_base(&self) -> &BaseSchema {
-        &self.base
+    pub fn get_base(self) -> BaseSchema {
+        self.base
     }
 
     pub fn render(
@@ -386,9 +386,20 @@ impl Table {
                         cols.push(Schema::Text(text));
                     }
                     Schema::QrCode(mut qr_code) => {
-                        qr_code.set_x(x);
-                        qr_code.set_y(y_line_mm);
-                        max_height = max(max_height, qr_code.get_height());
+                        max_height = max_height.max(qr_code.get_height());
+
+                        let bounding_box = BoundingBox {
+                            x: x,
+                            y: y_line_mm,
+                            width: cell_width,
+                            height: max_height.clone(),
+                        };
+
+                        qr_code.set_bounding_box(bounding_box);
+                        // qr_code.set_x(x);
+                        // qr_code.set_y(y_line_mm);
+                        // qr_code.set_width(cell_width);
+                        // max_height = max(max_height, qr_code.get_height());
 
                         x += cell_width;
 
@@ -431,13 +442,6 @@ impl Table {
             }
         }
 
-        let gray = Color::Rgb(Rgb {
-            r: 0.9,
-            g: 0.9,
-            b: 0.9,
-            icc_profile: None,
-        });
-
         for (page_index, page) in pages.into_iter().enumerate() {
             for (row_index, rows) in page.into_iter().enumerate() {
                 // Determine background color based on row_index
@@ -468,7 +472,7 @@ impl Table {
                 };
 
                 for (col_index, schema) in rows.into_iter().enumerate() {
-                    let base = schema.get_base();
+                    let base = schema.clone().get_base();
 
                     let width = cell_widths[col_index];
                     let rect = DrawRectangle {

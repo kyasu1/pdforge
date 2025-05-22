@@ -98,8 +98,8 @@ impl DynamicText {
         Ok(text)
     }
 
-    pub fn get_base(&self) -> &BaseSchema {
-        &self.base
+    pub fn get_base(self) -> BaseSchema {
+        self.base
     }
 
     pub fn render(

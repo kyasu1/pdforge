@@ -83,8 +83,8 @@ impl Text {
         })
     }
 
-    pub fn get_base(&self) -> &BaseSchema {
-        &self.base
+    pub fn get_base(self) -> BaseSchema {
+        self.base
     }
 
     pub fn from_json(json: JsonTextSchema, font_map: &FontMap) -> Result<Text, Error> {
