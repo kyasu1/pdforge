@@ -386,6 +386,11 @@
             "Joe Biden",
             "Democratic",
             "46"
+          ],
+          [
+            "Donald Trump",
+            "Republican",
+            "47"
           ]
         ]
       },
@@ -394,7 +399,7 @@
         "type": "dynamicText",
         "position": {
           "x": 10,
-          "y": 20
+          "y": 0
         },
         "required": false,
         "content": "HEADER 日経新聞からの抜粋です",

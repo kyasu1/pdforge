@@ -599,7 +599,6 @@ impl Table {
                     };
                     let ops = draw_rectangle(rect);
 
-                    println!("page_index: {}", page_index);
                     buffer.insert(page_index, ops);
 
                     schema.render(base_pdf, None, doc, page_index, buffer)?;
