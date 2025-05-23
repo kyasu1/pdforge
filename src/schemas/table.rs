@@ -306,6 +306,46 @@ impl Table {
         self.base
     }
 
+    fn create_header_row(
+        &self,
+        y_line_mm: Mm,
+        cell_widths: &[Mm],
+    ) -> Result<(Vec<Schema>, Mm), Error> {
+        let mut cols: Vec<Schema> = vec![];
+        let mut x = self.base.x;
+        let mut max_height = Mm(0.0);
+
+        for (head_index, head) in self.head_width_percentages.iter().enumerate() {
+            let mut text = head.text.clone();
+            let height = text.get_height()?;
+
+            max_height = max(max_height, height);
+
+            text.set_x(x);
+            text.set_y(y_line_mm);
+            text.set_width(cell_widths[head_index]);
+
+            let height = text.get_height()?;
+            max_height = max(max_height, height);
+
+            x += cell_widths[head_index];
+
+            cols.push(Schema::Text(text));
+        }
+
+        let new_y_line_mm = y_line_mm + max_height;
+
+        let header_row = cols
+            .into_iter()
+            .map(|mut schema| {
+                schema.set_height(max_height);
+                return schema;
+            })
+            .collect();
+
+        Ok((header_row, new_y_line_mm))
+    }
+
     pub fn render(
         &mut self,
         base_pdf: &BasePdf,
@@ -323,46 +363,14 @@ impl Table {
         let cell_widths = self.cell_widths();
         let mut show_head = self.show_head;
 
-        let heads = if self.show_head {
-            let mut cols: Vec<Schema> = vec![];
-            let mut x = self.base.x;
-            let mut max_height = Mm(0.0);
-
-            for (head_index, head) in self.head_width_percentages.iter().enumerate() {
-                let mut text = head.text.clone();
-                let height = text.get_height()?;
-                println!("head height: {:?}", height);
-                max_height = max(max_height, height);
-
-                text.set_x(x);
-                text.set_y(y_line_mm);
-                text.set_width(cell_widths[head_index]);
-
-                let height = text.get_height()?;
-                max_height = max(max_height, height);
-
-                x += cell_widths[head_index];
-
-                cols.push(Schema::Text(text));
-            }
-            println!("max_height: {:?}", max_height);
-            y_line_mm = y_line_mm + max_height;
-
-            cols.into_iter()
-                .map(|mut schema| {
-                    schema.set_height(max_height);
-                    return schema;
-                })
-                .collect()
-        } else {
-            vec![]
-        };
-
         let mut pages = vec![];
         for row in self.fields.iter() {
             if show_head {
                 show_head = false;
-                pages.push(vec![heads.clone()]);
+                let (header_row, new_y_line) = self.create_header_row(y_line_mm, &cell_widths)?;
+                y_line_mm = new_y_line;
+
+                pages.push(vec![header_row]);
             }
             let mut cols: Vec<Schema> = vec![];
             let mut x = self.base.x;
@@ -396,10 +404,6 @@ impl Table {
                         };
 
                         qr_code.set_bounding_box(bounding_box);
-                        // qr_code.set_x(x);
-                        // qr_code.set_y(y_line_mm);
-                        // qr_code.set_width(cell_width);
-                        // max_height = max(max_height, qr_code.get_height());
 
                         x += cell_width;
 
@@ -412,19 +416,41 @@ impl Table {
             }
             y_line_mm = y_line_mm + max_height;
 
+            // Check if the next row will exceed the page height
+            // If it does, create a new page and reset the y_line_mm
+            // If it doesn't, just continue to the next row
             if y_line_mm > y_bottom_mm {
                 internal_page_counter += 1;
+
+                let (header_row, new_y_line_mm) = if self.show_head {
+                    let header = self.create_header_row(top_margin_in_mm, &cell_widths)?;
+                    (Some(header.0), header.1)
+                } else {
+                    (None, top_margin_in_mm)
+                };
+
+                y_line_mm = new_y_line_mm;
+
                 // colsのyをリセットする必要がある
                 let updated: Vec<Schema> = cols
                     .into_iter()
                     .map(|mut schema| {
-                        schema.set_y(top_margin_in_mm);
+                        schema.set_y(y_line_mm);
                         schema.set_height(max_height);
                         return schema;
                     })
                     .collect();
-                pages.push(vec![updated]);
-                y_line_mm = top_margin_in_mm + max_height;
+
+                y_line_mm = y_line_mm + max_height;
+
+                match header_row {
+                    Some(header_row) => {
+                        pages.push(vec![header_row, updated]);
+                    }
+                    None => {
+                        pages.push(vec![updated]);
+                    }
+                }
             } else {
                 let updated: Vec<Schema> = cols
                     .into_iter()
@@ -434,6 +460,10 @@ impl Table {
                     })
                     .collect();
 
+                // Check if the page already exists
+                // If it does, push the updated schema to that page
+                // If it doesn't, create a new page and add the updated schema
+                // to that page
                 if let Some(page) = pages.get_mut(internal_page_counter) {
                     page.push(updated);
                 } else {

@@ -158,7 +158,6 @@ impl QrCode {
         // 配置オフセットを計算
         let x_offset = self.calculate_horizontal_offset(box_width, qr_width);
         let y_offset = self.calculate_vertical_offset(box_height, qr_height);
-        println!("x_offset: {:?}, y_offset: {:?}", x_offset, y_offset);
 
         // パディングとオフセットを考慮した位置を計算
         let x = self
