@@ -1,5 +1,3 @@
-use std::cmp::max;
-
 use super::{base::BaseSchema, BasePdf, InvalidColorSnafu, Schema};
 use super::{qrcode, BoundingBox, Frame, JsonFrame, SchemaTrait, VerticalAlignment};
 use crate::font::FontMap;
@@ -14,6 +12,8 @@ use printpdf::{
 };
 use serde::Deserialize;
 use snafu::prelude::*;
+use std::cmp::max;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -333,8 +333,6 @@ impl Table {
             cols.push(Schema::Text(text));
         }
 
-        let new_y_line_mm = y_line_mm + max_height;
-
         let header_row = cols
             .into_iter()
             .map(|mut schema| {
@@ -343,7 +341,58 @@ impl Table {
             })
             .collect();
 
-        Ok((header_row, new_y_line_mm))
+        Ok((header_row, max_height))
+    }
+
+    fn process_row(
+        &self,
+        row: Vec<String>,
+        y_line_mm: Mm,
+        cell_widths: &[Mm],
+    ) -> Result<(Vec<Schema>, Mm), Error> {
+        let mut cols: Vec<Schema> = vec![];
+        let mut x = self.base.x;
+        let mut max_height = Mm(0.0);
+
+        for (col_index, col) in row.into_iter().enumerate() {
+            let schema = self.columns[col_index].clone();
+            let cell_width = cell_widths[col_index];
+            match schema.clone() {
+                Schema::Text(mut text) => {
+                    text.set_x(x);
+                    text.set_y(y_line_mm);
+                    text.set_width(cell_width);
+                    text.set_content(col.to_string());
+
+                    let height = text.get_height()?;
+                    max_height = max(max_height, height);
+
+                    x += cell_width;
+
+                    cols.push(Schema::Text(text));
+                }
+                Schema::QrCode(mut qr_code) => {
+                    max_height = max_height.max(qr_code.get_height());
+
+                    let bounding_box = BoundingBox {
+                        x: x,
+                        y: y_line_mm,
+                        width: cell_width,
+                        height: max_height.clone(),
+                    };
+
+                    qr_code.set_bounding_box(bounding_box);
+
+                    x += cell_width;
+
+                    cols.push(Schema::QrCode(qr_code));
+                }
+                _ => {
+                    unimplemented!();
+                }
+            }
+        }
+        Ok((cols, max_height))
     }
 
     pub fn render(
@@ -356,82 +405,53 @@ impl Table {
     ) -> Result<(usize, Option<Mm>), Error> {
         let top_margin_in_mm = base_pdf.padding.top;
         let bottom_margin_in_mm = base_pdf.padding.bottom;
-        let mut internal_page_counter = 0;
+        let mut internal_page_counter: usize = 0;
         let y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
         let y_bottom_mm = base_pdf.height - bottom_margin_in_mm;
         let mut y_line_mm: Mm = y_top_mm;
         let cell_widths = self.cell_widths();
         let mut show_head = self.show_head;
 
-        let mut pages = vec![];
-        for row in self.fields.iter() {
-            if show_head {
-                show_head = false;
-                let (header_row, new_y_line) = self.create_header_row(y_line_mm, &cell_widths)?;
-                y_line_mm = new_y_line;
+        let mut pages: HashMap<usize, Vec<Vec<Schema>>> = HashMap::new();
 
-                pages.push(vec![header_row]);
+        let (header_row, header_height) = if self.show_head {
+            let header = self.create_header_row(top_margin_in_mm, &cell_widths)?;
+            (Some(header.0), header.1)
+        } else {
+            (None, Mm(0.0))
+        };
+
+        match self.fields.as_slice() {
+            [] => {
+                // If there are no fields, we don't need to render anything
+                return Ok((current_page, None));
             }
-            let mut cols: Vec<Schema> = vec![];
-            let mut x = self.base.x;
-            let mut max_height = Mm(0.0);
+            [head, tail @ ..] => {
+                let (cols, max_height) = self.process_row(head.clone(), y_line_mm, &cell_widths)?;
 
-            for (col_index, col) in row.into_iter().enumerate() {
-                let schema = self.columns[col_index].clone();
-                let cell_width = cell_widths[col_index];
-                match schema.clone() {
-                    Schema::Text(mut text) => {
-                        text.set_x(x);
-                        text.set_y(y_line_mm);
-                        text.set_width(cell_width);
-                        text.set_content(col.to_string());
-
-                        let height = text.get_height()?;
-                        max_height = max(max_height, height);
-
-                        x += cell_width;
-
-                        cols.push(Schema::Text(text));
-                    }
-                    Schema::QrCode(mut qr_code) => {
-                        max_height = max_height.max(qr_code.get_height());
-
-                        let bounding_box = BoundingBox {
-                            x: x,
-                            y: y_line_mm,
-                            width: cell_width,
-                            height: max_height.clone(),
-                        };
-
-                        qr_code.set_bounding_box(bounding_box);
-
-                        x += cell_width;
-
-                        cols.push(Schema::QrCode(qr_code));
-                    }
-                    _ => {
-                        unimplemented!();
-                    }
+                if y_line_mm + header_height + max_height > y_bottom_mm {
+                    // If the header row exceeds the page height, we need to create a new page
+                    internal_page_counter += 1;
+                    y_line_mm = top_margin_in_mm;
                 }
-            }
-            y_line_mm = y_line_mm + max_height;
 
-            // Check if the next row will exceed the page height
-            // If it does, create a new page and reset the y_line_mm
-            // If it doesn't, just continue to the next row
-            if y_line_mm > y_bottom_mm {
-                internal_page_counter += 1;
-
-                let (header_row, new_y_line_mm) = if self.show_head {
-                    let header = self.create_header_row(top_margin_in_mm, &cell_widths)?;
-                    (Some(header.0), header.1)
-                } else {
-                    (None, top_margin_in_mm)
+                let updated_header_row = match header_row.clone() {
+                    Some(header_row) => {
+                        let updated: Vec<Schema> = header_row
+                            .into_iter()
+                            .map(|mut schema| {
+                                schema.set_y(y_line_mm);
+                                return schema;
+                            })
+                            .collect();
+                        Some(updated)
+                    }
+                    None => None,
                 };
 
-                y_line_mm = new_y_line_mm;
-
                 // colsのyをリセットする必要がある
+                y_line_mm += header_height;
+
                 let updated: Vec<Schema> = cols
                     .into_iter()
                     .map(|mut schema| {
@@ -441,38 +461,100 @@ impl Table {
                     })
                     .collect();
 
-                y_line_mm = y_line_mm + max_height;
+                y_line_mm += max_height;
 
-                match header_row {
+                let head_and_first = match updated_header_row {
                     Some(header_row) => {
-                        pages.push(vec![header_row, updated]);
+                        vec![header_row, updated]
                     }
                     None => {
-                        pages.push(vec![updated]);
+                        vec![updated]
                     }
-                }
-            } else {
-                let updated: Vec<Schema> = cols
-                    .into_iter()
-                    .map(|mut schema| {
-                        schema.set_height(max_height);
-                        return schema;
-                    })
-                    .collect();
+                };
 
-                // Check if the page already exists
-                // If it does, push the updated schema to that page
-                // If it doesn't, create a new page and add the updated schema
-                // to that page
-                if let Some(page) = pages.get_mut(internal_page_counter) {
-                    page.push(updated);
+                if let Some(page) = pages.get_mut(&internal_page_counter) {
+                    page.extend_from_slice(&head_and_first);
                 } else {
-                    pages.push(vec![updated])
+                    pages.insert(internal_page_counter, head_and_first);
+                }
+
+                for row in tail.iter() {
+                    let (cols, max_height) =
+                        self.process_row(row.clone(), y_line_mm, &cell_widths)?;
+
+                    // Check if the next row will exceed the page height
+                    // If it does, create a new page and reset the y_line_mm
+                    // If it doesn't, just continue to the next row
+                    if y_line_mm + max_height > y_bottom_mm {
+                        internal_page_counter += 1;
+
+                        y_line_mm = top_margin_in_mm;
+
+                        let updated_header_row = match header_row.clone() {
+                            Some(header_row) => {
+                                let updated: Vec<Schema> = header_row
+                                    .into_iter()
+                                    .map(|mut schema| {
+                                        schema.set_y(y_line_mm);
+                                        return schema;
+                                    })
+                                    .collect();
+                                Some(updated)
+                            }
+                            None => None,
+                        };
+
+                        y_line_mm = header_height + top_margin_in_mm;
+
+                        // colsのyをリセットする必要がある
+                        let updated: Vec<Schema> = cols
+                            .into_iter()
+                            .map(|mut schema| {
+                                schema.set_y(y_line_mm);
+                                schema.set_height(max_height);
+                                return schema;
+                            })
+                            .collect();
+
+                        let head_and_first = match updated_header_row {
+                            Some(u) => {
+                                vec![u, updated]
+                            }
+                            None => {
+                                vec![updated]
+                            }
+                        };
+
+                        if let Some(page) = pages.get_mut(&internal_page_counter) {
+                            page.extend_from_slice(&head_and_first);
+                        } else {
+                            pages.insert(internal_page_counter, head_and_first);
+                        }
+                    } else {
+                        let updated: Vec<Schema> = cols
+                            .into_iter()
+                            .map(|mut schema| {
+                                schema.set_height(max_height);
+                                return schema;
+                            })
+                            .collect();
+
+                        // Check if the page already exists
+                        // If it does, push the updated schema to that page
+                        // If it doesn't, create a new page and add the updated schema
+                        // to that page
+                        if let Some(page) = pages.get_mut(&internal_page_counter) {
+                            page.push(updated);
+                        } else {
+                            pages.insert(internal_page_counter, vec![updated]);
+                        }
+                    }
+                    y_line_mm = y_line_mm + max_height;
                 }
             }
         }
 
-        for (page_index, page) in pages.into_iter().enumerate() {
+        for (page_index, page) in pages.into_iter() {
             for (row_index, rows) in page.into_iter().enumerate() {
                 // Determine background color based on row_index
                 let color = if row_index % 2 == 1 {
@@ -517,6 +599,7 @@ impl Table {
                     };
                     let ops = draw_rectangle(rect);
 
+                    println!("page_index: {}", page_index);
                     buffer.insert(page_index, ops);
 
                     schema.render(base_pdf, None, doc, page_index, buffer)?;
