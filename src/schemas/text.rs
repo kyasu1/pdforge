@@ -329,38 +329,16 @@ impl Text {
         character_spacing: Pt,
         line: &str,
     ) -> Vec<Op> {
-        vec![
-            Op::StartTextSection,
-            Op::SetLineHeight {
-                lh: font_size * self.line_height.unwrap_or(1.0),
-            },
-            Op::SetFillColor {
-                col: Color::Rgb(Rgb {
-                    r: self.font_color.r,
-                    g: self.font_color.g,
-                    b: self.font_color.b,
-                    icc_profile: None,
-                }),
-            },
-            Op::SetFontSize {
-                size: font_size.clone(),
-                font: self.font_id.clone(),
-            },
-            Op::SetTextCursor {
-                pos: Point {
-                    x: x_line.into(),
-                    y: y.into(),
-                },
-            },
-            Op::SetCharacterSpacing {
-                multiplier: character_spacing.0,
-            },
-            Op::WriteText {
-                items: vec![TextItem::Text(line.to_string())],
-                font: self.font_id.clone(),
-            },
-            Op::EndTextSection,
-        ]
+        super::pdf_utils::create_text_ops(
+            &self.font_id,
+            font_size,
+            x_line,
+            y,
+            character_spacing,
+            line,
+            self.line_height,
+            &self.font_color,
+        )
     }
 
     pub fn set_x(&mut self, x: Mm) {

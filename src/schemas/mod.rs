@@ -1,6 +1,7 @@
 pub mod base;
 pub mod dynamic_text;
 pub mod image;
+pub mod pdf_utils;
 pub mod qrcode;
 pub mod rect;
 pub mod svg;
@@ -271,12 +272,12 @@ impl Template {
         font_map: &FontMap,
         inputs: Vec<Vec<HashMap<&'static str, String>>>,
     ) -> Result<Vec<u8>, Error> {
-        if inputs.len() != self.schemas.len() {
-            return Err(Error::Whatever {
-                message: "Input length does not match page length".to_string(),
-                source: None,
-            });
-        }
+        // if inputs.len() != self.schemas.len() {
+        //     return Err(Error::Whatever {
+        //         message: "Input length does not match page length".to_string(),
+        //         source: None,
+        //     });
+        // }
 
         let mut schemas: Vec<Vec<Schema>> = Vec::new();
 

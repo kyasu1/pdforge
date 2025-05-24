@@ -410,7 +410,6 @@ impl Table {
         let y_bottom_mm = base_pdf.height - bottom_margin_in_mm;
         let mut y_line_mm: Mm = y_top_mm;
         let cell_widths = self.cell_widths();
-        let mut show_head = self.show_head;
 
         let mut pages: HashMap<usize, Vec<Vec<Schema>>> = HashMap::new();
 

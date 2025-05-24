@@ -109,18 +109,17 @@ impl DynamicText {
         current_top_mm: Option<Mm>,
         buffer: &mut OpBuffer,
     ) -> Result<(usize, Option<Mm>), Error> {
+        println!("current_top_mm {:?}", current_top_mm);
+
         let top_margin_in_mm = base_pdf.padding.top;
         let bottom_margin_in_mm = base_pdf.padding.bottom;
-        let page_height: Pt = base_pdf.height.into();
+        let page_height_in_mm = base_pdf.height;
 
-        let mut index_offset = 0;
         let mut page_counter = 0;
-        let mut y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
-        // let mut y_bottom_mm = self.schema.base.get_y() + self.schema.base.get_height();
+        let y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
+        let mut y_line_mm: Mm = y_top_mm;
         let y_bottom_mm = base_pdf.height - bottom_margin_in_mm;
-
-        let line_height = Pt(self.line_height.unwrap_or(1.0) * self.font_size.0);
-
+        let line_height_in_mm: Mm = Pt(self.line_height.unwrap_or(1.0) * self.font_size.0).into();
         let character_spacing = self.character_spacing;
 
         let lines: Vec<String> = self
@@ -133,85 +132,53 @@ impl DynamicText {
             )
             .context(FontSnafu)?;
 
-        let y_offset: Pt = Pt(0.0);
-        let mut y_line: Pt = Pt(0.0);
-        let lines_splitted_to_pages: Vec<Vec<String>> = lines.into_iter().enumerate().fold(
-            Vec::new(),
-            |mut acc: Vec<Vec<String>>, (index, current)| {
-                let row_y_offset = self.font_size * (index as f32 - index_offset as f32);
-                y_line = page_height - y_top_mm.into() - y_offset - row_y_offset;
-                if y_line <= page_height - y_bottom_mm.into() {
-                    page_counter += 1;
-                    acc.push(vec![current.clone()]);
-                    index_offset = index;
-                    y_top_mm = top_margin_in_mm;
-                } else {
-                    if let Some(page) = acc.get_mut(page_counter) {
-                        page.push(current.clone());
-                    } else {
-                        acc.push(vec![current.clone()]);
-                    }
-                }
-                acc
-            },
-        );
+        let mut pages: Vec<Vec<String>> = Vec::new();
 
-        let next_y_line_mm = base_pdf.height - y_line.into() + self.font_size.into();
+        for line in lines.into_iter() {
+            y_line_mm = y_line_mm + line_height_in_mm;
 
-        let mut pages_increased = 0;
-        let mut y_start = page_height - (current_top_mm.unwrap_or(self.base.y).into());
-
-        for (page_index, page) in lines_splitted_to_pages.into_iter().enumerate() {
-            let mut ops: Vec<Op> = vec![
-                Op::SaveGraphicsState,
-                Op::StartTextSection,
-                Op::SetTextCursor {
-                    pos: Point {
-                        x: self.base.x.into(),
-                        y: y_start,
-                    },
-                },
-                Op::SetLineHeight { lh: line_height },
-                Op::SetCharacterSpacing {
-                    // multiplier: character_spacing.clone(),
-                    multiplier: 0.0,
-                },
-                Op::SetFillColor {
-                    col: Color::Rgb(Rgb {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 0.0,
-                        icc_profile: None,
-                    }),
-                },
-                Op::SetFontSize {
-                    size: self.font_size.clone(),
-                    font: self.font_id.clone(),
-                },
-            ];
-
-            for line in page {
-                let line_ops = vec![
-                    Op::WriteText {
-                        items: vec![TextItem::Text(line.clone())],
-                        font: self.font_id.clone(),
-                    },
-                    Op::AddLineBreak,
-                ];
-                ops.extend_from_slice(&line_ops);
+            if y_line_mm > y_bottom_mm {
+                page_counter += 1;
+                y_line_mm = top_margin_in_mm;
             }
 
-            ops.extend_from_slice(&[Op::EndTextSection, Op::RestoreGraphicsState]);
-            buffer.insert(current_page + page_index, ops);
-            pages_increased += 1;
-            y_start = page_height - top_margin_in_mm.into();
+            if let Some(page) = pages.get_mut(page_counter) {
+                page.push(line.clone());
+            } else {
+                pages.insert(page_counter, vec![line.clone()]);
+            }
         }
-        Ok((
-            current_page + pages_increased - 1,
-            // Some((page_height - y_line + top_margin_in_mm.into()).into()),
-            // Some(page_height_in_mm - y_line.into()),
-            Some(next_y_line_mm),
-        ))
+
+        let next_y_line_mm = y_line_mm;
+
+        let mut y_start = y_top_mm;
+
+        let pages_increased = pages.len() - 1;
+
+        for (page_index, page) in pages.into_iter().enumerate() {
+            let mut ops: Vec<Op> = Vec::new();
+
+            for (index, line) in page.into_iter().enumerate() {
+                let y_position =
+                    page_height_in_mm - y_start - line_height_in_mm * (index + 1) as f32;
+
+                let line_ops = super::pdf_utils::create_text_ops(
+                    &self.font_id,
+                    self.font_size,
+                    self.base.x,
+                    y_position,
+                    character_spacing,
+                    &line,
+                    self.line_height,
+                    &csscolorparser::parse("#000000").unwrap(), // デフォルトの黒色
+                );
+
+                ops.extend_from_slice(&line_ops);
+            }
+            buffer.insert(current_page + page_index, ops);
+            y_start = top_margin_in_mm;
+        }
+        Ok((current_page + pages_increased, Some(next_y_line_mm)))
     }
 
     pub fn set_y(&mut self, y: Mm) {
