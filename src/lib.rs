@@ -25,7 +25,15 @@ impl PDFme {
     }
 
     pub fn render(&mut self, template_name: &str) -> Vec<u8> {
-        self.render_with_inputs(template_name, vec![vec![HashMap::new()]])
+        match self.template_map.get(template_name) {
+            Some(template) => template
+                .render_static(&mut self.doc, &self.font_map)
+                .unwrap(),
+            None => {
+                println!("Template not found: {}", template_name);
+                Vec::new()
+            }
+        }
     }
 
     pub fn render_with_inputs(

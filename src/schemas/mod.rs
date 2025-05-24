@@ -264,20 +264,62 @@ impl Template {
        PDFmeのテンプレートは、複数のページを持つことができる。各ページはスキーマのリストにより構成される。
        スキーマには、テキスト、QRコード、画像、SVGなどの要素がある。
        テンプレートに含まれる各ページに対して、複数の入力データの集合を渡すことにより、データ集合毎にページを生成することができる。
-
     */
+
+    // inputsがない場合のrender関数
+    pub fn render_static(
+        &self,
+        doc: &mut PdfDocument,
+        font_map: &FontMap,
+    ) -> Result<Vec<u8>, Error> {
+        let mut schemas: Vec<Vec<Schema>> = Vec::new();
+
+        // 各ページのschemaを直接変換（テンプレート処理なし）
+        for page_schema in &self.schemas {
+            let json_schemas: Vec<JsonSchema> = serde_json::from_value(page_schema.clone())
+                .map_err(|e| Error::TemplateDeserialize {
+                    source: e,
+                    message: "Failed to parse schema without inputs".to_string(),
+                })?;
+
+            let converted: Vec<Schema> = json_schemas
+                .into_iter()
+                .map(|schema| match schema {
+                    JsonSchema::Text(json) => {
+                        Schema::Text(Text::from_json(json, font_map).unwrap())
+                    }
+                    JsonSchema::DynamicText(json) => Schema::DynamicText(
+                        dynamic_text::DynamicText::from_json(json, font_map).unwrap(),
+                    ),
+                    JsonSchema::Table(json) => {
+                        Schema::Table(Table::from_json(json, font_map).unwrap())
+                    }
+                    JsonSchema::QrCode(json) => json.into(),
+                    JsonSchema::Image(json) => json.try_into().unwrap(),
+                    JsonSchema::Svg(json) => json.try_into().unwrap(),
+                    JsonSchema::Rectangle(json) => json.try_into().unwrap(),
+                })
+                .collect::<Vec<Schema>>();
+
+            schemas.push(converted);
+        }
+
+        self.render_schemas(doc, schemas)
+    }
+
+    // inputsがある場合のrender関数
     pub fn render(
         &self,
-        mut doc: &mut PdfDocument,
+        doc: &mut PdfDocument,
         font_map: &FontMap,
         inputs: Vec<Vec<HashMap<&'static str, String>>>,
     ) -> Result<Vec<u8>, Error> {
-        // if inputs.len() != self.schemas.len() {
-        //     return Err(Error::Whatever {
-        //         message: "Input length does not match page length".to_string(),
-        //         source: None,
-        //     });
-        // }
+        if inputs.len() != self.schemas.len() {
+            return Err(Error::Whatever {
+                message: "Input length does not match page length".to_string(),
+                source: None,
+            });
+        }
 
         let mut schemas: Vec<Vec<Schema>> = Vec::new();
 
@@ -327,22 +369,33 @@ impl Template {
             schemas.extend(converted);
         }
 
-        let mut buffer = OpBuffer::default();
+        self.render_schemas(doc, schemas)
+    }
 
-        let mut p = 0;
+    // 共通のレンダリング処理
+    fn render_schemas(
+        &self,
+        mut doc: &mut PdfDocument,
+        schemas: Vec<Vec<Schema>>,
+    ) -> Result<Vec<u8>, Error> {
+        let mut buffer = OpBuffer::default();
+        let mut current_page = 0;
         let mut y: Option<Mm> = None;
 
         for (page_index, page) in schemas.iter().enumerate() {
+            println!("Rendering page {}", page_index + 1);
             for schema in page {
                 match schema.clone() {
                     Schema::Text(mut obj) => {
                         obj.render(&self.base_pdf, page_index, &mut buffer)?;
                     }
                     Schema::DynamicText(mut obj) => {
-                        (p, y) = obj.render(&self.base_pdf, p, y, &mut buffer)?;
+                        (current_page, y) =
+                            obj.render(&self.base_pdf, current_page, y, &mut buffer)?;
                     }
                     Schema::Table(mut obj) => {
-                        (p, y) = obj.render(&self.base_pdf, doc, p, y, &mut buffer)?;
+                        (current_page, y) =
+                            obj.render(&self.base_pdf, doc, current_page, y, &mut buffer)?;
                     }
                     Schema::QrCode(obj) => {
                         obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?;
