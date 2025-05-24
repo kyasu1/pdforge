@@ -1,7 +1,8 @@
 use super::{BasePdf, InvalidColorSnafu};
+use crate::schemas::pdf_utils::{draw_rectangle, DrawRectangle};
 use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
 use crate::utils::OpBuffer;
-use printpdf::{Color, LinePoint, Mm, Op, PdfDocument, Point, Polygon, PolygonRing, Pt, Rgb};
+use printpdf::{Color, Mm, Op, PdfDocument, Pt, Rgb};
 use serde::Deserialize;
 use snafu::prelude::*;
 
@@ -87,72 +88,32 @@ impl Rect {
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
-        let mode = if self.color == self.border_color {
-            printpdf::PaintMode::Fill
-        } else {
-            printpdf::PaintMode::FillStroke
+        let rect = DrawRectangle {
+            x: self.base.x,
+            y: self.base.y,
+            width: self.base.width,
+            height: self.base.height,
+            page_height: base_pdf.height,
+            color: Some(Color::Rgb(Rgb {
+                r: self.color.r,
+                g: self.color.g,
+                b: self.color.b,
+                icc_profile: None,
+            })),
+            border_width: Some(Mm(self.border_width.0)),
+            border_color: Some(Color::Rgb(Rgb {
+                r: self.border_color.r,
+                g: self.border_color.g,
+                b: self.border_color.b,
+                icc_profile: None,
+            })),
         };
-        let ops = vec![
-            Op::SaveGraphicsState,
-            Op::SetFillColor {
-                col: Color::Rgb(Rgb {
-                    r: self.color.r,
-                    g: self.color.g,
-                    b: self.color.b,
-                    icc_profile: None,
-                }),
-            },
-            Op::SetOutlineColor {
-                col: Color::Rgb(Rgb {
-                    r: self.border_color.r,
-                    g: self.border_color.g,
-                    b: self.border_color.b,
-                    icc_profile: None,
-                }),
-            },
-            Op::SetOutlineThickness {
-                pt: self.border_width,
-            },
-            Op::DrawPolygon {
-                polygon: Polygon {
-                    rings: vec![PolygonRing {
-                        points: vec![
-                            LinePoint {
-                                p: Point {
-                                    x: self.base.x.into(),
-                                    y: (base_pdf.height - self.base.y).into(),
-                                },
-                                bezier: false,
-                            },
-                            LinePoint {
-                                p: Point {
-                                    x: self.base.x.into(),
-                                    y: (base_pdf.height - self.base.y - self.base.height).into(),
-                                },
-                                bezier: false,
-                            },
-                            LinePoint {
-                                p: Point {
-                                    x: (self.base.x + self.base.width).into(),
-                                    y: (base_pdf.height - self.base.y - self.base.height).into(),
-                                },
-                                bezier: false,
-                            },
-                            LinePoint {
-                                p: Point {
-                                    x: (self.base.x + self.base.width).into(),
-                                    y: (base_pdf.height - self.base.y).into(),
-                                },
-                                bezier: false,
-                            },
-                        ],
-                    }],
-                    mode,
-                    winding_order: printpdf::WindingOrder::NonZero,
-                },
-            },
-            Op::RestoreGraphicsState,
-        ];
+
+        let ops = vec![Op::SaveGraphicsState]
+            .into_iter()
+            .chain(draw_rectangle(rect))
+            .chain(vec![Op::RestoreGraphicsState])
+            .collect();
 
         buffer.insert(page, ops);
 

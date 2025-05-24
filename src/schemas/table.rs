@@ -1,6 +1,7 @@
 use super::{base::BaseSchema, BasePdf, InvalidColorSnafu, Schema};
 use super::{qrcode, BoundingBox, Frame, JsonFrame, SchemaTrait, VerticalAlignment};
 use crate::font::FontMap;
+use crate::schemas::pdf_utils::{draw_rectangle, DrawRectangle};
 use crate::schemas::text;
 use crate::{
     schemas::{Alignment, Error, JsonPosition},
@@ -607,82 +608,6 @@ impl Table {
 
         Ok((current_page + internal_page_counter, Some(y_line_mm)))
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct DrawRectangle {
-    x: Mm,
-    y: Mm,
-    width: Mm,
-    height: Mm,
-    page_height: Mm,
-    color: Option<Color>,
-    border_width: Option<Mm>,
-    border_color: Option<Color>,
-}
-fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
-    let mode = match props.color {
-        Some(_) => PaintMode::FillStroke,
-        None => PaintMode::Stroke,
-    };
-
-    let color = props.color.unwrap_or(Color::Rgb(Rgb {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
-        icc_profile: None,
-    }));
-
-    let border_color = props.border_color.unwrap_or(Color::Rgb(Rgb {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        icc_profile: None,
-    }));
-
-    let border_width = props.border_width.unwrap_or(Mm(0.1));
-
-    let x1: Pt = props.x.into();
-    let y1: Pt = (props.page_height - props.y).into();
-    let x2: Pt = (props.x + props.width).into();
-    let y2: Pt = (props.page_height - props.y - props.height).into();
-
-    let polygon = Polygon {
-        rings: vec![PolygonRing {
-            points: vec![
-                LinePoint {
-                    p: Point { x: x1, y: y1 },
-                    bezier: false,
-                },
-                LinePoint {
-                    p: Point { x: x2, y: y1 },
-                    bezier: false,
-                },
-                LinePoint {
-                    p: Point { x: x2, y: y2 },
-                    bezier: false,
-                },
-                LinePoint {
-                    p: Point { x: x1, y: y2 },
-                    bezier: false,
-                },
-            ],
-        }],
-        mode,
-        winding_order: WindingOrder::NonZero,
-    };
-
-    let ops: Vec<Op> = vec![
-        Op::SetOutlineColor { col: border_color },
-        Op::SetFillColor { col: color },
-        Op::SetOutlineThickness {
-            pt: border_width.into(),
-        },
-        Op::DrawPolygon {
-            polygon: polygon.clone(),
-        },
-    ];
-    ops
 }
 
 #[derive(Debug, Clone)]
