@@ -1,6 +1,6 @@
 [package]
-name = "rust_pdfme"
-version = "0.2.0"
+name = "pdforge"
+version = "0.2.1"
 edition = "2021"
 
 [dependencies]
@@ -12,7 +12,7 @@ image = { version = "0.25.5", features = ["png"] }
 palette = "0.7.6"
 #printpdf = { git = "https://github.com/fschutt/printpdf", rev = "e32651e", features = ["bmp", "png", "jpeg"] }
 #printpdf = { path = "../printpdf", features = ["bmp", "png", "jpeg"] }
-printpdf = { version = "0.8.2", features = ["bmp", "png", "jpeg"]}
+printpdf = { version = "0.8", features = ["bmp", "png", "jpeg"]}
 qrcode = "0.14.1"
 serde = { version = "1.0.217", features = ["derive", "serde_derive"] }
 serde_json = "1.0.139"
