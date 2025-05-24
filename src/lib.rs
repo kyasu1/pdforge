@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 use printpdf::{ParsedFont, PdfDocument};
 
+#[derive(Debug, Clone)]
 pub struct PDForge {
     name: String,
     doc: PdfDocument,
