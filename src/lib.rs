@@ -7,16 +7,16 @@ use std::collections::HashMap;
 
 use printpdf::{ParsedFont, PdfDocument};
 
-pub struct PDFme {
+pub struct PDForge {
     name: String,
     doc: PdfDocument,
     font_map: font::FontMap,
     template_map: HashMap<String, schemas::Template>,
 }
 
-impl PDFme {
+impl PDForge {
     pub fn new(name: String) -> Self {
-        PDFme {
+        PDForge {
             name: name.clone(),
             doc: PdfDocument::new(&name),
             font_map: font::FontMap::default(),

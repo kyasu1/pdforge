@@ -36,19 +36,19 @@ pdforge = "0.2.1"
 ### Basic Usage
 
 ```rust
-use pdforge::PDFme;
+use pdforge::PDForge;
 
 fn main() {
     // Create a new PDF generator
-    let mut pdfme = PDFme::new("My Document".to_string())
+    let mut pdforge = PDForge::new("My Document".to_string())
         .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")
         .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf");
 
     // Load a template from JSON file
-    pdfme.load_template("table-test", "./templates/table-test.json");
+    pdforge.load_template("table-test", "./templates/table-test.json");
 
     // Generate PDF
-    let bytes: Vec<u8> = pdfme.render("table-test");
+    let bytes: Vec<u8> = pdforge.render("table-test");
 
     // Save to file
     std::fs::write("./output.pdf", bytes).unwrap();
@@ -59,14 +59,14 @@ fn main() {
 
 ```rust
 use std::collections::HashMap;
-use pdforge::PDFme;
+use pdforge::PDForge;
 
 fn main() {
-    let mut pdfme = PDFme::new("Dynamic Document".to_string())
+    let mut pdforge = PDForge::new("Dynamic Document".to_string())
         .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")
         .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf");
 
-    pdfme.load_template("pawn-ticket", "./templates/pawn-ticket.json");
+    pdforge.load_template("pawn-ticket", "./templates/pawn-ticket.json");
 
     // Prepare input data
     let mut input: HashMap<&'static str, String> = HashMap::new();
@@ -75,7 +75,7 @@ fn main() {
     input.insert("amount", "100,000".to_string());
 
     let inputs = vec![vec![input]];
-    let bytes: Vec<u8> = pdfme.render_with_inputs("pawn-ticket", inputs);
+    let bytes: Vec<u8> = pdforge.render_with_inputs("pawn-ticket", inputs);
 
     std::fs::write("./dynamic_output.pdf", bytes).unwrap();
 }
@@ -211,7 +211,7 @@ PDForge includes comprehensive font support with a focus on Japanese typography:
 ### Adding Custom Fonts
 
 ```rust
-let pdfme = PDFme::new("Document".to_string())
+let pdforge = PDForge::new("Document".to_string())
     .add_font("CustomFont", "./path/to/custom-font.ttf");
 ```
 

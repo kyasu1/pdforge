@@ -1,11 +1,11 @@
 fn main() {
-    let mut pdfme = pdforge::PDFme::new("TEST".to_string())
+    let mut pdforge = pdforge::PDForge::new("TEST".to_string())
         .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")
         .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf");
 
-    pdfme.load_template("table", "./templates/table.json");
+    pdforge.load_template("table", "./templates/table.json");
 
-    let bytes: Vec<u8> = pdfme.render("table");
+    let bytes: Vec<u8> = pdforge.render("table");
 
     std::fs::write("./table.pdf", bytes).unwrap();
 }
