@@ -1,9 +1,10 @@
 fn main() {
-    let mut pdforge = pdforge::PDForge::new("TEST".to_string())
+    let builder = pdforge::PDForgeBuilder::new("TEST".to_string())
         .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")
-        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf");
+        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")
+        .load_template("table-test", "./templates/table-test.json");
 
-    pdforge.load_template("table-test", "./templates/table-test.json");
+    let mut pdforge = builder.build();
 
     let bytes: Vec<u8> = pdforge.render("table-test");
 

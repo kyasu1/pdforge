@@ -13,14 +13,6 @@ pub struct PDForge {
 }
 
 impl PDForge {
-    pub fn new(name: String) -> Self {
-        PDForge {
-            doc: PdfDocument::new(&name),
-            font_map: font::FontMap::default(),
-            template_map: HashMap::new(),
-        }
-    }
-
     pub fn render(&mut self, template_name: &str) -> Vec<u8> {
         match self.template_map.get(template_name) {
             Some(template) => template
@@ -48,6 +40,22 @@ impl PDForge {
             }
         }
     }
+}
+
+pub struct PDForgeBuilder {
+    doc: PdfDocument,
+    font_map: font::FontMap,
+    template_map: HashMap<String, schemas::Template>,
+}
+
+impl PDForgeBuilder {
+    pub fn new(name: String) -> Self {
+        PDForgeBuilder {
+            doc: PdfDocument::new(&name),
+            font_map: font::FontMap::default(),
+            template_map: HashMap::new(),
+        }
+    }
 
     pub fn add_font(mut self, font_name: &str, file_name: &str) -> Self {
         let font_slice = std::fs::read(file_name).unwrap();
@@ -59,10 +67,20 @@ impl PDForge {
         self
     }
 
-    pub fn load_template(&mut self, template_name: &str, template: &str) {
+    pub fn load_template(mut self, template_name: &str, template: &str) -> Self {
         let template = schemas::Template::new(template).unwrap();
 
         self.template_map
             .insert(template_name.to_string(), template);
+
+        self
+    }
+
+    pub fn build(self) -> PDForge {
+        PDForge {
+            doc: self.doc,
+            font_map: self.font_map,
+            template_map: self.template_map,
+        }
     }
 }
