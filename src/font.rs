@@ -433,7 +433,7 @@ impl FontMap {
             .insert(font_name.clone(), (font_id.clone(), Box::new(font.clone())))
     }
 
-    pub fn find(&self, font_name: String) -> Option<&(FontId, Box<ParsedFont>)> {
-        self.map.get(&font_name)
+    pub fn find(&self, font_name: &str) -> Option<&(FontId, Box<ParsedFont>)> {
+        self.map.get(font_name)
     }
 }

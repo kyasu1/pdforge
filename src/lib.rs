@@ -2,14 +2,11 @@ pub mod common;
 pub mod font;
 pub mod schemas;
 pub mod utils;
-
-use std::collections::HashMap;
-
 use printpdf::{ParsedFont, PdfDocument};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct PDForge {
-    name: String,
     doc: PdfDocument,
     font_map: font::FontMap,
     template_map: HashMap<String, schemas::Template>,
@@ -18,7 +15,6 @@ pub struct PDForge {
 impl PDForge {
     pub fn new(name: String) -> Self {
         PDForge {
-            name: name.clone(),
             doc: PdfDocument::new(&name),
             font_map: font::FontMap::default(),
             template_map: HashMap::new(),

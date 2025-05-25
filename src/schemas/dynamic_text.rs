@@ -47,7 +47,7 @@ impl DynamicText {
         font_map: &FontMap,
     ) -> Result<Self, Error> {
         let (font_id, font) = font_map
-            .find(font_name.clone())
+            .find(&font_name)
             .whatever_context("Font specified in the schema is not loaded")?;
         let font_spec = FontSpec::new(font.clone());
         let base = BaseSchema::new(String::from("cell"), x, y, width, height);
@@ -65,7 +65,7 @@ impl DynamicText {
 
     pub fn from_json(json: JsonDynamicTextSchema, font_map: &FontMap) -> Result<Self, Error> {
         let (font_id, font) = font_map
-            .find(json.font_name.clone())
+            .find(&json.font_name)
             .whatever_context("Font specified in the schema is not loaded")?;
         let font_spec = FontSpec::new(font.clone());
 
