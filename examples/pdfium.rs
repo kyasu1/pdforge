@@ -4,12 +4,11 @@ use base64::prelude::*;
 use pdfium_render::prelude::*;
 
 fn main() -> Result<(), PdfiumError> {
-    let builder = pdforge::PDForgeBuilder::new("TEST".to_string())
+    let mut pdforge = pdforge::PDForgeBuilder::new("TEST".to_string())
         .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")
         .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")
-        .load_template("pawn-ticket", "./templates/pawn-ticket.json");
-
-    let mut pdforge = builder.build();
+        .load_template("pawn-ticket", "./templates/pawn-ticket.json")
+        .build();
 
     let mut inputs = vec![];
 
