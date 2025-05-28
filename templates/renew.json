@@ -1,0 +1,127 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "pawnSequence",
+                "type": "text",
+                "position": {
+                    "x": 0,
+                    "y": 0
+                },
+                "required": false,
+                "content": "{{pawnSequence}}",
+                "width": 23,
+                "height": 5,
+                "rotate": 0,
+                "alignment": "center",
+                "verticalAlignment": "bottom",
+                "scaleY": 1.6,
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "name",
+                "type": "text",
+                "position": {
+                    "x": 0,
+                    "y": 5.75
+                },
+                "required": false,
+                "content": "発行{{date}}",
+                "width": 23,
+                "height": 5,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "bottom",
+                "scaleY": 1.6,
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "renewDateBackground",
+                "type": "rectangle",
+                "position": {
+                    "x": 0,
+                    "y": 11.5
+                },
+                "width": 23,
+                "height": 5.75,
+                "rotate": 0,
+                "opacity": 1,
+                "borderWidth": 1,
+                "borderColor": "#000000",
+                "color": "#000000",
+                "readOnly": true,
+                "radius": 10,
+                "required": false
+            },
+            {
+                "name": "name",
+                "type": "text",
+                "position": {
+                    "x": 0,
+                    "y": 11.5
+                },
+                "required": false,
+                "content": "利済{{renewDate}}",
+                "width": 23,
+                "height": 5,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "bottom",
+                "scaleY": 1.6,
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#ffffff",
+                "fontName": "NotoSansJP",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "name",
+                "type": "text",
+                "position": {
+                    "x": 0,
+                    "y": 17.25
+                },
+                "required": false,
+                "content": "期限{{expiryDate}}",
+                "width": 23,
+                "height": 5,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "bottom",
+                "scaleY": 1.6,
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "opacity": 1,
+                "readOnly": false
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 60.96,
+        "height": 23,
+        "padding": [
+            0,
+            0,
+            0,
+            0
+        ]
+    },
+    "pdfmeVersion": "5.3.5"
+}

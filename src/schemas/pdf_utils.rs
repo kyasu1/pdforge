@@ -5,11 +5,16 @@ pub fn create_text_ops(
     font_size: Pt,
     x_line: Mm,
     y: Mm,
+    scale_x: Option<f32>,
+    scale_y: Option<f32>,
     character_spacing: Pt,
     line: &str,
     line_height: Option<f32>,
     font_color: &csscolorparser::Color,
 ) -> Vec<Op> {
+    let x_in_pt: Pt = x_line.into();
+    let y_in_pt: Pt = y.into();
+
     vec![
         Op::StartTextSection,
         Op::SetLineHeight {
@@ -27,12 +32,25 @@ pub fn create_text_ops(
             size: font_size,
             font: font_id.clone(),
         },
-        Op::SetTextCursor {
-            pos: Point {
-                x: x_line.into(),
-                y: y.into(),
-            },
+        Op::SetTextMatrix {
+            matrix: TextMatrix::Raw([
+                scale_x.unwrap_or(1.0),
+                0.0,
+                0.0,
+                scale_y.unwrap_or(1.0),
+                x_in_pt.0,
+                y_in_pt.0,
+            ]),
         },
+        // Op::SetTextCursor {
+        //     pos: Point {
+        //         x: x_line.into(),
+        //         y: y.into(),
+        //     },
+        // },
+        // Op::SetTextMatrix {
+        //     matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 2.0, 0.0, 0.0]),
+        // },
         Op::SetCharacterSpacing {
             multiplier: character_spacing.0,
         },

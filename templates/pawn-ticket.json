@@ -47,7 +47,9 @@
                 "fontColor": "#000000",
                 "fontName": "NotoSansJP",
                 "opacity": 1,
-                "readOnly": false
+                "readOnly": false,
+                "scaleX": 1,
+                "scaleY": 1.2
             },
             {
                 "name": "expiryDateBackground",

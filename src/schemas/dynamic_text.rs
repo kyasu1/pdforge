@@ -167,6 +167,8 @@ impl DynamicText {
                     self.font_size,
                     self.base.x,
                     y_position,
+                    None,
+                    None,
                     character_spacing,
                     &line,
                     self.line_height,

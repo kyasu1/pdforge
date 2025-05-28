@@ -27,6 +27,8 @@ pub struct JsonTextSchema {
     font_color: Option<String>,
     background_color: Option<String>,
     padding: Option<Frame>,
+    scale_x: Option<f32>,
+    scale_y: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +45,8 @@ pub struct Text {
     font_color: csscolorparser::Color,
     background_color: Option<csscolorparser::Color>,
     padding: Option<Frame>,
+    scale_x: Option<f32>,
+    scale_y: Option<f32>,
 }
 
 impl Text {
@@ -80,6 +84,8 @@ impl Text {
                 .context(InvalidColorSnafu)?,
             background_color: None,
             padding,
+            scale_x: None,
+            scale_y: None,
         })
     }
 
@@ -135,6 +141,8 @@ impl Text {
             font_color,
             background_color,
             padding: json.padding,
+            scale_x: json.scale_x,
+            scale_y: json.scale_y,
         };
 
         Ok(text)
@@ -334,6 +342,8 @@ impl Text {
             font_size,
             x_line,
             y,
+            self.scale_x,
+            self.scale_y,
             character_spacing,
             line,
             self.line_height,
@@ -466,6 +476,8 @@ mod tests {
             font_color: "#000".parse().unwrap(),
             background_color: None,
             padding: None,
+            scale_x: None,
+            scale_y: None,
         }
     }
 
