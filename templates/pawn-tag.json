@@ -6,11 +6,29 @@
                 "type": "rectangle",
                 "position": {
                     "x": 0,
-                    "y": 0
+                    "y": 30.5
                 },
                 "width": 90,
                 "height": 29,
-                "rotate": -40,
+                "rotate": 0,
+                "opacity": 1,
+                "borderWidth": 0.1,
+                "borderColor": "#000000",
+                "color": "#FFFFFF",
+                "readOnly": true,
+                "radius": 10,
+                "required": false
+            },
+            {
+                "name": "expiryDateBackground",
+                "type": "rectangle",
+                "position": {
+                    "x": 0,
+                    "y": 60.5
+                },
+                "width": 90,
+                "height": 29,
+                "rotate": 0,
                 "opacity": 1,
                 "borderWidth": 0.1,
                 "borderColor": "#000000",
@@ -24,11 +42,11 @@
                 "type": "group",
                 "position": {
                     "x": 0,
-                    "y": 0
+                    "y": 30.5
                 },
                 "width": 90,
                 "height": 29,
-                "rotate": -40,
+                "rotate": 0,
                 "schemas": [
                     {
                         "name": "name",
@@ -42,7 +60,7 @@
                         "width": 90,
                         "height": 6.35,
                         "alignment": "left",
-                        "verticalAlignment": "bottom",
+                        "verticalAlignment": "middle",
                         "fontSize": {
                             "min": 10,
                             "max": 18,
@@ -64,7 +82,7 @@
                         },
                         "required": false,
                         "content": "入質日 {{pawnDate}}",
-                        "width": 80,
+                        "width": 32,
                         "height": 4.064,
                         "alignment": "left",
                         "verticalAlignment": "top",
@@ -107,7 +125,7 @@
                         },
                         "required": false,
                         "content": " {{desc}}",
-                        "width": 90,
+                        "width": 80,
                         "height": 9,
                         "alignment": "left",
                         "verticalAlignment": "top",
@@ -123,8 +141,31 @@
                         "name": "pawnSequence",
                         "type": "text",
                         "position": {
-                            "x": 85,
-                            "y": 29
+                            "x": 90,
+                            "y": 24
+                        },
+                        "rotate": 0,
+                        "required": false,
+                        "content": "{{pawnSequence}}",
+                        "width": 29,
+                        "height": 5,
+                        "alignment": "center",
+                        "verticalAlignment": "top",
+                        "fontSize": 10,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "backgroundColor": "#999999",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "pawnSequence",
+                        "type": "text",
+                        "position": {
+                            "x": 90,
+                            "y": 24
                         },
                         "rotate": -90,
                         "required": false,
@@ -132,12 +173,13 @@
                         "width": 29,
                         "height": 5,
                         "alignment": "center",
-                        "verticalAlignment": "bottom",
+                        "verticalAlignment": "top",
                         "fontSize": 10,
                         "lineHeight": 1,
                         "characterSpacing": 0,
                         "fontColor": "#000000",
                         "fontName": "NotoSansJP",
+                        "backgroundColor": "#999999",
                         "opacity": 1,
                         "readOnly": false
                     }

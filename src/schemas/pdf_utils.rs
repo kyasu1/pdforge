@@ -79,6 +79,7 @@ pub fn create_text_ops(
     font_color: &csscolorparser::Color,
 ) -> Vec<Op> {
     let matrix_values = calculate_transform_matrix(x_line, y, rotate, scale_x, scale_y);
+    println!("Text matrix values: {:?}", matrix_values);
     let matrix = TextMatrix::Raw(matrix_values);
 
     vec![
@@ -124,7 +125,6 @@ pub struct DrawRectangle {
 }
 
 pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
-    println!("Drawing rectangle with properties: {:?}", props);
     let matrix_values = calculate_transform_matrix_with_center_pivot(
         props.x,
         props.page_height - props.y - props.height,
@@ -132,9 +132,8 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
         props.height,
         props.rotate,
     );
-    println!("Rect transformation matrix: {:?}", matrix_values);
 
-    let matrixes: Op = Op::SetTransformationMatrix {
+    let matrixe: Op = Op::SetTransformationMatrix {
         matrix: CurTransMat::Raw(matrix_values),
     };
 
@@ -197,7 +196,7 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
 
     vec![
         Op::SaveGraphicsState,
-        matrixes,
+        matrixe,
         Op::SetOutlineColor { col: border_color },
         Op::SetFillColor { col: color },
         Op::SetOutlineThickness {

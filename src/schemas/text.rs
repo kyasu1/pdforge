@@ -276,9 +276,35 @@ impl Text {
 
     // 背景色のオペレーションを作成
     fn create_background_ops(&self, parent_height: Mm) -> Option<Vec<Op>> {
+        let matrix_values = super::pdf_utils::calculate_transform_matrix_with_center_pivot(
+            self.base.x,
+            parent_height - self.base.y - self.base.height,
+            self.base.width,
+            self.base.height,
+            self.rotate,
+        );
+        let matrix_values = super::pdf_utils::calculate_transform_matrix(
+            self.base.x,
+            parent_height - self.base.y - self.base.height,
+            self.rotate,
+            None,
+            None,
+        );
+
+        println!("Bg matrix values: {:?}", matrix_values);
+
+        let matrix: Op = Op::SetTransformationMatrix {
+            matrix: CurTransMat::Raw(matrix_values),
+        };
+
+        let x1 = Pt(0.0);
+        let x2: Pt = self.base.width.into();
+        let y1: Pt = Pt(0.0);
+        let y2: Pt = self.base.height.into();
         self.background_color.clone().map(|bg_color| {
             vec![
                 Op::SaveGraphicsState,
+                matrix,
                 Op::SetFillColor {
                     col: Color::Rgb(Rgb {
                         r: bg_color.r,
@@ -292,31 +318,19 @@ impl Text {
                         rings: vec![PolygonRing {
                             points: vec![
                                 LinePoint {
-                                    p: Point {
-                                        x: self.base.x.into(),
-                                        y: (parent_height - self.base.y).into(),
-                                    },
+                                    p: Point { x: x1, y: y1 },
                                     bezier: false,
                                 },
                                 LinePoint {
-                                    p: Point {
-                                        x: self.base.x.into(),
-                                        y: (parent_height - self.base.y - self.base.height).into(),
-                                    },
+                                    p: Point { x: x2, y: y1 },
                                     bezier: false,
                                 },
                                 LinePoint {
-                                    p: Point {
-                                        x: (self.base.x + self.base.width).into(),
-                                        y: (parent_height - self.base.y - self.base.height).into(),
-                                    },
+                                    p: Point { x: x2, y: y2 },
                                     bezier: false,
                                 },
                                 LinePoint {
-                                    p: Point {
-                                        x: (self.base.x + self.base.width).into(),
-                                        y: (parent_height - self.base.y).into(),
-                                    },
+                                    p: Point { x: x1, y: y2 },
                                     bezier: false,
                                 },
                             ],

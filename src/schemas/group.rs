@@ -77,7 +77,6 @@ impl Group {
     pub fn render(
         &mut self,
         base_pdf: &BasePdf,
-        current_top_mm: Option<Mm>,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,

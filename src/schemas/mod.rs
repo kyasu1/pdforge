@@ -420,7 +420,7 @@ impl Template {
                         obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
                     }
                     Schema::Group(mut obj) => {
-                        obj.render(&self.base_pdf, y, &mut doc, page_index, &mut buffer)?;
+                        obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?;
                     }
                 }
             }
