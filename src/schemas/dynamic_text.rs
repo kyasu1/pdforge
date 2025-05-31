@@ -169,6 +169,7 @@ impl DynamicText {
                     y_position,
                     None,
                     None,
+                    None,
                     character_spacing,
                     &line,
                     self.line_height,

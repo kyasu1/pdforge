@@ -72,7 +72,7 @@ impl Image {
 
     pub fn render(
         &self,
-        base_pdf: &BasePdf,
+        parent_height: Mm,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
@@ -87,7 +87,7 @@ impl Image {
 
         let image_x_object_id = doc.add_image(&image);
 
-        let transform = self.base.get_matrix(base_pdf.height, Some(Px(image.width)));
+        let transform = self.base.get_matrix(parent_height, Some(Px(image.width)));
 
         let ops = vec![
             Op::SaveGraphicsState,

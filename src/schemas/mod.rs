@@ -1,5 +1,6 @@
 pub mod base;
 pub mod dynamic_text;
+pub mod group;
 pub mod image;
 pub mod pdf_utils;
 pub mod qrcode;
@@ -60,6 +61,7 @@ enum JsonSchema {
     Image(image::JsonImageSchema),
     Svg(svg::JsonSvgSchema),
     Rectangle(rect::JsonRectSchema),
+    Group(group::JsonGroupSchema),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -85,12 +87,11 @@ struct JsonTemplate {
 pub trait SchemaTrait {
     fn render(
         &self,
-        base_pdf: &BasePdf,
-        current_top_mm: Option<Mm>,
+        parent_height: Mm,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
-    ) -> Result<(usize, Option<Mm>), Error>;
+    ) -> Result<(), Error>;
     // fn set_x(&mut self, x: Mm);
     fn set_y(&mut self, y: Mm);
     fn set_height(&mut self, height: Mm);
@@ -107,6 +108,7 @@ pub enum Schema {
     Image(image::Image),
     Svg(svg::Svg),
     Rect(rect::Rect),
+    Group(group::Group),
 }
 
 impl Schema {
@@ -119,6 +121,7 @@ impl Schema {
             Schema::Image(image) => image.get_base(),
             Schema::Svg(svg) => svg.get_base(),
             Schema::Rect(rect) => rect.get_base(),
+            Schema::Group(group) => group.get_base(),
         }
     }
 }
@@ -126,38 +129,33 @@ impl Schema {
 impl SchemaTrait for Schema {
     fn render(
         &self,
-        base_pdf: &BasePdf,
-        current_top_mm: Option<Mm>,
+        parent_height: Mm,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
-    ) -> Result<(usize, Option<Mm>), Error> {
+    ) -> Result<(), Error> {
         match self.clone() {
             Schema::Text(mut schema) => {
-                schema.render(&base_pdf, page, buffer)?;
-                Ok((page, current_top_mm))
+                schema.render(parent_height, page, buffer)?;
+                Ok(())
             }
-            Schema::DynamicText(mut schema) => {
-                schema.render(&base_pdf, page, current_top_mm, buffer)?;
-                Ok((page, current_top_mm))
-            }
-            Schema::Table(mut table) => table.render(&base_pdf, doc, page, current_top_mm, buffer),
             Schema::QrCode(qr_code) => {
-                qr_code.render(&base_pdf, doc, page, buffer)?;
-                Ok((page, current_top_mm))
+                qr_code.render(parent_height, doc, page, buffer)?;
+                Ok(())
             }
             Schema::Image(image) => {
-                image.render(&base_pdf, doc, page, buffer)?;
-                Ok((page, current_top_mm))
+                image.render(parent_height, doc, page, buffer)?;
+                Ok(())
             }
             Schema::Svg(svg) => {
-                svg.render(&base_pdf, doc, page, buffer)?;
-                Ok((page, current_top_mm))
+                svg.render(parent_height, doc, page, buffer)?;
+                Ok(())
             }
             Schema::Rect(rect) => {
-                rect.render(&base_pdf, doc, page, buffer)?;
-                Ok((page, current_top_mm))
+                rect.render(parent_height, doc, page, buffer)?;
+                Ok(())
             }
+            _ => unimplemented!(),
         }
     }
 
@@ -167,6 +165,9 @@ impl SchemaTrait for Schema {
             Schema::DynamicText(text) => text.set_y(y),
             Schema::QrCode(qr_code) => {
                 qr_code.set_y(y);
+            }
+            Schema::Group(group) => {
+                group.set_y(y);
             }
             _ => unimplemented!(),
         }
@@ -178,6 +179,9 @@ impl SchemaTrait for Schema {
             Schema::DynamicText(text) => text.set_height(height),
             Schema::QrCode(qr_code) => {
                 qr_code.set_height(height);
+            }
+            Schema::Group(group) => {
+                group.set_height(height);
             }
             _ => unimplemented!(),
         }
@@ -298,6 +302,9 @@ impl Template {
                     JsonSchema::Image(json) => json.try_into().unwrap(),
                     JsonSchema::Svg(json) => json.try_into().unwrap(),
                     JsonSchema::Rectangle(json) => json.try_into().unwrap(),
+                    JsonSchema::Group(json) => {
+                        Schema::Group(group::Group::from_json(json, font_map).unwrap())
+                    }
                 })
                 .collect::<Vec<Schema>>();
 
@@ -361,6 +368,9 @@ impl Template {
                             JsonSchema::Image(json) => json.try_into().unwrap(),
                             JsonSchema::Svg(json) => json.try_into().unwrap(),
                             JsonSchema::Rectangle(json) => json.try_into().unwrap(),
+                            JsonSchema::Group(json) => {
+                                Schema::Group(group::Group::from_json(json, font_map).unwrap())
+                            }
                         })
                         .collect::<Vec<Schema>>()
                 })
@@ -387,7 +397,7 @@ impl Template {
             for schema in page {
                 match schema.clone() {
                     Schema::Text(mut obj) => {
-                        obj.render(&self.base_pdf, page_index, &mut buffer)?;
+                        obj.render(self.base_pdf.height, page_index, &mut buffer)?;
                     }
                     Schema::DynamicText(mut obj) => {
                         (current_page, y) =
@@ -398,16 +408,19 @@ impl Template {
                             obj.render(&self.base_pdf, doc, current_page, y, &mut buffer)?;
                     }
                     Schema::QrCode(obj) => {
-                        obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?;
+                        obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?;
                     }
                     Schema::Image(obj) => {
-                        obj.render(&self.base_pdf, doc, page_index, &mut buffer)?
+                        obj.render(self.base_pdf.height, doc, page_index, &mut buffer)?
                     }
                     Schema::Svg(obj) => {
-                        obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?
+                        obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
                     }
                     Schema::Rect(obj) => {
-                        obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?
+                        obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
+                    }
+                    Schema::Group(mut obj) => {
+                        obj.render(&self.base_pdf, y, &mut doc, page_index, &mut buffer)?;
                     }
                 }
             }

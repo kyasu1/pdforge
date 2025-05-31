@@ -1,10 +1,76 @@
 use printpdf::*;
 
+// 2D変換行列を計算する独立した関数
+pub fn calculate_transform_matrix(
+    x: Mm,
+    y: Mm,
+    rotate: Option<f32>,
+    scale_x: Option<f32>,
+    scale_y: Option<f32>,
+) -> [f32; 6] {
+    let x_in_pt: Pt = x.into();
+    let y_in_pt: Pt = y.into();
+
+    // 回転角度をラジアンに変換
+    let rotation_radians = rotate.unwrap_or(0.0) * std::f32::consts::PI / 180.0;
+    let cos_theta = rotation_radians.cos();
+    let sin_theta = rotation_radians.sin();
+
+    // スケール値を取得
+    let sx = scale_x.unwrap_or(1.0);
+    let sy = scale_y.unwrap_or(1.0);
+
+    // 2D変換行列: [a b c d e f] = [sx*cos -sx*sin sy*sin sy*cos tx ty]
+    // 回転とスケールを組み合わせた変換行列
+    [
+        sx * cos_theta,  // a: x方向のスケール * 回転のcos成分
+        -sx * sin_theta, // b: x方向のスケール * 回転の-sin成分
+        sy * sin_theta,  // c: y方向のスケール * 回転のsin成分
+        sy * cos_theta,  // d: y方向のスケール * 回転のcos成分
+        x_in_pt.0,       // e: x座標の平行移動
+        y_in_pt.0,       // f: y座標の平行移動
+    ]
+}
+// バウンディングボックスの中心をピボットとして回転を考慮したマトリックスを計算
+pub fn calculate_transform_matrix_with_center_pivot(
+    x: Mm,
+    y: Mm,
+    width: Mm,
+    height: Mm,
+    rotate: Option<f32>,
+) -> [f32; 6] {
+    let x_in_pt: Pt = x.into();
+    let y_in_pt: Pt = y.into();
+    let width_in_pt: Pt = width.into();
+    let height_in_pt: Pt = height.into();
+
+    // ボックスの中心点を計算（左下座標からの相対位置）
+    let center_x = width_in_pt / 2.0;
+    let center_y = height_in_pt / 2.0;
+
+    // 回転角度をラジアンに変換
+    let rotation_radians = rotate.unwrap_or(0.0) * std::f32::consts::PI / 180.0;
+    let cos_theta = rotation_radians.cos();
+    let sin_theta = rotation_radians.sin();
+
+    let tx = x_in_pt + center_x - center_x * cos_theta + center_y * sin_theta;
+    let ty = y_in_pt + center_y - center_x * sin_theta - center_y * cos_theta;
+    [
+        cos_theta,  // a: 回転のcos成分
+        sin_theta,  // b: 回転の-sin成分
+        -sin_theta, // c: 回転のsin成分
+        cos_theta,  // d: 回転のcos成分
+        tx.0,       // e: 中心基準回転を考慮したx座標の平行移動
+        ty.0,       // f: 中心基準回転を考慮したy座標の平行移動
+    ]
+}
+
 pub fn create_text_ops(
     font_id: &FontId,
     font_size: Pt,
     x_line: Mm,
     y: Mm,
+    rotate: Option<f32>,
     scale_x: Option<f32>,
     scale_y: Option<f32>,
     character_spacing: Pt,
@@ -12,8 +78,8 @@ pub fn create_text_ops(
     line_height: Option<f32>,
     font_color: &csscolorparser::Color,
 ) -> Vec<Op> {
-    let x_in_pt: Pt = x_line.into();
-    let y_in_pt: Pt = y.into();
+    let matrix_values = calculate_transform_matrix(x_line, y, rotate, scale_x, scale_y);
+    let matrix = TextMatrix::Raw(matrix_values);
 
     vec![
         Op::StartTextSection,
@@ -32,25 +98,7 @@ pub fn create_text_ops(
             size: font_size,
             font: font_id.clone(),
         },
-        Op::SetTextMatrix {
-            matrix: TextMatrix::Raw([
-                scale_x.unwrap_or(1.0),
-                0.0,
-                0.0,
-                scale_y.unwrap_or(1.0),
-                x_in_pt.0,
-                y_in_pt.0,
-            ]),
-        },
-        // Op::SetTextCursor {
-        //     pos: Point {
-        //         x: x_line.into(),
-        //         y: y.into(),
-        //     },
-        // },
-        // Op::SetTextMatrix {
-        //     matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 2.0, 0.0, 0.0]),
-        // },
+        Op::SetTextMatrix { matrix },
         Op::SetCharacterSpacing {
             multiplier: character_spacing.0,
         },
@@ -68,6 +116,7 @@ pub struct DrawRectangle {
     pub y: Mm,
     pub width: Mm,
     pub height: Mm,
+    pub rotate: Option<f32>,
     pub page_height: Mm,
     pub color: Option<Color>,
     pub border_width: Option<Mm>,
@@ -75,6 +124,20 @@ pub struct DrawRectangle {
 }
 
 pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
+    println!("Drawing rectangle with properties: {:?}", props);
+    let matrix_values = calculate_transform_matrix_with_center_pivot(
+        props.x,
+        props.page_height - props.y - props.height,
+        props.width,
+        props.height,
+        props.rotate,
+    );
+    println!("Rect transformation matrix: {:?}", matrix_values);
+
+    let matrixes: Op = Op::SetTransformationMatrix {
+        matrix: CurTransMat::Raw(matrix_values),
+    };
+
     let mode = match props.color {
         Some(_) => PaintMode::FillStroke,
         None => PaintMode::Stroke,
@@ -102,10 +165,10 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
 
     let border_width = props.border_width.unwrap_or(Mm(0.1));
 
-    let x1: Pt = props.x.into();
-    let y1: Pt = (props.page_height - props.y).into();
-    let x2: Pt = (props.x + props.width).into();
-    let y2: Pt = (props.page_height - props.y - props.height).into();
+    let x1: Pt = Pt(0.0);
+    let y1: Pt = Pt(0.0);
+    let x2: Pt = props.width.into();
+    let y2: Pt = props.height.into();
 
     let polygon = Polygon {
         rings: vec![PolygonRing {
@@ -133,6 +196,8 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
     };
 
     vec![
+        Op::SaveGraphicsState,
+        matrixes,
         Op::SetOutlineColor { col: border_color },
         Op::SetFillColor { col: color },
         Op::SetOutlineThickness {
@@ -141,5 +206,6 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
         Op::DrawPolygon {
             polygon: polygon.clone(),
         },
+        Op::RestoreGraphicsState,
     ]
 }

@@ -27,6 +27,7 @@ pub struct JsonTextSchema {
     font_color: Option<String>,
     background_color: Option<String>,
     padding: Option<Frame>,
+    rotate: Option<f32>,
     scale_x: Option<f32>,
     scale_y: Option<f32>,
 }
@@ -45,6 +46,7 @@ pub struct Text {
     font_color: csscolorparser::Color,
     background_color: Option<csscolorparser::Color>,
     padding: Option<Frame>,
+    rotate: Option<f32>,
     scale_x: Option<f32>,
     scale_y: Option<f32>,
 }
@@ -84,6 +86,7 @@ impl Text {
                 .context(InvalidColorSnafu)?,
             background_color: None,
             padding,
+            rotate: None,
             scale_x: None,
             scale_y: None,
         })
@@ -141,6 +144,7 @@ impl Text {
             font_color,
             background_color,
             padding: json.padding,
+            rotate: json.rotate,
             scale_x: json.scale_x,
             scale_y: json.scale_y,
         };
@@ -150,7 +154,7 @@ impl Text {
 
     pub fn render(
         &mut self,
-        base_pdf: &BasePdf,
+        parent_height: Mm,
         current_page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
@@ -176,7 +180,7 @@ impl Text {
         let mut ops: Vec<Op> = vec![];
 
         // 背景色があれば背景を描画
-        if let Some(bg_ops) = self.create_background_ops(base_pdf) {
+        if let Some(bg_ops) = self.create_background_ops(parent_height) {
             ops.extend_from_slice(&bg_ops);
         }
 
@@ -191,7 +195,7 @@ impl Text {
             let (x_line, character_spacing) =
                 self.calculate_horizontal_alignment(box_width, line_width, line);
 
-            let y = self.calculate_y_position(base_pdf, y_offset, line_height_in_mm, index);
+            let y = self.calculate_y_position(parent_height, y_offset, line_height_in_mm, index);
 
             let line_ops = self.create_text_ops(font_size, x_line, y, character_spacing, line);
             ops.extend_from_slice(&line_ops);
@@ -259,19 +263,19 @@ impl Text {
     // Y座標を計算
     fn calculate_y_position(
         &self,
-        base_pdf: &BasePdf,
+        parent_height: Mm,
         y_offset: Mm,
         line_height_in_mm: Mm,
         line_index: usize,
     ) -> Mm {
-        base_pdf.height
+        parent_height
             - (self.base.y + y_offset)
             - line_height_in_mm * (line_index as i32 + 1) as f32
             - self.padding.as_ref().map_or(Mm(0.0), |p| p.top)
     }
 
     // 背景色のオペレーションを作成
-    fn create_background_ops(&self, base_pdf: &BasePdf) -> Option<Vec<Op>> {
+    fn create_background_ops(&self, parent_height: Mm) -> Option<Vec<Op>> {
         self.background_color.clone().map(|bg_color| {
             vec![
                 Op::SaveGraphicsState,
@@ -290,30 +294,28 @@ impl Text {
                                 LinePoint {
                                     p: Point {
                                         x: self.base.x.into(),
-                                        y: (base_pdf.height - self.base.y).into(),
+                                        y: (parent_height - self.base.y).into(),
                                     },
                                     bezier: false,
                                 },
                                 LinePoint {
                                     p: Point {
                                         x: self.base.x.into(),
-                                        y: (base_pdf.height - self.base.y - self.base.height)
-                                            .into(),
+                                        y: (parent_height - self.base.y - self.base.height).into(),
                                     },
                                     bezier: false,
                                 },
                                 LinePoint {
                                     p: Point {
                                         x: (self.base.x + self.base.width).into(),
-                                        y: (base_pdf.height - self.base.y - self.base.height)
-                                            .into(),
+                                        y: (parent_height - self.base.y - self.base.height).into(),
                                     },
                                     bezier: false,
                                 },
                                 LinePoint {
                                     p: Point {
                                         x: (self.base.x + self.base.width).into(),
-                                        y: (base_pdf.height - self.base.y).into(),
+                                        y: (parent_height - self.base.y).into(),
                                     },
                                     bezier: false,
                                 },
@@ -342,6 +344,7 @@ impl Text {
             font_size,
             x_line,
             y,
+            self.rotate,
             self.scale_x,
             self.scale_y,
             character_spacing,
@@ -362,6 +365,13 @@ impl Text {
     }
     pub fn set_height(&mut self, height: Mm) {
         self.base.height = height;
+    }
+
+    pub fn set_rotate(&mut self, rotate: Option<f32>) {
+        match self.rotate {
+            Some(rotate_) => self.rotate = Some(rotate_ + rotate.unwrap_or(0.0)),
+            None => self.rotate = rotate,
+        }
     }
 
     pub fn set_content(&mut self, content: String) {
@@ -476,6 +486,7 @@ mod tests {
             font_color: "#000".parse().unwrap(),
             background_color: None,
             padding: None,
+            rotate: None,
             scale_x: None,
             scale_y: None,
         }
@@ -577,18 +588,9 @@ mod tests {
     #[test]
     fn test_y_position_calculation() {
         let text = create_test_text();
-        let base_pdf = BasePdf {
-            width: Mm(210.0),
-            height: Mm(297.0),
-            padding: Frame {
-                top: Mm(0.0),
-                right: Mm(0.0),
-                bottom: Mm(0.0),
-                left: Mm(0.0),
-            },
-        };
+        let parent_height = Mm(297.0);
 
-        let y = text.calculate_y_position(&base_pdf, Mm(5.0), Mm(14.4), 0);
+        let y = text.calculate_y_position(parent_height, Mm(5.0), Mm(14.4), 0);
 
         // 297 - (10 + 5) - 14.4 - 0 = 267.6
         assert_eq!(y, Mm(267.6));

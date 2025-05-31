@@ -43,7 +43,6 @@ pub struct JsonRectSchema {
 #[derive(Debug, Clone)]
 pub struct Rect {
     base: BaseSchema,
-
     rotate: Option<f32>,
     opacity: Option<f32>,
     border_width: Pt,
@@ -83,7 +82,7 @@ impl Rect {
 
     pub fn render(
         &self,
-        base_pdf: &BasePdf,
+        parent_height: Mm,
         _doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
@@ -93,7 +92,8 @@ impl Rect {
             y: self.base.y,
             width: self.base.width,
             height: self.base.height,
-            page_height: base_pdf.height,
+            rotate: self.rotate,
+            page_height: parent_height,
             color: Some(Color::Rgb(Rgb {
                 r: self.color.r,
                 g: self.color.g,
@@ -109,12 +109,13 @@ impl Rect {
             })),
         };
 
-        let ops = vec![Op::SaveGraphicsState]
-            .into_iter()
-            .chain(draw_rectangle(rect))
-            .chain(vec![Op::RestoreGraphicsState])
-            .collect();
+        // let ops = vec![Op::SaveGraphicsState]
+        //     .into_iter()
+        //     .chain(draw_rectangle(rect))
+        //     .chain(vec![Op::RestoreGraphicsState])
+        //     .collect();
 
+        let ops = draw_rectangle(rect);
         buffer.insert(page, ops);
 
         Ok(())

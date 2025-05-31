@@ -5,7 +5,7 @@
                 "name": "pawnSequence",
                 "type": "text",
                 "position": {
-                    "x": 0,
+                    "x": 36,
                     "y": 0
                 },
                 "required": false,
@@ -16,7 +16,7 @@
                 "alignment": "center",
                 "verticalAlignment": "bottom",
                 "scaleY": 1.6,
-                "fontSize": 9,
+                "fontSize": 10,
                 "lineHeight": 1,
                 "characterSpacing": 0,
                 "fontColor": "#000000",
@@ -25,10 +25,10 @@
                 "readOnly": false
             },
             {
-                "name": "name",
+                "name": "date",
                 "type": "text",
                 "position": {
-                    "x": 0,
+                    "x": 36,
                     "y": 5.75
                 },
                 "required": false,
@@ -51,7 +51,7 @@
                 "name": "renewDateBackground",
                 "type": "rectangle",
                 "position": {
-                    "x": 0,
+                    "x": 36,
                     "y": 11.5
                 },
                 "width": 23,
@@ -66,10 +66,10 @@
                 "required": false
             },
             {
-                "name": "name",
+                "name": "renewDate",
                 "type": "text",
                 "position": {
-                    "x": 0,
+                    "x": 36,
                     "y": 11.5
                 },
                 "required": false,
@@ -89,10 +89,10 @@
                 "readOnly": false
             },
             {
-                "name": "name",
+                "name": "expiryDate",
                 "type": "text",
                 "position": {
-                    "x": 0,
+                    "x": 36,
                     "y": 17.25
                 },
                 "required": false,

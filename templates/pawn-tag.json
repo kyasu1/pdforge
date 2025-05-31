@@ -1,0 +1,159 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "expiryDateBackground",
+                "type": "rectangle",
+                "position": {
+                    "x": 0,
+                    "y": 0
+                },
+                "width": 90,
+                "height": 29,
+                "rotate": -40,
+                "opacity": 1,
+                "borderWidth": 0.1,
+                "borderColor": "#000000",
+                "color": "#FFFFFF",
+                "readOnly": true,
+                "radius": 10,
+                "required": false
+            },
+            {
+                "name": "group1",
+                "type": "group",
+                "position": {
+                    "x": 0,
+                    "y": 0
+                },
+                "width": 90,
+                "height": 29,
+                "rotate": -40,
+                "schemas": [
+                    {
+                        "name": "name",
+                        "type": "text",
+                        "position": {
+                            "x": 1.016,
+                            "y": 1
+                        },
+                        "required": false,
+                        "content": "{{name}}",
+                        "width": 90,
+                        "height": 6.35,
+                        "alignment": "left",
+                        "verticalAlignment": "bottom",
+                        "fontSize": {
+                            "min": 10,
+                            "max": 18,
+                            "fit": "vertical"
+                        },
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "pawnDate",
+                        "type": "text",
+                        "position": {
+                            "x": 1.016,
+                            "y": 7.8
+                        },
+                        "required": false,
+                        "content": "入質日 {{pawnDate}}",
+                        "width": 80,
+                        "height": 4.064,
+                        "alignment": "left",
+                        "verticalAlignment": "top",
+                        "fontSize": 10,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#FFFFFF",
+                        "fontName": "NotoSansJP",
+                        "backgroundColor": "#000000",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "amount",
+                        "type": "text",
+                        "position": {
+                            "x": 1.016,
+                            "y": 11
+                        },
+                        "required": false,
+                        "content": " {{amount}}円",
+                        "width": 58.928,
+                        "height": 4.064,
+                        "alignment": "left",
+                        "verticalAlignment": "top",
+                        "fontSize": 18,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "desc",
+                        "type": "text",
+                        "position": {
+                            "x": 1.016,
+                            "y": 17.5
+                        },
+                        "required": false,
+                        "content": " {{desc}}",
+                        "width": 90,
+                        "height": 9,
+                        "alignment": "left",
+                        "verticalAlignment": "top",
+                        "fontSize": 10,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "pawnSequence",
+                        "type": "text",
+                        "position": {
+                            "x": 85,
+                            "y": 29
+                        },
+                        "rotate": -90,
+                        "required": false,
+                        "content": "{{pawnSequence}}",
+                        "width": 29,
+                        "height": 5,
+                        "alignment": "center",
+                        "verticalAlignment": "bottom",
+                        "fontSize": 10,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    }
+                ]
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 210,
+        "height": 297,
+        "padding": [
+            0,
+            0,
+            0,
+            0
+        ]
+    },
+    "pdfmeVersion": "5.3.5"
+}

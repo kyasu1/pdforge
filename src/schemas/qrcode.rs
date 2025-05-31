@@ -125,7 +125,7 @@ impl QrCode {
 
     pub fn render(
         &self,
-        base_pdf: &BasePdf,
+        parent_height: Mm,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
@@ -178,7 +178,7 @@ impl QrCode {
         // 新しい基本スキーマを一時的に作成して、正しい位置に変換行列を取得
         let temp_base = BaseSchema::new(self.base.name.clone(), x, y, qr_width, qr_height);
 
-        let transform = temp_base.get_matrix(base_pdf.height, Some(qrcode_width));
+        let transform = temp_base.get_matrix(parent_height, Some(qrcode_width));
 
         let ops = vec![
             Op::SaveGraphicsState,
@@ -198,9 +198,16 @@ impl QrCode {
         self.bounding_box = Some(bounding_box);
     }
 
-    // pub fn set_x(&mut self, x: Mm) {
-    //     self.base.x = x;
-    // }
+    pub fn set_x(&mut self, x: Mm) {
+        match self.bounding_box {
+            Some(ref mut bounding_box) => {
+                bounding_box.x = x;
+            }
+            None => {
+                self.base.x = x;
+            }
+        }
+    }
 
     pub fn set_y(&mut self, y: Mm) {
         match self.bounding_box {

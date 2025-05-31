@@ -64,14 +64,14 @@ impl Svg {
 
     pub fn render(
         &self,
-        base_pdf: &BasePdf,
+        parent_height: Mm,
         doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
         let svg_x_object_id = doc.add_xobject(&self.content);
 
-        let transform = self.base.get_matrix(base_pdf.height, self.content.width);
+        let transform = self.base.get_matrix(parent_height, self.content.width);
 
         let ops = vec![Op::UseXobject {
             id: svg_x_object_id,

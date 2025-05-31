@@ -592,6 +592,7 @@ impl Table {
                         y: base.y,
                         width,
                         height: base.height,
+                        rotate: None,
                         page_height: base_pdf.height,
                         color: Some(color.clone()),
                         border_width: Some(self.table_styles.border_width),
@@ -601,7 +602,7 @@ impl Table {
 
                     buffer.insert(page_index, ops);
 
-                    schema.render(base_pdf, None, doc, page_index, buffer)?;
+                    schema.render(base_pdf.height, doc, page_index, buffer)?;
                 }
             }
         }
