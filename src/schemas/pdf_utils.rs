@@ -4,17 +4,11 @@ use printpdf::*;
 pub fn calculate_transform_matrix(
     x: Mm,
     y: Mm,
-    rotate: Option<f32>,
     scale_x: Option<f32>,
     scale_y: Option<f32>,
 ) -> [f32; 6] {
     let x_in_pt: Pt = x.into();
     let y_in_pt: Pt = y.into();
-
-    // 回転角度をラジアンに変換
-    let rotation_radians = rotate.unwrap_or(0.0) * std::f32::consts::PI / 180.0;
-    let cos_theta = rotation_radians.cos();
-    let sin_theta = rotation_radians.sin();
 
     // スケール値を取得
     let sx = scale_x.unwrap_or(1.0);
@@ -23,12 +17,12 @@ pub fn calculate_transform_matrix(
     // 2D変換行列: [a b c d e f] = [sx*cos -sx*sin sy*sin sy*cos tx ty]
     // 回転とスケールを組み合わせた変換行列
     [
-        sx * cos_theta,  // a: x方向のスケール * 回転のcos成分
-        sx * sin_theta,  // b: x方向のスケール * 回転の-sin成分
-        -sy * sin_theta, // c: y方向のスケール * 回転のsin成分
-        sy * cos_theta,  // d: y方向のスケール * 回転のcos成分
-        x_in_pt.0,       // e: x座標の平行移動
-        y_in_pt.0,       // f: y座標の平行移動
+        sx,        // a: x方向のスケール * 回転のcos成分
+        0.0,       // b: x方向のスケール * 回転の-sin成分
+        0.0,       // c: y方向のスケール * 回転のsin成分
+        sy,        // d: y方向のスケール * 回転のcos成分
+        x_in_pt.0, // e: x座標の平行移動
+        y_in_pt.0, // f: y座標の平行移動
     ]
 }
 // バウンディングボックスの中心をピボットとして回転を考慮したマトリックスを計算
@@ -78,10 +72,7 @@ pub fn create_text_ops(
     line_height: Option<f32>,
     font_color: &csscolorparser::Color,
 ) -> Vec<Op> {
-    let matrix_values = calculate_transform_matrix(x_line, y, None, scale_x, scale_y);
-    println!("y position: {:?}", y);
-    println!("TEXT : {:?}", matrix_values);
-    println!("======================================");
+    let matrix_values = calculate_transform_matrix(x_line, y, scale_x, scale_y);
     let matrix = TextMatrix::Raw(matrix_values);
 
     vec![

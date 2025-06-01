@@ -5,30 +5,12 @@
                 "name": "expiryDateBackground",
                 "type": "rectangle",
                 "position": {
-                    "x": 0,
-                    "y": 0
+                    "x": 2.5,
+                    "y": 30.5
                 },
                 "width": 90,
                 "height": 29,
-                "rotate": 0,
-                "opacity": 1,
-                "borderWidth": 0.1,
-                "borderColor": "#000000",
-                "color": "#FFFFFF",
-                "readOnly": true,
-                "radius": 10,
-                "required": false
-            },
-            {
-                "name": "expiryDateBackground",
-                "type": "rectangle",
-                "position": {
-                    "x": 0,
-                    "y": 60.5
-                },
-                "width": 90,
-                "height": 29,
-                "rotate": 0,
+                "rotate": 90,
                 "opacity": 1,
                 "borderWidth": 0.1,
                 "borderColor": "#000000",
@@ -41,23 +23,23 @@
                 "name": "group1",
                 "type": "group",
                 "position": {
-                    "x": 0,
-                    "y": 0
+                    "x": 2.5,
+                    "y": 30.5
                 },
                 "width": 90,
                 "height": 29,
-                "rotate": 0,
+                "rotate": 90,
                 "schemas": [
                     {
                         "name": "name",
                         "type": "text",
                         "position": {
-                            "x": 1.016,
+                            "x": 1,
                             "y": 1
                         },
                         "required": false,
                         "content": "{{name}}",
-                        "width": 90,
+                        "width": 84,
                         "height": 6.5,
                         "alignment": "left",
                         "verticalAlignment": "middle",
@@ -113,7 +95,6 @@
                         "characterSpacing": 0,
                         "fontColor": "#000000",
                         "fontName": "NotoSansJP",
-                        "backgroundColor": "#EE88EE",
                         "opacity": 1,
                         "readOnly": false
                     },
@@ -126,16 +107,15 @@
                         },
                         "required": false,
                         "content": " {{desc}}",
-                        "width": 80,
+                        "width": 84,
                         "height": 9,
                         "alignment": "left",
-                        "verticalAlignment": "top",
+                        "verticalAlignment": "middle",
                         "fontSize": 10,
                         "lineHeight": 1,
                         "characterSpacing": 0,
                         "fontColor": "#000000",
                         "fontName": "NotoSansJP",
-                        "backgroundColor": "#EE8888",
                         "opacity": 1,
                         "readOnly": false
                     },
@@ -143,45 +123,22 @@
                         "name": "pawnSequence",
                         "type": "text",
                         "position": {
-                            "x": 90,
-                            "y": 29
+                            "x": 73.5,
+                            "y": 12.5
                         },
-                        "rotate": 0,
-                        "required": false,
-                        "content": "中央下端揃え",
-                        "width": 29,
-                        "height": 5,
-                        "alignment": "center",
-                        "verticalAlignment": "bottom",
-                        "fontSize": 10,
-                        "lineHeight": 1,
-                        "characterSpacing": 0,
-                        "fontColor": "#000000",
-                        "fontName": "NotoSansJP",
-                        "backgroundColor": "#999999",
-                        "opacity": 1,
-                        "readOnly": false
-                    },
-                    {
-                        "name": "pawnSequence",
-                        "type": "text",
-                        "position": {
-                            "x": 90,
-                            "y": 29
-                        },
-                        "rotate": -90,
+                        "rotate": 90,
                         "required": false,
                         "content": "{{pawnSequence}}",
                         "width": 29,
-                        "height": 5,
+                        "height": 4,
                         "alignment": "center",
-                        "verticalAlignment": "bottom",
+                        "verticalAlignment": "middle",
                         "fontSize": 10,
                         "lineHeight": 1,
                         "characterSpacing": 0,
                         "fontColor": "#000000",
                         "fontName": "NotoSansJP",
-                        "backgroundColor": "#999999",
+                        "backgroundColor": "#888888",
                         "opacity": 1,
                         "readOnly": false
                     }
@@ -190,8 +147,8 @@
         ]
     ],
     "basePdf": {
-        "width": 210,
-        "height": 297,
+        "width": 62,
+        "height": 90,
         "padding": [
             0,
             0,

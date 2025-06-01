@@ -191,7 +191,6 @@ impl Text {
             ops.extend_from_slice(&bg_ops);
         }
 
-        println!("BOUND: {:?}", bounding_matrix);
         // 各行のテキストを描画
         for (index, line) in splitted_paragraphs.iter().enumerate() {
             let line_width: Mm = self
@@ -208,7 +207,6 @@ impl Text {
                     + line_height_in_mm * (index as i32 + 1) as f32
                     + self.padding.as_ref().map_or(Mm(0.0), |p| p.top));
 
-            println!("Y Offset {:?} Y relative : {:?} ", y_offset, y);
             let line_ops = self.create_text_ops(
                 bounding_matrix,
                 font_size,

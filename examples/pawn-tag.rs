@@ -12,7 +12,7 @@ fn main() -> Result<(), PdfiumError> {
     let mut inputs = vec![];
 
     let mut input: HashMap<&'static str, String> = HashMap::new();
-    input.insert("name", "小松原 康行".to_string());
+    input.insert("name", "SERRANO CHARO DE CHRIS V".to_string());
     input.insert("pawnDate", "2025/05/10".to_string());
     input.insert("amount", "50,000".to_string());
     input.insert(
