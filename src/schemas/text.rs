@@ -179,11 +179,19 @@ impl Text {
 
         let mut ops: Vec<Op> = vec![];
 
+        let bounding_matrix = super::pdf_utils::calculate_transform_matrix_with_center_pivot(
+            self.base.x,
+            parent_height - self.base.y - self.base.height,
+            self.base.width,
+            self.base.height,
+            self.rotate,
+        );
         // 背景色があれば背景を描画
-        if let Some(bg_ops) = self.create_background_ops(parent_height) {
+        if let Some(bg_ops) = self.create_background_ops(bounding_matrix) {
             ops.extend_from_slice(&bg_ops);
         }
 
+        println!("BOUND: {:?}", bounding_matrix);
         // 各行のテキストを描画
         for (index, line) in splitted_paragraphs.iter().enumerate() {
             let line_width: Mm = self
@@ -195,9 +203,20 @@ impl Text {
             let (x_line, character_spacing) =
                 self.calculate_horizontal_alignment(box_width, line_width, line);
 
-            let y = self.calculate_y_position(parent_height, y_offset, line_height_in_mm, index);
+            let y = self.base.height
+                - (y_offset
+                    + line_height_in_mm * (index as i32 + 1) as f32
+                    + self.padding.as_ref().map_or(Mm(0.0), |p| p.top));
 
-            let line_ops = self.create_text_ops(font_size, x_line, y, character_spacing, line);
+            println!("Y Offset {:?} Y relative : {:?} ", y_offset, y);
+            let line_ops = self.create_text_ops(
+                bounding_matrix,
+                font_size,
+                x_line,
+                y,
+                character_spacing,
+                line,
+            );
             ops.extend_from_slice(&line_ops);
         }
 
@@ -235,14 +254,10 @@ impl Text {
         let residual: Mm = box_width - line_width;
 
         let x_line = match self.alignment {
-            Alignment::Left => self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
-            Alignment::Center => {
-                self.base.x + residual / 2.0 + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
-            }
-            Alignment::Right => {
-                self.base.x + residual + self.padding.as_ref().map_or(Mm(0.0), |p| p.left)
-            }
-            Alignment::Justify => self.base.x + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
+            Alignment::Left => self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
+            Alignment::Center => residual / 2.0 + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
+            Alignment::Right => residual + self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
+            Alignment::Justify => self.padding.as_ref().map_or(Mm(0.0), |p| p.left),
         };
 
         let character_spacing = match self.alignment {
@@ -260,41 +275,10 @@ impl Text {
         (x_line, character_spacing)
     }
 
-    // Y座標を計算
-    fn calculate_y_position(
-        &self,
-        parent_height: Mm,
-        y_offset: Mm,
-        line_height_in_mm: Mm,
-        line_index: usize,
-    ) -> Mm {
-        parent_height
-            - (self.base.y + y_offset)
-            - line_height_in_mm * (line_index as i32 + 1) as f32
-            - self.padding.as_ref().map_or(Mm(0.0), |p| p.top)
-    }
-
     // 背景色のオペレーションを作成
-    fn create_background_ops(&self, parent_height: Mm) -> Option<Vec<Op>> {
-        let matrix_values = super::pdf_utils::calculate_transform_matrix_with_center_pivot(
-            self.base.x,
-            parent_height - self.base.y - self.base.height,
-            self.base.width,
-            self.base.height,
-            self.rotate,
-        );
-        let matrix_values = super::pdf_utils::calculate_transform_matrix(
-            self.base.x,
-            parent_height - self.base.y - self.base.height,
-            self.rotate,
-            None,
-            None,
-        );
-
-        println!("Bg matrix values: {:?}", matrix_values);
-
+    fn create_background_ops(&self, bounding_matrix: [f32; 6]) -> Option<Vec<Op>> {
         let matrix: Op = Op::SetTransformationMatrix {
-            matrix: CurTransMat::Raw(matrix_values),
+            matrix: CurTransMat::Raw(bounding_matrix),
         };
 
         let x1 = Pt(0.0);
@@ -347,6 +331,7 @@ impl Text {
     // テキスト描画のオペレーションを作成
     fn create_text_ops(
         &self,
+        matrix: [f32; 6],
         font_size: Pt,
         x_line: Mm,
         y: Mm,
@@ -354,11 +339,11 @@ impl Text {
         line: &str,
     ) -> Vec<Op> {
         super::pdf_utils::create_text_ops(
+            matrix,
             &self.font_id,
             font_size,
             x_line,
             y,
-            self.rotate,
             self.scale_x,
             self.scale_y,
             character_spacing,
@@ -597,16 +582,5 @@ mod tests {
         let (x, _) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
         assert_eq!(x, Mm(10.0)); // base.x
                                  // 文字間隔は実際の計算結果に依存するため、ここではテストしない
-    }
-
-    #[test]
-    fn test_y_position_calculation() {
-        let text = create_test_text();
-        let parent_height = Mm(297.0);
-
-        let y = text.calculate_y_position(parent_height, Mm(5.0), Mm(14.4), 0);
-
-        // 297 - (10 + 5) - 14.4 - 0 = 267.6
-        assert_eq!(y, Mm(267.6));
     }
 }

@@ -24,8 +24,8 @@ pub fn calculate_transform_matrix(
     // 回転とスケールを組み合わせた変換行列
     [
         sx * cos_theta,  // a: x方向のスケール * 回転のcos成分
-        -sx * sin_theta, // b: x方向のスケール * 回転の-sin成分
-        sy * sin_theta,  // c: y方向のスケール * 回転のsin成分
+        sx * sin_theta,  // b: x方向のスケール * 回転の-sin成分
+        -sy * sin_theta, // c: y方向のスケール * 回転のsin成分
         sy * cos_theta,  // d: y方向のスケール * 回転のcos成分
         x_in_pt.0,       // e: x座標の平行移動
         y_in_pt.0,       // f: y座標の平行移動
@@ -66,11 +66,11 @@ pub fn calculate_transform_matrix_with_center_pivot(
 }
 
 pub fn create_text_ops(
+    bounding_matrix: [f32; 6],
     font_id: &FontId,
     font_size: Pt,
     x_line: Mm,
     y: Mm,
-    rotate: Option<f32>,
     scale_x: Option<f32>,
     scale_y: Option<f32>,
     character_spacing: Pt,
@@ -78,11 +78,17 @@ pub fn create_text_ops(
     line_height: Option<f32>,
     font_color: &csscolorparser::Color,
 ) -> Vec<Op> {
-    let matrix_values = calculate_transform_matrix(x_line, y, rotate, scale_x, scale_y);
-    println!("Text matrix values: {:?}", matrix_values);
+    let matrix_values = calculate_transform_matrix(x_line, y, None, scale_x, scale_y);
+    println!("y position: {:?}", y);
+    println!("TEXT : {:?}", matrix_values);
+    println!("======================================");
     let matrix = TextMatrix::Raw(matrix_values);
 
     vec![
+        Op::SaveGraphicsState,
+        Op::SetTransformationMatrix {
+            matrix: CurTransMat::Raw(bounding_matrix),
+        },
         Op::StartTextSection,
         Op::SetLineHeight {
             lh: font_size * line_height.unwrap_or(1.0),
@@ -108,6 +114,7 @@ pub fn create_text_ops(
             font: font_id.clone(),
         },
         Op::EndTextSection,
+        Op::RestoreGraphicsState,
     ]
 }
 

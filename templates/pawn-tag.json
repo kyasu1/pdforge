@@ -6,7 +6,7 @@
                 "type": "rectangle",
                 "position": {
                     "x": 0,
-                    "y": 30.5
+                    "y": 0
                 },
                 "width": 90,
                 "height": 29,
@@ -42,7 +42,7 @@
                 "type": "group",
                 "position": {
                     "x": 0,
-                    "y": 30.5
+                    "y": 0
                 },
                 "width": 90,
                 "height": 29,
@@ -58,7 +58,7 @@
                         "required": false,
                         "content": "{{name}}",
                         "width": 90,
-                        "height": 6.35,
+                        "height": 6.5,
                         "alignment": "left",
                         "verticalAlignment": "middle",
                         "fontSize": {
@@ -83,7 +83,7 @@
                         "required": false,
                         "content": "入質日 {{pawnDate}}",
                         "width": 32,
-                        "height": 4.064,
+                        "height": 4,
                         "alignment": "left",
                         "verticalAlignment": "top",
                         "fontSize": 10,
@@ -100,19 +100,20 @@
                         "type": "text",
                         "position": {
                             "x": 1.016,
-                            "y": 11
+                            "y": 12
                         },
                         "required": false,
                         "content": " {{amount}}円",
                         "width": 58.928,
-                        "height": 4.064,
+                        "height": 6.4,
                         "alignment": "left",
-                        "verticalAlignment": "top",
+                        "verticalAlignment": "middle",
                         "fontSize": 18,
                         "lineHeight": 1,
                         "characterSpacing": 0,
                         "fontColor": "#000000",
                         "fontName": "NotoSansJP",
+                        "backgroundColor": "#EE88EE",
                         "opacity": 1,
                         "readOnly": false
                     },
@@ -121,7 +122,7 @@
                         "type": "text",
                         "position": {
                             "x": 1.016,
-                            "y": 17.5
+                            "y": 18.5
                         },
                         "required": false,
                         "content": " {{desc}}",
@@ -134,6 +135,7 @@
                         "characterSpacing": 0,
                         "fontColor": "#000000",
                         "fontName": "NotoSansJP",
+                        "backgroundColor": "#EE8888",
                         "opacity": 1,
                         "readOnly": false
                     },
@@ -142,15 +144,15 @@
                         "type": "text",
                         "position": {
                             "x": 90,
-                            "y": 24
+                            "y": 29
                         },
                         "rotate": 0,
                         "required": false,
-                        "content": "{{pawnSequence}}",
+                        "content": "中央下端揃え",
                         "width": 29,
                         "height": 5,
                         "alignment": "center",
-                        "verticalAlignment": "top",
+                        "verticalAlignment": "bottom",
                         "fontSize": 10,
                         "lineHeight": 1,
                         "characterSpacing": 0,
@@ -165,7 +167,7 @@
                         "type": "text",
                         "position": {
                             "x": 90,
-                            "y": 24
+                            "y": 29
                         },
                         "rotate": -90,
                         "required": false,
@@ -173,7 +175,7 @@
                         "width": 29,
                         "height": 5,
                         "alignment": "center",
-                        "verticalAlignment": "top",
+                        "verticalAlignment": "bottom",
                         "fontSize": 10,
                         "lineHeight": 1,
                         "characterSpacing": 0,

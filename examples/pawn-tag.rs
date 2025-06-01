@@ -15,7 +15,10 @@ fn main() -> Result<(), PdfiumError> {
     input.insert("name", "小松原 康行".to_string());
     input.insert("pawnDate", "2025/05/10".to_string());
     input.insert("amount", "50,000".to_string());
-    input.insert("desc", "ロレックス 時計 16233G 箱付 保付 計1点".to_string());
+    input.insert(
+        "desc",
+        "ロレックス デイトジャスト 時計 16233G ブルーグラデーション 箱付 保付 計1点".to_string(),
+    );
     input.insert("pawnSequence", "31-0001".to_string());
 
     inputs.push(input);

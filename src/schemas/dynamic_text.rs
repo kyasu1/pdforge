@@ -162,12 +162,20 @@ impl DynamicText {
                 let y_position =
                     page_height_in_mm - y_start - line_height_in_mm * (index + 1) as f32;
 
+                let matrix = super::pdf_utils::calculate_transform_matrix_with_center_pivot(
+                    self.base.x,
+                    self.base.y,
+                    self.base.width,
+                    self.base.height,
+                    None,
+                );
+
                 let line_ops = super::pdf_utils::create_text_ops(
+                    matrix,
                     &self.font_id,
                     self.font_size,
                     self.base.x,
                     y_position,
-                    None,
                     None,
                     None,
                     character_spacing,
