@@ -19,6 +19,7 @@ fn main() -> Result<(), PdfiumError> {
         "desc",
         "ロレックス デイトジャスト 時計 16233G ブルーグラデーション 箱付 保付 計1点".to_string(),
     );
+    input.insert("qrCode", "31-0001".to_string());
     input.insert("pawnSequence", "31-0001".to_string());
 
     inputs.push(input);

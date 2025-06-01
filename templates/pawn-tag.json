@@ -120,6 +120,28 @@
                         "readOnly": false
                     },
                     {
+                        "name": "qrCode",
+                        "type": "qrCode",
+                        "position": {
+                            "x": 75,
+                            "y": 10
+                        },
+                        "required": false,
+                        "content": "{{qrCode}}",
+                        "width": 10,
+                        "height": 10,
+                        "rotate": 0,
+                        "alignment": "center",
+                        "verticalAlignment": "top",
+                        "fontSize": 24,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSans",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
                         "name": "pawnSequence",
                         "type": "text",
                         "position": {

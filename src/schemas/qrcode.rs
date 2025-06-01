@@ -15,6 +15,7 @@ pub struct JsonQrCodeSchema {
     position: JsonPosition,
     width: f32,
     height: f32,
+    rotate: Option<f32>,
     alignment: Option<Alignment>,
     vertical_alignment: Option<VerticalAlignment>,
     padding: Option<Frame>,
@@ -24,6 +25,7 @@ pub struct JsonQrCodeSchema {
 pub struct QrCode {
     base: BaseSchema,
     content: String,
+    rotate: Option<f32>,
     alignment: Alignment,
     vertical_alignment: VerticalAlignment,
     bounding_box: Option<BoundingBox>,
@@ -46,6 +48,7 @@ impl From<JsonQrCodeSchema> for Schema {
         Schema::QrCode(QrCode {
             base,
             content: json.content,
+            rotate: json.rotate,
             alignment,
             vertical_alignment,
             bounding_box: None,
@@ -59,6 +62,7 @@ impl QrCode {
         Self {
             base,
             content,
+            rotate: None,
             alignment: Alignment::Center,
             vertical_alignment: VerticalAlignment::Middle,
             bounding_box: None,

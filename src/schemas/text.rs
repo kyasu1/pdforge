@@ -1,5 +1,5 @@
 use super::{
-    Alignment, BasePdf, Error, FontSnafu, Frame, InvalidColorSnafu, JsonPosition, VerticalAlignment,
+    Alignment, Error, FontSnafu, Frame, InvalidColorSnafu, JsonPosition, VerticalAlignment,
 };
 use crate::font::{DynamicFontSize, FontMap, FontSize, FontSpec, FontSpecTrait, JsonFontSize};
 use crate::schemas::base::BaseSchema;

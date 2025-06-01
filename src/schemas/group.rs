@@ -49,10 +49,10 @@ impl Group {
                 JsonSchema::Table(schema) => {
                     Schema::Table(crate::schemas::table::Table::from_json(schema, font_map)?)
                 }
-                // JsonSchema::QrCode(schema) => Schema::QrCode(schema.into()),
-                // JsonSchema::Image(schema) => Schema::Image(schema.into()),
-                // JsonSchema::Svg(schema) => Schema::Svg(schema.into()),
-                // JsonSchema::Rectangle(schema) => Schema::Rect(schema.try_into()?),
+                JsonSchema::QrCode(schema) => schema.into(),
+                JsonSchema::Image(schema) => schema.try_into()?,
+                JsonSchema::Svg(schema) => schema.try_into()?,
+                JsonSchema::Rectangle(schema) => schema.try_into()?,
                 _ => {
                     return Err(Error::Whatever {
                         message: "Group schema does not support this type".to_string(),
