@@ -21,6 +21,7 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 - **Image**: Image embedding with PNG, JPEG, and BMP support
 - **SVG**: Scalable vector graphics rendering
 - **Rectangle**: Geometric shapes with customizable styling
+- **Group**: Container for grouping and transforming multiple schemas together
 
 ## Installation
 
@@ -52,6 +53,43 @@ fn main() {
 
     // Save to file
     std::fs::write("./output.pdf", bytes).unwrap();
+}
+```
+
+### With Command Line Arguments
+
+```rust
+use std::env;
+use std::path::Path;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    
+    if args.len() != 2 {
+        eprintln!("Usage: {} <template_file>", args[0]);
+        std::process::exit(1);
+    }
+    
+    let template_file = &args[1];
+    let template_path = Path::new(template_file);
+    
+    // Extract filename without extension for output
+    let file_stem = template_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
+    
+    let mut pdforge = pdforge::PDForgeBuilder::new("CLI Example".to_string())
+        .load_template("template", template_file)
+        .build();
+
+    let bytes: Vec<u8> = pdforge.render("template");
+
+    // Generate output filename based on input template
+    let output_file = format!("{}.pdf", file_stem);
+    std::fs::write(&output_file, bytes).unwrap();
+    
+    println!("PDF generated: {}", output_file);
 }
 ```
 
@@ -189,13 +227,62 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
 }
 ```
 
+#### Group Schema
+
+```json
+{
+  "type": "group",
+  "name": "header_group",
+  "position": { "x": 10, "y": 10 },
+  "width": 190,
+  "height": 50,
+  "rotate": 15,
+  "schemas": [
+    {
+      "type": "text",
+      "name": "title",
+      "content": "Grouped Title",
+      "position": { "x": 0, "y": 0 },
+      "width": 100,
+      "height": 20,
+      "fontSize": 16,
+      "fontName": "NotoSansJP"
+    },
+    {
+      "type": "qrCode",
+      "name": "group_qr",
+      "content": "https://example.com",
+      "position": { "x": 120, "y": 0 },
+      "width": 30,
+      "height": 30
+    }
+  ]
+}
+```
+
+The Group schema allows you to:
+- **Group multiple elements**: Combine different schema types into a single container
+- **Apply transformations**: Rotate the entire group around its center point
+- **Coordinate positioning**: Position child elements relative to the group's origin
+- **Maintain hierarchy**: Organize complex layouts with nested structures
+
 ## Examples
 
 The project includes several examples in the `examples/` directory:
 
 - **Basic Table**: `cargo run --example table`
 - **SVG Graphics**: `cargo run --example svg`
+- **Command Line Usage**: `cargo run --example svg ./templates/tiger-svg.json`
 - **PDFium Integration**: `cargo run --example pdfium`
+
+Examples with command line arguments:
+
+```bash
+# SVG example with specific template
+cargo run --example svg ./templates/tiger-svg.json
+
+# This will generate tiger-svg.pdf from tiger-svg.json template
+```
 
 ## Font Support
 
