@@ -1,3 +1,5 @@
+// This example demonstrates how to use the printpdf library to create a PDF document
+// with various text items in different languages, including Japanese, Chinese, and Korean.
 use printpdf::*;
 
 fn main() {

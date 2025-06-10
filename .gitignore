@@ -3,9 +3,4 @@ target/
 debug/
 printpdf/
 assets/
-*.pdf
 .idea/
-*.png
-pdfium/
-pdfium*.tgz
-libpdfium.dylib
