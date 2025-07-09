@@ -43,6 +43,12 @@ pub enum Error {
         source: csscolorparser::ParseColorError,
     },
 
+    #[snafu(display("Failed to convert {schema_type} schema"))]
+    SchemaConversion {
+        schema_type: String,
+        source: Box<dyn std::error::Error>,
+    },
+
     #[snafu(whatever, display("{message}"))]
     Whatever {
         message: String,
@@ -288,25 +294,36 @@ impl Template {
 
             let converted: Vec<Schema> = json_schemas
                 .into_iter()
-                .map(|schema| match schema {
-                    JsonSchema::Text(json) => {
-                        Schema::Text(Text::from_json(json, font_map).unwrap())
-                    }
-                    JsonSchema::DynamicText(json) => Schema::DynamicText(
-                        dynamic_text::DynamicText::from_json(json, font_map).unwrap(),
-                    ),
-                    JsonSchema::Table(json) => {
-                        Schema::Table(Table::from_json(json, font_map).unwrap())
-                    }
-                    JsonSchema::QrCode(json) => json.into(),
-                    JsonSchema::Image(json) => json.try_into().unwrap(),
-                    JsonSchema::Svg(json) => json.try_into().unwrap(),
-                    JsonSchema::Rectangle(json) => json.try_into().unwrap(),
-                    JsonSchema::Group(json) => {
-                        Schema::Group(group::Group::from_json(json, font_map).unwrap())
+                .map(|schema| -> Result<Schema, Error> {
+                    match schema {
+                        JsonSchema::Text(json) => {
+                            Ok(Schema::Text(Text::from_json(json, font_map)?))
+                        }
+                        JsonSchema::DynamicText(json) => Ok(Schema::DynamicText(
+                            dynamic_text::DynamicText::from_json(json, font_map)?,
+                        )),
+                        JsonSchema::Table(json) => {
+                            Ok(Schema::Table(Table::from_json(json, font_map)?))
+                        }
+                        JsonSchema::QrCode(json) => Ok(json.into()),
+                        JsonSchema::Image(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Image".to_string(),
+                            source: Box::new(e),
+                        })?),
+                        JsonSchema::Svg(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Svg".to_string(),
+                            source: Box::new(e),
+                        })?),
+                        JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Rectangle".to_string(),
+                            source: Box::new(e),
+                        })?),
+                        JsonSchema::Group(json) => {
+                            Ok(Schema::Group(group::Group::from_json(json, font_map)?))
+                        }
                     }
                 })
-                .collect::<Vec<Schema>>();
+                .collect::<Result<Vec<Schema>, Error>>()?;
 
             schemas.push(converted);
         }
@@ -331,12 +348,18 @@ impl Template {
         let mut schemas: Vec<Vec<Schema>> = Vec::new();
 
         for (index, group) in inputs.iter().enumerate() {
-            let json_schema = serde_json::to_string(&self.schemas[index]).unwrap();
+            let json_schema = serde_json::to_string(&self.schemas[index]).map_err(|e| Error::Whatever {
+                message: "Failed to serialize schema to JSON".to_string(),
+                source: Some(Box::new(e)),
+            })?;
 
             // Teraを使ってテンプレートをレンダリングする
             let mut tera = tera::Tera::default();
             tera.add_raw_template("schema_template", &json_schema)
-                .unwrap();
+                .map_err(|e| Error::Whatever {
+                    message: "Failed to add template to Tera".to_string(),
+                    source: Some(Box::new(e)),
+                })?;
 
             let mut json_schemas: Vec<Vec<JsonSchema>> = Vec::new();
             for input in group {
@@ -344,37 +367,54 @@ impl Template {
                 for (key, value) in input.iter() {
                     context.insert(*key, value);
                 }
-                let rendered = tera.render("schema_template", &context).unwrap();
-                let parsed: Vec<JsonSchema> = serde_json::from_str(&rendered).unwrap();
+                let rendered = tera.render("schema_template", &context).map_err(|e| Error::Whatever {
+                    message: "Failed to render template".to_string(),
+                    source: Some(Box::new(e)),
+                })?;
+                let parsed: Vec<JsonSchema> = serde_json::from_str(&rendered).map_err(|e| Error::TemplateDeserialize {
+                    source: e,
+                    message: "Failed to parse rendered template".to_string(),
+                })?;
                 json_schemas.push(parsed);
             }
 
             // JSONをSchemaに変換する
             let converted: Vec<Vec<Schema>> = json_schemas
                 .into_iter()
-                .map(|page| {
+                .map(|page| -> Result<Vec<Schema>, Error> {
                     page.into_iter()
-                        .map(|schema| match schema {
-                            JsonSchema::Text(json) => {
-                                Schema::Text(Text::from_json(json, font_map).unwrap())
-                            }
-                            JsonSchema::DynamicText(json) => Schema::DynamicText(
-                                dynamic_text::DynamicText::from_json(json, font_map).unwrap(),
-                            ),
-                            JsonSchema::Table(json) => {
-                                Schema::Table(Table::from_json(json, font_map).unwrap())
-                            }
-                            JsonSchema::QrCode(json) => json.into(),
-                            JsonSchema::Image(json) => json.try_into().unwrap(),
-                            JsonSchema::Svg(json) => json.try_into().unwrap(),
-                            JsonSchema::Rectangle(json) => json.try_into().unwrap(),
-                            JsonSchema::Group(json) => {
-                                Schema::Group(group::Group::from_json(json, font_map).unwrap())
+                        .map(|schema| -> Result<Schema, Error> {
+                            match schema {
+                                JsonSchema::Text(json) => {
+                                    Ok(Schema::Text(Text::from_json(json, font_map)?))
+                                }
+                                JsonSchema::DynamicText(json) => Ok(Schema::DynamicText(
+                                    dynamic_text::DynamicText::from_json(json, font_map)?,
+                                )),
+                                JsonSchema::Table(json) => {
+                                    Ok(Schema::Table(Table::from_json(json, font_map)?))
+                                }
+                                JsonSchema::QrCode(json) => Ok(json.into()),
+                                JsonSchema::Image(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                    schema_type: "Image".to_string(),
+                                    source: Box::new(e),
+                                })?),
+                                JsonSchema::Svg(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                    schema_type: "Svg".to_string(),
+                                    source: Box::new(e),
+                                })?),
+                                JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                    schema_type: "Rectangle".to_string(),
+                                    source: Box::new(e),
+                                })?),
+                                JsonSchema::Group(json) => {
+                                    Ok(Schema::Group(group::Group::from_json(json, font_map)?))
+                                }
                             }
                         })
-                        .collect::<Vec<Schema>>()
+                        .collect::<Result<Vec<Schema>, Error>>()
                 })
-                .collect();
+                .collect::<Result<Vec<Vec<Schema>>, Error>>()?;
 
             schemas.extend(converted);
         }
