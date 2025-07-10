@@ -49,7 +49,7 @@ pub enum Error {
     #[snafu(display("Failed to convert {schema_type} schema"))]
     SchemaConversion {
         schema_type: String,
-        source: Box<dyn std::error::Error>,
+        source: Box<dyn std::error::Error + Send + Sync>,
     },
 
     #[snafu(display("Font file I/O error: {message}"))]
@@ -92,8 +92,8 @@ pub enum Error {
     #[snafu(whatever, display("{message}"))]
     Whatever {
         message: String,
-        #[snafu(source(from(Box<dyn std::error::Error>, Some)))]
-        source: Option<Box<dyn std::error::Error>>,
+        #[snafu(source(from(Box<dyn std::error::Error + Send + Sync>, Some)))]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
 }
 
