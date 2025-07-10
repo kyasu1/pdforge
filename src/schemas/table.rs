@@ -250,7 +250,7 @@ impl Table {
             whatever!("total of column width must be 100%");
         }
 
-        let heads = json
+        let heads: Result<Vec<Head>, Error> = json
             .head_width_percentages
             .into_iter()
             .map(|json_head| {
@@ -271,15 +271,15 @@ impl Table {
                         .unwrap_or(head_styles.clone().vertical_alignment),
                     font_map,
                     Some(head_styles.padding.clone()),
-                )
-                .unwrap();
+                )?;
 
-                Head {
+                Ok(Head {
                     percent: json_head.percent,
                     text,
-                }
+                })
             })
             .collect();
+        let heads = heads?;
 
         let mut columns = Vec::new();
         for json_column in json.columns {

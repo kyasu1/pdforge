@@ -146,7 +146,9 @@ impl QrCode {
         let encoder: PngEncoder<&mut Vec<u8>> = PngEncoder::new(&mut buf);
         encoder
             .write_image(&luma.into_raw(), w, h, ExtendedColorType::L8)
-            .unwrap();
+            .map_err(|_| Error::ImageEncoding {
+                message: "Failed to encode QR code to PNG".to_string(),
+            })?;
 
         let mut warnings = Vec::new();
         let image = RawImage::decode_from_bytes(&buf, &mut warnings)

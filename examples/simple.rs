@@ -1,7 +1,7 @@
 use std::env;
 use std::path::Path;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
@@ -19,16 +19,17 @@ fn main() {
         .unwrap_or("output");
 
     let mut pdforge = pdforge::PDForgeBuilder::new("Example".to_string())
-        .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")
-        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")
-        .load_template("template", template_file)
+        .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .load_template("template", template_file)?
         .build();
 
-    let bytes: Vec<u8> = pdforge.render("template");
+    let bytes: Vec<u8> = pdforge.render("template")?;
 
     // 出力ファイル名を元のファイル名をベースに生成
     let output_file = format!("./examples/pdf/{}.pdf", file_stem);
-    std::fs::write(&output_file, bytes).unwrap();
+    std::fs::write(&output_file, bytes)?;
 
     println!("PDF generated: {}", output_file);
+    Ok(())
 }

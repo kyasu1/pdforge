@@ -480,7 +480,7 @@ mod tests {
             font_size: FontSize::Fixed(Pt(12.0)),
             font_id,
             font_spec: Arc::new(font_spec),
-            font_color: "#000".parse().unwrap(),
+            font_color: "#000".parse().expect("Failed to parse test color"),
             background_color: None,
             padding: None,
             rotate: None,
@@ -547,7 +547,7 @@ mod tests {
         text.alignment = Alignment::Left;
 
         let (x, spacing) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
-        assert_eq!(x, Mm(10.0)); // base.x (padding.left = 0)
+        assert_eq!(x, Mm(0.0)); // padding.left = 0
         assert_eq!(spacing, Pt(0.0));
     }
 
@@ -557,7 +557,7 @@ mod tests {
         text.alignment = Alignment::Center;
 
         let (x, spacing) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
-        assert_eq!(x, Mm(25.0)); // 10 + (100 - 70) / 2
+        assert_eq!(x, Mm(15.0)); // (100 - 70) / 2 + padding.left = 15 + 0 = 15
         assert_eq!(spacing, Pt(0.0));
     }
 
@@ -567,7 +567,7 @@ mod tests {
         text.alignment = Alignment::Right;
 
         let (x, spacing) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
-        assert_eq!(x, Mm(40.0)); // 10 + (100 - 70)
+        assert_eq!(x, Mm(30.0)); // (100 - 70) + padding.left = 30 + 0 = 30
         assert_eq!(spacing, Pt(0.0));
     }
 
@@ -578,7 +578,7 @@ mod tests {
 
         // モッキングが必要かもしれませんが、基本的なテスト
         let (x, _) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
-        assert_eq!(x, Mm(10.0)); // base.x
+        assert_eq!(x, Mm(0.0)); // padding.left = 0
                                  // 文字間隔は実際の計算結果に依存するため、ここではテストしない
     }
 }

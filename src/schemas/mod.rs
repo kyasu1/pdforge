@@ -17,6 +17,9 @@ use serde::{Deserialize, Serialize};
 use snafu::prelude::*;
 use std::collections::HashMap;
 
+// Snafu context for error handling
+pub use snafu::ResultExt;
+
 use table::Table;
 use text::Text;
 
@@ -49,6 +52,43 @@ pub enum Error {
         source: Box<dyn std::error::Error>,
     },
 
+    #[snafu(display("Font file I/O error: {message}"))]
+    FontFileIo {
+        source: std::io::Error,
+        message: String,
+    },
+
+    #[snafu(display("Font parsing error: {message}"))]
+    FontParsing {
+        message: String,
+    },
+
+    #[snafu(display("Template loading error: {message}"))]
+    TemplateLoading {
+        message: String,
+    },
+
+    #[snafu(display("Image decoding error: {message}"))]
+    ImageDecoding {
+        message: String,
+    },
+
+    #[snafu(display("Image encoding error: {message}"))]
+    ImageEncoding {
+        message: String,
+    },
+
+    #[snafu(display("QR code generation error: {message}"))]
+    QrCodeGeneration {
+        message: String,
+    },
+
+    #[snafu(display("Color parsing error: {message}"))]
+    ColorParsing {
+        source: csscolorparser::ParseColorError,
+        message: String,
+    },
+
     #[snafu(whatever, display("{message}"))]
     Whatever {
         message: String,
@@ -56,6 +96,8 @@ pub enum Error {
         source: Option<Box<dyn std::error::Error>>,
     },
 }
+
+// Snafu contexts are automatically generated and available within this module
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]

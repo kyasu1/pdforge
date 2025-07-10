@@ -49,7 +49,9 @@ impl Image {
         let decoded = general_purpose::STANDARD
             .decode(parts[1])
             .whatever_context("Unable to decode data url image")?;
-        Ok(image::load_from_memory(&decoded).unwrap())
+        image::load_from_memory(&decoded).map_err(|_| Error::ImageDecoding {
+            message: "Failed to decode image from memory".to_string(),
+        })
     }
 
     pub fn new(
@@ -80,10 +82,13 @@ impl Image {
         let rgb_image = self.content.to_rgb8();
 
         let mut buf = Cursor::new(Vec::new());
-        rgb_image.write_to(&mut buf, ImageFormat::Jpeg).unwrap();
+        rgb_image.write_to(&mut buf, ImageFormat::Jpeg).map_err(|_| Error::ImageEncoding {
+            message: "Failed to encode image to JPEG".to_string(),
+        })?;
 
         let mut warnings = Vec::new();
-        let image = RawImage::decode_from_bytes(&buf.get_ref(), &mut warnings).unwrap();
+        let image = RawImage::decode_from_bytes(&buf.get_ref(), &mut warnings)
+            .whatever_context("Failed to decode image bytes for PDF")?;
 
         let image_x_object_id = doc.add_image(&image);
 

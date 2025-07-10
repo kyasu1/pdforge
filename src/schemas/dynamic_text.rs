@@ -181,7 +181,10 @@ impl DynamicText {
                     character_spacing,
                     &line,
                     self.line_height,
-                    &csscolorparser::parse("#000000").unwrap(), // デフォルトの黒色
+                    &csscolorparser::parse("#000000").map_err(|e| Error::ColorParsing {
+                        source: e,
+                        message: "Failed to parse default black color".to_string(),
+                    })?, // デフォルトの黒色
                 );
 
                 ops.extend_from_slice(&line_ops);

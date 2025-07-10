@@ -8,7 +8,7 @@ fn main() {
     // let font_slice = include_bytes!("../assets/fonts/NotoSansCJKjp-Regular.otf");
     let font_slice = include_bytes!("../assets/fonts/NotoSansJP-Regular.otf");
 
-    let parsed_font = ParsedFont::from_bytes(font_slice, 0, &mut vec![]).unwrap();
+    let parsed_font = ParsedFont::from_bytes(font_slice, 0, &mut vec![]).expect("Failed to parse font");
     let font_id = doc.add_font(&parsed_font);
 
     let texts = [
@@ -65,7 +65,7 @@ fn main() {
     let mut warnings = vec![];
     let bytes = doc.with_pages(pages).save(&options, &mut warnings);
 
-    std::fs::write("./font.pdf", bytes).unwrap();
+    std::fs::write("./font.pdf", bytes).expect("Failed to write PDF file");
 
     for warning in warnings {
         if warning.severity != PdfParseErrorSeverity::Info {
