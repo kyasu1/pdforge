@@ -600,9 +600,11 @@ impl Table {
                     };
                     let ops = draw_rectangle(rect);
 
-                    buffer.insert(page_index, ops);
+                    // Fix: Add current_page offset to page_index
+                    let actual_page_index = current_page + page_index;
+                    buffer.insert(actual_page_index, ops);
 
-                    schema.render(base_pdf.height, doc, page_index, buffer)?;
+                    schema.render(base_pdf.height, doc, actual_page_index, buffer)?;
                 }
             }
         }

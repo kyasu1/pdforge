@@ -487,7 +487,7 @@ impl Template {
                     }
                     Schema::Table(mut obj) => {
                         (current_page, y) =
-                            obj.render(&self.base_pdf, doc, current_page, y, &mut buffer)?;
+                            obj.render(&self.base_pdf, doc, page_index, y, &mut buffer)?;
                     }
                     Schema::QrCode(obj) => {
                         obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?;
