@@ -1,5 +1,5 @@
-use pdforge::schemas::table::{JsonTableSchema, Table};
 use pdforge::font::FontMap;
+use pdforge::schemas::table::{JsonTableSchema, Table};
 use std::collections::HashMap;
 
 fn create_test_font_map() -> FontMap {
@@ -23,7 +23,7 @@ fn create_simple_table_json() -> serde_json::Value {
                 "alignment": "left"
             },
             {
-                "content": "Price", 
+                "content": "Price",
                 "percent": 30.0,
                 "fontSize": 12.0,
                 "alignment": "right"
@@ -97,9 +97,9 @@ fn test_simple_table_creation_from_json() {
     let json_value = create_simple_table_json();
     let json_schema: JsonTableSchema = serde_json::from_value(json_value).unwrap();
     let font_map = create_test_font_map();
-    
+
     let table = Table::from_json(json_schema, &font_map).unwrap();
-    
+
     let _base = table.get_base();
     // Note: BaseSchema fields are private, so we can only test basic construction success
     assert!(true); // Table was created successfully
@@ -108,7 +108,7 @@ fn test_simple_table_creation_from_json() {
 #[test]
 fn test_table_column_width_percentages_validation() {
     let mut json_value = create_simple_table_json();
-    
+
     // Set invalid percentages that don't add up to 100%
     json_value["headWidthPercentages"] = serde_json::json!([
         {
@@ -118,17 +118,17 @@ fn test_table_column_width_percentages_validation() {
             "alignment": "left"
         },
         {
-            "content": "Price", 
+            "content": "Price",
             "percent": 40.0, // Total = 80%, not 100%
             "fontSize": 12.0,
             "alignment": "right"
         }
     ]);
-    
+
     let json_schema: JsonTableSchema = serde_json::from_value(json_value).unwrap();
     let font_map = create_test_font_map();
     let result = Table::from_json(json_schema, &font_map);
-    
+
     assert!(result.is_err());
     let error_message = format!("{}", result.unwrap_err());
     assert!(error_message.contains("total of column width must be 100%"));
@@ -139,7 +139,7 @@ fn test_table_valid_column_width_percentages() {
     let json_value = create_simple_table_json();
     let json_schema: JsonTableSchema = serde_json::from_value(json_value).unwrap();
     let font_map = create_test_font_map();
-    
+
     let result = Table::from_json(json_schema, &font_map);
     assert!(result.is_ok());
 }
