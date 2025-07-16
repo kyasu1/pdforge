@@ -1,0 +1,622 @@
+{
+  "schemas": [
+    [
+      {
+        "name": "title_page1",
+        "type": "text",
+        "content": "ANNUAL FINANCIAL REPORT - TABLE 1 (STARTS PAGE 1)",
+        "position": {
+          "x": 10,
+          "y": 280
+        },
+        "width": 190,
+        "height": 12,
+        "fontSize": 14,
+        "fontName": "NotoSansJP",
+        "fontColor": "#2c3e50",
+        "alignment": "center"
+      },
+      {
+        "type": "table",
+        "name": "financial_table",
+        "position": {
+          "x": 10,
+          "y": 260
+        },
+        "width": 190,
+        "height": 900,
+        "content": "",
+        "showHead": true,
+        "headWidthPercentages": [
+          {
+            "content": "Quarter",
+            "percent": 15,
+            "fontSize": 10,
+            "alignment": "center"
+          },
+          {
+            "content": "Department",
+            "percent": 25,
+            "fontSize": 10,
+            "alignment": "left"
+          },
+          {
+            "content": "Category",
+            "percent": 25,
+            "fontSize": 10,
+            "alignment": "left"
+          },
+          {
+            "content": "Budget",
+            "percent": 17,
+            "fontSize": 10,
+            "alignment": "right"
+          },
+          {
+            "content": "Actual",
+            "percent": 18,
+            "fontSize": 10,
+            "alignment": "right"
+          }
+        ],
+        "tableStyles": {
+          "borderWidth": 0.3,
+          "borderColor": "#34495e"
+        },
+        "headStyles": {
+          "fontSize": 10,
+          "fontName": "NotoSansJP",
+          "characterSpacing": 0,
+          "alignment": "center",
+          "verticalAlignment": "middle",
+          "lineHeight": 1,
+          "fontColor": "#ffffff",
+          "borderColor": "",
+          "backgroundColor": "#e74c3c",
+          "borderWidth": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "padding": {
+            "top": 3,
+            "right": 3,
+            "bottom": 3,
+            "left": 3
+          }
+        },
+        "bodyStyles": {
+          "fontSize": 9,
+          "fontName": "NotoSansJP",
+          "characterSpacing": 0,
+          "alignment": "left",
+          "verticalAlignment": "middle",
+          "lineHeight": 1.2,
+          "fontColor": "#2c3e50",
+          "borderColor": "#bdc3c7",
+          "backgroundColor": "#ffffff",
+          "alternateBackgroundColor": "#f8f9fa",
+          "borderWidth": {
+            "top": 0.1,
+            "right": 0.1,
+            "bottom": 0.1,
+            "left": 0.1
+          },
+          "padding": {
+            "top": 2,
+            "right": 3,
+            "bottom": 2,
+            "left": 3
+          }
+        },
+        "columnStyles": {},
+        "required": false,
+        "readOnly": false,
+        "columns": [
+          {
+            "schema": {
+              "name": "quarter",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "center",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#2c3e50",
+              "fontSize": 9,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 5.0
+          },
+          {
+            "schema": {
+              "name": "department",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "left",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#2c3e50",
+              "fontSize": 9,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 5.0
+          },
+          {
+            "schema": {
+              "name": "category",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "left",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#2c3e50",
+              "fontSize": 9,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 5.0
+          },
+          {
+            "schema": {
+              "name": "budget",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#3498db",
+              "fontSize": 9,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 5.0
+          },
+          {
+            "schema": {
+              "name": "actual",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#27ae60",
+              "fontSize": 9,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 5.0
+          }
+        ],
+        "fields": [
+          ["Quarter", "Department", "Category", "Budget", "Actual"],
+          ["Q1", "Sales", "Personnel", "$125,000", "$118,500"],
+          ["Q1", "Sales", "Marketing", "$45,000", "$48,200"],
+          ["Q1", "Sales", "Travel", "$18,000", "$16,800"],
+          ["Q1", "Sales", "Software", "$12,000", "$11,500"],
+          ["Q1", "Engineering", "Personnel", "$280,000", "$275,600"],
+          ["Q1", "Engineering", "Equipment", "$35,000", "$38,900"],
+          ["Q1", "Engineering", "Software", "$25,000", "$24,100"],
+          ["Q1", "Engineering", "Training", "$15,000", "$12,800"],
+          ["Q1", "Operations", "Personnel", "$95,000", "$92,300"],
+          ["Q1", "Operations", "Facilities", "$28,000", "$29,100"],
+          ["Q1", "Operations", "Utilities", "$12,000", "$13,200"],
+          ["Q1", "Operations", "Maintenance", "$8,000", "$7,500"],
+          ["Q1", "HR", "Personnel", "$65,000", "$63,800"],
+          ["Q1", "HR", "Recruitment", "$15,000", "$18,200"],
+          ["Q1", "HR", "Training", "$10,000", "$9,500"],
+          ["Q1", "HR", "Benefits", "$22,000", "$21,800"],
+          ["Q1", "Finance", "Personnel", "$85,000", "$82,600"],
+          ["Q1", "Finance", "Accounting", "$8,000", "$8,500"],
+          ["Q1", "Finance", "Audit", "$12,000", "$11,200"],
+          ["Q1", "Finance", "Legal", "$18,000", "$19,800"],
+          ["Q2", "Sales", "Personnel", "$130,000", "$128,200"],
+          ["Q2", "Sales", "Marketing", "$50,000", "$52,600"],
+          ["Q2", "Sales", "Travel", "$20,000", "$18,900"],
+          ["Q2", "Sales", "Software", "$12,000", "$12,300"],
+          ["Q2", "Engineering", "Personnel", "$285,000", "$282,100"],
+          ["Q2", "Engineering", "Equipment", "$40,000", "$42,500"],
+          ["Q2", "Engineering", "Software", "$30,000", "$28,800"],
+          ["Q2", "Engineering", "Training", "$18,000", "$16,200"],
+          ["Q2", "Operations", "Personnel", "$98,000", "$96,800"],
+          ["Q2", "Operations", "Facilities", "$30,000", "$31,200"],
+          ["Q2", "Operations", "Utilities", "$14,000", "$15,100"],
+          ["Q2", "Operations", "Maintenance", "$10,000", "$9,300"],
+          ["Q2", "HR", "Personnel", "$68,000", "$66,900"],
+          ["Q2", "HR", "Recruitment", "$18,000", "$21,500"],
+          ["Q2", "HR", "Training", "$12,000", "$11,800"],
+          ["Q2", "HR", "Benefits", "$24,000", "$23,600"],
+          ["Q2", "Finance", "Personnel", "$88,000", "$85,800"],
+          ["Q2", "Finance", "Accounting", "$9,000", "$9,200"],
+          ["Q2", "Finance", "Audit", "$14,000", "$13,500"],
+          ["Q2", "Finance", "Legal", "$20,000", "$22,100"],
+          ["Q3", "Sales", "Personnel", "$135,000", "$132,800"],
+          ["Q3", "Sales", "Marketing", "$55,000", "$57,300"],
+          ["Q3", "Sales", "Travel", "$22,000", "$20,500"],
+          ["Q3", "Sales", "Software", "$13,000", "$12,800"],
+          ["Q3", "Engineering", "Personnel", "$290,000", "$288,500"],
+          ["Q3", "Engineering", "Equipment", "$45,000", "$46,200"],
+          ["Q3", "Engineering", "Software", "$32,000", "$31,100"],
+          ["Q3", "Engineering", "Training", "$20,000", "$18,600"],
+          ["Q3", "Operations", "Personnel", "$102,000", "$100,200"],
+          ["Q3", "Operations", "Facilities", "$32,000", "$33,500"],
+          ["Q3", "Operations", "Utilities", "$16,000", "$17,200"],
+          ["Q3", "Operations", "Maintenance", "$12,000", "$11,100"],
+          ["Q3", "HR", "Personnel", "$72,000", "$70,500"],
+          ["Q3", "HR", "Recruitment", "$20,000", "$24,100"],
+          ["Q3", "HR", "Training", "$14,000", "$13,200"],
+          ["Q3", "HR", "Benefits", "$26,000", "$25,400"],
+          ["Q3", "Finance", "Personnel", "$92,000", "$89,200"],
+          ["Q3", "Finance", "Accounting", "$10,000", "$10,500"],
+          ["Q3", "Finance", "Audit", "$16,000", "$15,200"],
+          ["Q3", "Finance", "Legal", "$22,000", "$24,600"],
+          ["Q4", "Sales", "Personnel", "$140,000", "$137,600"],
+          ["Q4", "Sales", "Marketing", "$60,000", "$62,800"],
+          ["Q4", "Sales", "Travel", "$25,000", "$23,200"],
+          ["Q4", "Sales", "Software", "$14,000", "$13,500"],
+          ["Q4", "Engineering", "Personnel", "$295,000", "$292,800"],
+          ["Q4", "Engineering", "Equipment", "$50,000", "$51,200"],
+          ["Q4", "Engineering", "Software", "$35,000", "$33,900"],
+          ["Q4", "Engineering", "Training", "$22,000", "$20,100"],
+          ["Q4", "Operations", "Personnel", "$105,000", "$103,800"],
+          ["Q4", "Operations", "Facilities", "$35,000", "$36,200"],
+          ["Q4", "Operations", "Utilities", "$18,000", "$19,500"],
+          ["Q4", "Operations", "Maintenance", "$14,000", "$12,800"],
+          ["Q4", "HR", "Personnel", "$75,000", "$73,200"],
+          ["Q4", "HR", "Recruitment", "$22,000", "$26,800"],
+          ["Q4", "HR", "Training", "$16,000", "$14,900"],
+          ["Q4", "HR", "Benefits", "$28,000", "$27,100"],
+          ["Q4", "Finance", "Personnel", "$95,000", "$92,500"],
+          ["Q4", "Finance", "Accounting", "$11,000", "$11,800"],
+          ["Q4", "Finance", "Audit", "$18,000", "$17,100"],
+          ["Q4", "Finance", "Legal", "$25,000", "$27,500"]
+        ]
+      }
+    ],
+    [
+      {
+        "name": "continuation_note",
+        "type": "text",
+        "content": "(Table 1 Continued from Previous Page)",
+        "position": {
+          "x": 10,
+          "y": 280
+        },
+        "width": 190,
+        "height": 8,
+        "fontSize": 10,
+        "fontName": "NotoSansJP",
+        "fontColor": "#7f8c8d",
+        "alignment": "center"
+      }
+    ],
+    [
+      {
+        "name": "title_page3",
+        "type": "text",
+        "content": "INVENTORY MANAGEMENT REPORT - TABLE 2 (STARTS PAGE 3)",
+        "position": {
+          "x": 10,
+          "y": 280
+        },
+        "width": 190,
+        "height": 12,
+        "fontSize": 14,
+        "fontName": "NotoSansJP",
+        "fontColor": "#8e44ad",
+        "alignment": "center"
+      },
+      {
+        "type": "table",
+        "name": "inventory_table",
+        "position": {
+          "x": 10,
+          "y": 260
+        },
+        "width": 190,
+        "height": 900,
+        "content": "",
+        "showHead": true,
+        "headWidthPercentages": [
+          {
+            "content": "SKU",
+            "percent": 15,
+            "fontSize": 10,
+            "alignment": "center"
+          },
+          {
+            "content": "Product Name",
+            "percent": 30,
+            "fontSize": 10,
+            "alignment": "left"
+          },
+          {
+            "content": "Category",
+            "percent": 20,
+            "fontSize": 10,
+            "alignment": "left"
+          },
+          {
+            "content": "Stock",
+            "percent": 12,
+            "fontSize": 10,
+            "alignment": "right"
+          },
+          {
+            "content": "Unit Price",
+            "percent": 11,
+            "fontSize": 10,
+            "alignment": "right"
+          },
+          {
+            "content": "Total Value",
+            "percent": 12,
+            "fontSize": 10,
+            "alignment": "right"
+          }
+        ],
+        "tableStyles": {
+          "borderWidth": 0.3,
+          "borderColor": "#8e44ad"
+        },
+        "headStyles": {
+          "fontSize": 10,
+          "fontName": "NotoSansJP",
+          "characterSpacing": 0,
+          "alignment": "center",
+          "verticalAlignment": "middle",
+          "lineHeight": 1,
+          "fontColor": "#ffffff",
+          "borderColor": "",
+          "backgroundColor": "#9b59b6",
+          "borderWidth": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "padding": {
+            "top": 3,
+            "right": 3,
+            "bottom": 3,
+            "left": 3
+          }
+        },
+        "bodyStyles": {
+          "fontSize": 8,
+          "fontName": "NotoSansJP",
+          "characterSpacing": 0,
+          "alignment": "left",
+          "verticalAlignment": "middle",
+          "lineHeight": 1.2,
+          "fontColor": "#2c3e50",
+          "borderColor": "#d5b3e5",
+          "backgroundColor": "#ffffff",
+          "alternateBackgroundColor": "#f8f5fb",
+          "borderWidth": {
+            "top": 0.1,
+            "right": 0.1,
+            "bottom": 0.1,
+            "left": 0.1
+          },
+          "padding": {
+            "top": 2,
+            "right": 3,
+            "bottom": 2,
+            "left": 3
+          }
+        },
+        "columnStyles": {},
+        "required": false,
+        "readOnly": false,
+        "columns": [
+          {
+            "schema": {
+              "name": "sku",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "center",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#2c3e50",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 4.5
+          },
+          {
+            "schema": {
+              "name": "product_name",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "left",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#2c3e50",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 4.5
+          },
+          {
+            "schema": {
+              "name": "category",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "left",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#8e44ad",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 4.5
+          },
+          {
+            "schema": {
+              "name": "stock",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#e67e22",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 4.5
+          },
+          {
+            "schema": {
+              "name": "unit_price",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#3498db",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 4.5
+          },
+          {
+            "schema": {
+              "name": "total_value",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#27ae60",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+            },
+            "height": 4.5
+          }
+        ],
+        "fields": [
+          ["SKU", "Product Name", "Category", "Stock", "Unit Price", "Total Value"],
+          ["ELEC001", "Wireless Bluetooth Headphones", "Electronics", "150", "$89.99", "$13,499"],
+          ["ELEC002", "4K Smart TV 55 inch", "Electronics", "25", "$899.99", "$22,500"],
+          ["ELEC003", "Laptop Computer i7", "Electronics", "45", "$1,299.99", "$58,500"],
+          ["ELEC004", "Smartphone Pro Max", "Electronics", "120", "$999.99", "$120,000"],
+          ["ELEC005", "Gaming Console", "Electronics", "35", "$499.99", "$17,500"],
+          ["CLOTH001", "Cotton T-Shirt Black", "Clothing", "200", "$19.99", "$3,998"],
+          ["CLOTH002", "Denim Jeans Regular", "Clothing", "85", "$49.99", "$4,249"],
+          ["CLOTH003", "Winter Jacket Waterproof", "Clothing", "60", "$129.99", "$7,799"],
+          ["CLOTH004", "Running Shoes Athletic", "Clothing", "110", "$79.99", "$8,799"],
+          ["CLOTH005", "Formal Dress Shirt", "Clothing", "95", "$39.99", "$3,799"],
+          ["HOME001", "Kitchen Mixer Stand", "Home & Garden", "40", "$249.99", "$9,999"],
+          ["HOME002", "Vacuum Cleaner Robot", "Home & Garden", "30", "$399.99", "$12,000"],
+          ["HOME003", "Air Purifier HEPA", "Home & Garden", "55", "$199.99", "$10,999"],
+          ["HOME004", "Coffee Machine Espresso", "Home & Garden", "25", "$599.99", "$15,000"],
+          ["HOME005", "Garden Tool Set Complete", "Home & Garden", "70", "$89.99", "$6,299"],
+          ["BOOK001", "Programming Guide Python", "Books", "180", "$39.99", "$7,198"],
+          ["BOOK002", "Science Fiction Novel", "Books", "220", "$14.99", "$3,298"],
+          ["BOOK003", "Cookbook International", "Books", "65", "$24.99", "$1,624"],
+          ["BOOK004", "History World War II", "Books", "90", "$29.99", "$2,699"],
+          ["BOOK005", "Self-Help Motivation", "Books", "130", "$19.99", "$2,599"],
+          ["SPORT001", "Tennis Racket Professional", "Sports", "40", "$149.99", "$5,999"],
+          ["SPORT002", "Basketball Official Size", "Sports", "75", "$29.99", "$2,249"],
+          ["SPORT003", "Yoga Mat Premium", "Sports", "100", "$49.99", "$4,999"],
+          ["SPORT004", "Bicycle Mountain 21-Speed", "Sports", "20", "$799.99", "$16,000"],
+          ["SPORT005", "Swimming Goggles Anti-Fog", "Sports", "85", "$24.99", "$2,124"],
+          ["TOY001", "Educational Building Blocks", "Toys", "120", "$34.99", "$4,199"],
+          ["TOY002", "Remote Control Car", "Toys", "60", "$79.99", "$4,799"],
+          ["TOY003", "Puzzle 1000 Pieces", "Toys", "95", "$19.99", "$1,899"],
+          ["TOY004", "Action Figure Superhero", "Toys", "140", "$24.99", "$3,499"],
+          ["TOY005", "Board Game Strategy", "Toys", "50", "$49.99", "$2,499"],
+          ["BEAUTY001", "Facial Moisturizer SPF", "Beauty", "80", "$29.99", "$2,399"],
+          ["BEAUTY002", "Shampoo Organic Natural", "Beauty", "150", "$19.99", "$2,999"],
+          ["BEAUTY003", "Makeup Kit Professional", "Beauty", "45", "$89.99", "$4,049"],
+          ["BEAUTY004", "Perfume Eau de Parfum", "Beauty", "35", "$124.99", "$4,375"],
+          ["BEAUTY005", "Hair Dryer Ionic", "Beauty", "25", "$199.99", "$4,999"],
+          ["AUTO001", "Car Phone Mount Magnetic", "Automotive", "180", "$19.99", "$3,598"],
+          ["AUTO002", "Tire Pressure Gauge Digital", "Automotive", "90", "$29.99", "$2,699"],
+          ["AUTO003", "Car Vacuum Cordless", "Automotive", "55", "$79.99", "$4,399"],
+          ["AUTO004", "Emergency Kit Roadside", "Automotive", "40", "$149.99", "$5,999"],
+          ["AUTO005", "Dash Camera HD 1080p", "Automotive", "30", "$199.99", "$5,999"],
+          ["MUSIC001", "Acoustic Guitar Steel String", "Musical Instruments", "15", "$299.99", "$4,499"],
+          ["MUSIC002", "Digital Piano 88 Keys", "Musical Instruments", "8", "$899.99", "$7,199"],
+          ["MUSIC003", "Drum Set Complete", "Musical Instruments", "5", "$1,299.99", "$6,499"],
+          ["MUSIC004", "Violin Full Size", "Musical Instruments", "12", "$399.99", "$4,799"],
+          ["MUSIC005", "Microphone Condenser", "Musical Instruments", "25", "$149.99", "$3,749"],
+          ["OFFICE001", "Desk Chair Ergonomic", "Office Supplies", "35", "$299.99", "$10,499"],
+          ["OFFICE002", "Standing Desk Adjustable", "Office Supplies", "20", "$599.99", "$11,999"],
+          ["OFFICE003", "Monitor 27-inch 4K", "Office Supplies", "40", "$449.99", "$17,999"],
+          ["OFFICE004", "Wireless Keyboard Mouse", "Office Supplies", "85", "$79.99", "$6,799"],
+          ["OFFICE005", "Printer Laser Color", "Office Supplies", "15", "$399.99", "$5,999"],
+          ["PET001", "Dog Food Premium Dry", "Pet Supplies", "200", "$49.99", "$9,998"],
+          ["PET002", "Cat Litter Clumping", "Pet Supplies", "150", "$24.99", "$3,749"],
+          ["PET003", "Fish Tank Aquarium 20G", "Pet Supplies", "25", "$149.99", "$3,749"],
+          ["PET004", "Bird Cage Large", "Pet Supplies", "18", "$199.99", "$3,599"],
+          ["PET005", "Pet Carrier Travel", "Pet Supplies", "40", "$89.99", "$3,599"],
+          ["HEALTH001", "Vitamin D3 Supplements", "Health & Wellness", "120", "$19.99", "$2,399"],
+          ["HEALTH002", "Protein Powder Whey", "Health & Wellness", "60", "$49.99", "$2,999"],
+          ["HEALTH003", "Fitness Tracker Smartwatch", "Health & Wellness", "45", "$199.99", "$8,999"],
+          ["HEALTH004", "Massage Gun Percussive", "Health & Wellness", "30", "$149.99", "$4,499"],
+          ["HEALTH005", "Essential Oils Set", "Health & Wellness", "75", "$39.99", "$2,999"]
+        ]
+      }
+    ],
+    [
+      {
+        "name": "table2_continuation",
+        "type": "text",
+        "content": "(Table 2 Continued from Previous Page)",
+        "position": {
+          "x": 10,
+          "y": 280
+        },
+        "width": 190,
+        "height": 8,
+        "fontSize": 10,
+        "fontName": "NotoSansJP",
+        "fontColor": "#7f8c8d",
+        "alignment": "center"
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [
+      20,
+      10,
+      20,
+      10
+    ]
+  },
+  "pdfmeVersion": "5.3.8"
+}
