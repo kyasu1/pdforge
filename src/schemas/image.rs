@@ -7,8 +7,6 @@ use serde::Deserialize;
 use snafu::{whatever, ResultExt};
 use std::io::Cursor;
 
-use super::BasePdf;
-
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonImageSchema {
@@ -82,9 +80,11 @@ impl Image {
         let rgb_image = self.content.to_rgb8();
 
         let mut buf = Cursor::new(Vec::new());
-        rgb_image.write_to(&mut buf, ImageFormat::Jpeg).map_err(|_| Error::ImageEncoding {
-            message: "Failed to encode image to JPEG".to_string(),
-        })?;
+        rgb_image
+            .write_to(&mut buf, ImageFormat::Jpeg)
+            .map_err(|_| Error::ImageEncoding {
+                message: "Failed to encode image to JPEG".to_string(),
+            })?;
 
         let mut warnings = Vec::new();
         let image = RawImage::decode_from_bytes(&buf.get_ref(), &mut warnings)

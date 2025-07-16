@@ -1,8 +1,8 @@
-use super::{BasePdf, InvalidColorSnafu};
+use super::InvalidColorSnafu;
 use crate::schemas::pdf_utils::{draw_rectangle, DrawRectangle};
 use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
 use crate::utils::OpBuffer;
-use printpdf::{Color, Mm, Op, PdfDocument, Pt, Rgb};
+use printpdf::{Color, Mm, PdfDocument, Pt, Rgb};
 use serde::Deserialize;
 use snafu::prelude::*;
 

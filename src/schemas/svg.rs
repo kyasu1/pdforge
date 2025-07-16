@@ -4,8 +4,6 @@ use printpdf::{ExternalXObject, Mm, Op, PdfDocument};
 use serde::Deserialize;
 use snafu::ResultExt;
 
-use super::BasePdf;
-
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonSvgSchema {

@@ -3,9 +3,8 @@ pub mod font;
 pub mod schemas;
 pub mod utils;
 use printpdf::{ParsedFont, PdfDocument};
-use std::collections::HashMap;
 use schemas::Error;
-use snafu::prelude::*;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct PDForge {
@@ -60,9 +59,12 @@ impl PDForgeBuilder {
             source: e,
             message: format!("Failed to read font file: {}", file_name),
         })?;
-        let parsed_font = ParsedFont::from_bytes(&font_slice, 0, &mut Vec::new()).ok_or_else(|| Error::FontParsing {
-            message: format!("Failed to parse font file: {}", file_name),
-        })?;
+        let parsed_font =
+            ParsedFont::from_bytes(&font_slice, 0, &mut Vec::new()).ok_or_else(|| {
+                Error::FontParsing {
+                    message: format!("Failed to parse font file: {}", file_name),
+                }
+            })?;
         let font_id = self.doc.add_font(&parsed_font);
         self.font_map
             .add_font(String::from(font_name), font_id.clone(), &parsed_font);

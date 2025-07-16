@@ -1,4 +1,4 @@
-use super::{Alignment, BasePdf, BoundingBox, Frame, VerticalAlignment};
+use super::{Alignment, BoundingBox, Frame, VerticalAlignment};
 use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
