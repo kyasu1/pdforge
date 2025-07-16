@@ -822,3 +822,230 @@ fn draw_rounded_rectangle(props: DrawRoundedRectangle) -> Vec<Op> {
     ];
     ops
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::font::FontMap;
+    use std::collections::HashMap;
+
+    fn create_test_font_map() -> FontMap {
+        // Create an empty FontMap for testing purposes
+        FontMap::default()
+    }
+
+    fn create_test_json_frame() -> JsonFrame {
+        JsonFrame {
+            top: 5.0,
+            right: 5.0,
+            bottom: 5.0,
+            left: 5.0,
+        }
+    }
+
+    fn create_test_head_styles() -> JsonHeadStyles {
+        JsonHeadStyles {
+            font_size: 12.0,
+            font_name: "TestFont".to_string(),
+            character_spacing: Some(0.0),
+            alignment: Some(Alignment::Center),
+            vertical_alignment: Some(VerticalAlignment::Middle),
+            line_height: Some(1.0),
+            font_color: "#ffffff".to_string(),
+            border_color: "#000000".to_string(),
+            background_color: "#2980ba".to_string(),
+            border_width: create_test_json_frame(),
+            padding: create_test_json_frame(),
+        }
+    }
+
+    fn create_test_body_styles() -> JsonBodyStyles {
+        JsonBodyStyles {
+            alignment: Alignment::Left,
+            vertical_alignment: VerticalAlignment::Middle,
+            character_spacing: Some(0.0),
+            font_size: 10.0,
+            font_name: "TestFont".to_string(),
+            font_color: "#000000".to_string(),
+            line_height: 1.5,
+            border_color: "#888888".to_string(),
+            background_color: "#ffffff".to_string(),
+            alternate_background_color: Some("#f8f8f8".to_string()),
+            border_width: create_test_json_frame(),
+            padding: create_test_json_frame(),
+        }
+    }
+
+    fn create_test_table_styles() -> JsonTableStyles {
+        JsonTableStyles {
+            border_width: 0.3,
+            border_color: "#000000".to_string(),
+        }
+    }
+
+    fn create_test_table_schema() -> JsonTableSchema {
+        JsonTableSchema {
+            name: "test_table".to_string(),
+            position: JsonPosition { x: 10.0, y: 50.0 },
+            width: 190.0,
+            height: 100.0,
+            content: "test_content".to_string(),
+            show_head: true,
+            head_styles: create_test_head_styles(),
+            head_width_percentages: vec![
+                JsonHead {
+                    percent: 50.0,
+                    content: "Column 1".to_string(),
+                    font_size: Some(12.0),
+                    font_name: Some("TestFont".to_string()),
+                    character_spacing: Some(0.0),
+                    alignment: Some(Alignment::Center),
+                    vertical_alignment: Some(VerticalAlignment::Middle),
+                },
+                JsonHead {
+                    percent: 50.0,
+                    content: "Column 2".to_string(),
+                    font_size: Some(12.0),
+                    font_name: Some("TestFont".to_string()),
+                    character_spacing: Some(0.0),
+                    alignment: Some(Alignment::Center),
+                    vertical_alignment: Some(VerticalAlignment::Middle),
+                },
+            ],
+            body_styles: create_test_body_styles(),
+            table_styles: create_test_table_styles(),
+            columns: vec![],
+            fields: vec![
+                vec!["Header 1".to_string(), "Header 2".to_string()],
+                vec!["Data 1".to_string(), "Data 2".to_string()],
+                vec!["Data 3".to_string(), "Data 4".to_string()],
+            ],
+        }
+    }
+
+    #[test]
+    fn test_head_styles_from_json() {
+        let json = create_test_head_styles();
+        let result = HeadStyles::from_json(json);
+        
+        assert!(result.is_ok());
+        let head_styles = result.unwrap();
+        assert_eq!(head_styles.font_size, Pt(12.0));
+        assert_eq!(head_styles.font_name, "TestFont");
+        assert_eq!(head_styles.character_spacing, 0.0);
+        assert_eq!(head_styles.line_height, 1.0);
+        assert_eq!(head_styles.font_color, "#ffffff");
+        assert_eq!(head_styles.background_color, "#2980ba");
+        assert_eq!(head_styles.border_color, "#000000");
+    }
+
+    #[test]
+    fn test_body_styles_from_json() {
+        let json = create_test_body_styles();
+        let result = BodyStyles::from_json(json);
+        
+        assert!(result.is_ok());
+        let body_styles = result.unwrap();
+        assert_eq!(body_styles.font_size, Pt(10.0));
+        assert_eq!(body_styles.font_name, "TestFont");
+        assert_eq!(body_styles.character_spacing, 0.0);
+        assert_eq!(body_styles.line_height, 1.5);
+        assert!(body_styles.alternate_background_color.is_some());
+    }
+
+    #[test]
+    fn test_body_styles_invalid_color() {
+        let mut json = create_test_body_styles();
+        json.font_color = "invalid_color".to_string();
+        
+        let result = BodyStyles::from_json(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_table_styles_from_json() {
+        let json = create_test_table_styles();
+        let result = TableStyles::from_json(json);
+        
+        assert!(result.is_ok());
+        let table_styles = result.unwrap();
+        assert_eq!(table_styles.border_width, Mm(0.3));
+    }
+
+    #[test]
+    fn test_table_styles_invalid_color() {
+        let mut json = create_test_table_styles();
+        json.border_color = "invalid_color".to_string();
+        
+        let result = TableStyles::from_json(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_table_from_json_invalid_column_percentages() {
+        let mut json = create_test_table_schema();
+        // Make percentages not add up to 100%
+        json.head_width_percentages[0].percent = 40.0;
+        json.head_width_percentages[1].percent = 40.0; // Total = 80%, not 100%
+        
+        let font_map = create_test_font_map();
+        let result = Table::from_json(json, &font_map);
+        
+        assert!(result.is_err());
+        let error_message = format!("{}", result.unwrap_err());
+        assert!(error_message.contains("total of column width must be 100%"));
+    }
+
+    #[test]
+    fn test_draw_rounded_rectangle_valid_radius() {
+        let props = DrawRoundedRectangle {
+            x: Mm(10.0),
+            y: Mm(20.0),
+            width: Mm(100.0),
+            height: Mm(50.0),
+            page_height: Mm(297.0),
+            color: Some(Color::Rgb(Rgb { r: 1.0, g: 0.0, b: 0.0, icc_profile: None })),
+            border_width: Some(Mm(1.0)),
+            border_color: Some(Color::Rgb(Rgb { r: 0.0, g: 0.0, b: 0.0, icc_profile: None })),
+            radius: Mm(5.0),
+        };
+
+        let ops = draw_rounded_rectangle(props);
+        assert!(!ops.is_empty());
+        assert_eq!(ops.len(), 4); // SetOutlineColor, SetFillColor, SetOutlineThickness, DrawPolygon
+    }
+
+    #[test]
+    fn test_draw_rounded_rectangle_invalid_radius() {
+        let props = DrawRoundedRectangle {
+            x: Mm(10.0),
+            y: Mm(20.0),
+            width: Mm(100.0),
+            height: Mm(50.0),
+            page_height: Mm(297.0),
+            color: Some(Color::Rgb(Rgb { r: 1.0, g: 0.0, b: 0.0, icc_profile: None })),
+            border_width: Some(Mm(1.0)),
+            border_color: Some(Color::Rgb(Rgb { r: 0.0, g: 0.0, b: 0.0, icc_profile: None })),
+            radius: Mm(60.0), // Too large radius
+        };
+
+        let ops = draw_rounded_rectangle(props);
+        assert!(ops.is_empty()); // Should return empty when radius is invalid
+    }
+
+    #[test]
+    fn test_frame_from_json() {
+        let json_frame = JsonFrame {
+            top: 10.0,
+            right: 15.0,
+            bottom: 20.0,
+            left: 25.0,
+        };
+
+        let frame = Frame::from_json(json_frame).unwrap();
+        assert_eq!(frame.top, Mm(10.0));
+        assert_eq!(frame.right, Mm(15.0));
+        assert_eq!(frame.bottom, Mm(20.0));
+        assert_eq!(frame.left, Mm(25.0));
+    }
+}
