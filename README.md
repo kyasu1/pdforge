@@ -9,6 +9,7 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 - **Font management** - Easy font loading and management with support for Japanese fonts (Noto Sans JP, Noto Serif JP)
 - **Dynamic content** - Template rendering with variable substitution using Tera templating engine
 - **Multi-page support** - Generate PDFs with multiple pages from single templates
+- **Advanced table rendering** - Tables can span multiple pages automatically with proper pagination
 - **Flexible styling** - Comprehensive styling options for colors, borders, alignment, and spacing
 - **High-quality output** - Built on the robust printpdf library
 
@@ -16,7 +17,7 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 
 - **Text**: Static text with font styling and positioning
 - **Dynamic Text**: Template-driven text with variable substitution
-- **Table**: Structured tables with headers, borders, and cell styling
+- **Table**: Structured tables with headers, borders, cell styling, and multi-page spanning
 - **QR Code**: QR code generation with customizable size and positioning
 - **Image**: Image embedding with PNG, JPEG, and BMP support
 - **SVG**: Scalable vector graphics rendering
@@ -205,6 +206,8 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
 }
 ```
 
+**Multi-Page Tables**: Tables automatically span multiple pages when content exceeds the available space. The library handles pagination, headers, and proper content flow across pages automatically.
+
 #### QR Code Schema
 
 ```json
@@ -272,21 +275,45 @@ The Group schema allows you to:
 
 ## Examples
 
-The project includes several examples in the `examples/` directory:
+The project includes several examples and templates:
 
-- **Basic Table**: `cargo run --example table`
-- **SVG Graphics**: `cargo run --example svg`
-- **Command Line Usage**: `cargo run --example svg ./templates/tiger-svg.json`
-- **PDFium Integration**: `cargo run --example pdfium`
+### Running Examples
 
-Examples with command line arguments:
+Use the `simple` example to generate PDFs from any template:
 
 ```bash
-# SVG example with specific template
-cargo run --example svg ./templates/tiger-svg.json
+# Generate PDF from template
+cargo run --example simple templates/table.json
 
-# This will generate tiger-svg.pdf from tiger-svg.json template
+# Multi-page table examples
+cargo run --example simple templates/large-tables-spanning.json
+cargo run --example simple templates/multi-table-fixed.json
+
+# Other examples  
+cargo run --example simple templates/multipage.json
+cargo run --example simple templates/tiger-svg.json
 ```
+
+### Available Templates
+
+- **`table.json`** - Basic table example
+- **`large-tables-spanning.json`** - Comprehensive 4-page document with two large tables spanning multiple pages
+  - Financial report table (76 rows) across pages 1-2
+  - Inventory management table (57 rows) across pages 3-4
+- **`multi-table-fixed.json`** - 3-page document with multiple separate tables
+- **`multipage.json`** - Multi-page document example
+- **`tiger-svg.json`** - SVG graphics example
+- **`svg.json`** - Basic SVG example
+
+### Generating PDFs
+
+All PDF files are generated locally and are not tracked in the repository. To create a PDF:
+
+```bash
+cargo run --example simple <template-file>
+```
+
+This will create a PDF file in the `examples/pdf/` directory with the same name as your template.
 
 ## Font Support
 
@@ -344,13 +371,14 @@ cargo test
 ### Running Examples
 
 ```bash
-# Table example
+# Generate PDFs from templates
+cargo run --example simple templates/table.json
+cargo run --example simple templates/large-tables-spanning.json
+cargo run --example simple templates/multi-table-fixed.json
+
+# Legacy examples (may require specific setup)
 cargo run --example table
-
-# SVG example
 cargo run --example svg
-
-# PDFium example
 cargo run --example pdfium
 ```
 
@@ -366,14 +394,20 @@ pdforge/
 │   └── schemas/            # Schema implementations
 │       ├── mod.rs          # Schema definitions
 │       ├── text.rs         # Text schema
-│       ├── table.rs        # Table schema
+│       ├── table.rs        # Table schema with multi-page support
 │       ├── qrcode.rs       # QR code schema
 │       ├── image.rs        # Image schema
 │       ├── svg.rs          # SVG schema
 │       └── rect.rs         # Rectangle schema
-├── examples/               # Usage examples
+├── examples/               # Usage examples and CLI tools
+│   ├── simple.rs          # Main CLI for template processing
+│   └── ...                # Other specialized examples
 ├── templates/              # JSON template files
-├── assets/fonts/          # Font files
+│   ├── large-tables-spanning.json  # Comprehensive multi-page tables
+│   ├── multi-table-fixed.json      # Multiple tables example
+│   └── ...                # Other template examples
+├── examples/pdf/          # Generated PDF output (gitignored)
+├── assets/fonts/          # Font files (gitignored)
 └── pdfium/                # PDFium integration
 ```
 
