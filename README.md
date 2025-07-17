@@ -19,7 +19,7 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 - **Dynamic Text**: Template-driven text with variable substitution
 - **Table**: Structured tables with headers, borders, cell styling, and multi-page spanning
 - **QR Code**: QR code generation with customizable size and positioning
-- **Image**: Image embedding with PNG, JPEG, and BMP support
+- **Image**: Image embedding with PNG, JPEG, and BMP support, plus CSS-like object-fit controls
 - **SVG**: Scalable vector graphics rendering
 - **Rectangle**: Geometric shapes with customizable styling
 - **Group**: Container for grouping and transforming multiple schemas together
@@ -208,6 +208,55 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
 
 **Multi-Page Tables**: Tables automatically span multiple pages when content exceeds the available space. The library handles pagination, headers, and proper content flow across pages automatically.
 
+#### Image Schema
+
+```json
+{
+  "type": "image",
+  "name": "photo",
+  "content": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD...",
+  "position": { "x": 10, "y": 50 },
+  "width": 80,
+  "height": 60,
+  "objectFit": "contain"
+}
+```
+
+**Object-Fit Control**: The `objectFit` property controls how images are scaled and positioned within their containers, following CSS object-fit specifications:
+
+- **`fill`** (default): Stretches the image to fill the container exactly, may distort aspect ratio
+- **`contain`**: Scales image to fit within container while preserving aspect ratio, may leave empty space
+- **`cover`**: Scales image to cover entire container while preserving aspect ratio, may crop parts of the image
+- **`none`**: Displays image at natural size (1:1 pixel mapping), may overflow or leave empty space
+- **`scale-down`**: Behaves like `none` if image fits naturally, otherwise behaves like `contain`
+
+Examples:
+```json
+{
+  "type": "image",
+  "name": "logo",
+  "content": "data:image/png;base64,...",
+  "position": { "x": 10, "y": 10 },
+  "width": 100,
+  "height": 80,
+  "objectFit": "contain"
+}
+```
+
+```json
+{
+  "type": "image", 
+  "name": "background",
+  "content": "data:image/jpeg;base64,...",
+  "position": { "x": 0, "y": 0 },
+  "width": 210,
+  "height": 150,
+  "objectFit": "cover"
+}
+```
+
+The object-fit feature provides precise control over image display, ensuring your images look exactly as intended regardless of their original dimensions or aspect ratios.
+
 #### QR Code Schema
 
 ```json
@@ -289,6 +338,10 @@ cargo run --example simple templates/table.json
 cargo run --example simple templates/large-tables-spanning.json
 cargo run --example simple templates/multi-table-fixed.json
 
+# Image examples
+cargo run --example image assets/images/test-image-1.jpg assets/images/test-image-2.jpg
+cargo run --example object_fit_test
+
 # Other examples  
 cargo run --example simple templates/multipage.json
 cargo run --example simple templates/tiger-svg.json
@@ -304,6 +357,8 @@ cargo run --example simple templates/tiger-svg.json
 - **`multipage.json`** - Multi-page document example
 - **`tiger-svg.json`** - SVG graphics example
 - **`svg.json`** - Basic SVG example
+- **`image-test.json`** - Image embedding with object-fit controls
+- **`object-fit-test.json`** - Demonstrates all five object-fit modes side by side
 
 ### Generating PDFs
 

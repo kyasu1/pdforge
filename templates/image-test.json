@@ -1,0 +1,51 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "frontImage",
+                "type": "image",
+                "position": {
+                    "x": 7.5,
+                    "y": 10
+                },
+                "required": true,
+                "content": "{{frontImage}}",
+                "width": 85.6,
+                "height": 54,
+                "alignment": "center",
+                "verticalAlignment": "middle",
+                "opacity": 1,
+                "readOnly": false,
+                "objectFit": "contain"
+            },
+            {
+                "name": "backImage",
+                "type": "image",
+                "position": {
+                    "x": 7.5,
+                    "y": 104
+                },
+                "required": true,
+                "content": "{{backImage}}",
+                "width": 85.6,
+                "height": 54,
+                "alignment": "center",
+                "verticalAlignment": "middle",
+                "opacity": 1,
+                "readOnly": false,
+                "objectFit": "contain"
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 148,
+        "height": 210,
+        "padding": [
+            0,
+            0,
+            0,
+            0
+        ]
+    },
+    "pdfmeVersion": "5.3.5"
+}

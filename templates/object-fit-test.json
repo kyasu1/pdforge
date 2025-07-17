@@ -1,0 +1,77 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "fill-image",
+                "type": "image",
+                "position": {
+                    "x": 10,
+                    "y": 10
+                },
+                "required": true,
+                "content": "{{testImage}}",
+                "width": 40,
+                "height": 30,
+                "objectFit": "fill"
+            },
+            {
+                "name": "contain-image",
+                "type": "image",
+                "position": {
+                    "x": 60,
+                    "y": 10
+                },
+                "required": true,
+                "content": "{{testImage}}",
+                "width": 40,
+                "height": 30,
+                "objectFit": "contain"
+            },
+            {
+                "name": "cover-image", 
+                "type": "image",
+                "position": {
+                    "x": 110,
+                    "y": 10
+                },
+                "required": true,
+                "content": "{{testImage}}",
+                "width": 40,
+                "height": 30,
+                "objectFit": "cover"
+            },
+            {
+                "name": "none-image",
+                "type": "image", 
+                "position": {
+                    "x": 10,
+                    "y": 50
+                },
+                "required": true,
+                "content": "{{testImage}}",
+                "width": 40,
+                "height": 30,
+                "objectFit": "none"
+            },
+            {
+                "name": "scale-down-image",
+                "type": "image",
+                "position": {
+                    "x": 60,
+                    "y": 50
+                },
+                "required": true,
+                "content": "{{testImage}}",
+                "width": 40,
+                "height": 30,
+                "objectFit": "scale-down"
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 210,
+        "height": 148,
+        "padding": [0, 0, 0, 0]
+    },
+    "pdfmeVersion": "5.3.5"
+}

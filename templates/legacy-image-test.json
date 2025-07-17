@@ -1,0 +1,24 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "legacyImage",
+                "type": "image",
+                "position": {
+                    "x": 10,
+                    "y": 10
+                },
+                "required": true,
+                "content": "{{testImage}}",
+                "width": 80,
+                "height": 60
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 210,
+        "height": 148,
+        "padding": [0, 0, 0, 0]
+    },
+    "pdfmeVersion": "5.3.5"
+}
