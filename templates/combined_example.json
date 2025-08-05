@@ -1,0 +1,90 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "title",
+                "type": "text",
+                "content": "{{ report_title }}",
+                "position": { "x": 20, "y": 20 },
+                "width": 170,
+                "height": 10,
+                "fontSize": 16,
+                "fontName": "NotoSansJP",
+                "fontColor": "#000000",
+                "alignment": "center"
+            },
+            {
+                "name": "subtitle",
+                "type": "text", 
+                "content": "作成日: {{ created_date }} | 部署: {{ department }}",
+                "position": { "x": 20, "y": 35 },
+                "width": 170,
+                "height": 8,
+                "fontSize": 12,
+                "fontName": "NotoSerifJP",
+                "fontColor": "#666666",
+                "alignment": "center"
+            },
+            {
+                "type": "table",
+                "name": "employee_table",
+                "position": { "x": 20, "y": 50 },
+                "width": 170,
+                "height": 100,
+                "showHead": true,
+                "headWidthPercentages": [
+                    { "content": "名前", "percent": 25 },
+                    { "content": "役職", "percent": 25 },
+                    { "content": "経験年数", "percent": 20 },
+                    { "content": "評価", "percent": 15 },
+                    { "content": "給与", "percent": 15 }
+                ],
+                "tableStyles": {
+                    "borderWidth": 0.3,
+                    "borderColor": "#000000"
+                },
+                "headStyles": {
+                    "fontSize": 12,
+                    "fontName": "NotoSansJP",
+                    "characterSpacing": 0,
+                    "alignment": "center",
+                    "verticalAlignment": "middle",
+                    "lineHeight": 1,
+                    "fontColor": "#ffffff",
+                    "borderColor": "",
+                    "backgroundColor": "#2980ba",
+                    "borderWidth": { "top": 0, "right": 0, "bottom": 0, "left": 0 },
+                    "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 }
+                },
+                "bodyStyles": {
+                    "fontSize": 10,
+                    "fontName": "NotoSerifJP",
+                    "characterSpacing": 0,
+                    "alignment": "left",
+                    "verticalAlignment": "middle",
+                    "lineHeight": 1.2,
+                    "fontColor": "#000000",
+                    "borderColor": "#888888",
+                    "backgroundColor": "#FFFFFF",
+                    "alternateBackgroundColor": "#f8f8f8",
+                    "borderWidth": { "top": 0.1, "right": 0.1, "bottom": 0.1, "left": 0.1 },
+                    "padding": { "top": 2, "right": 2, "bottom": 2, "left": 2 }
+                },
+                "columns": [
+                    { "schema": { "name": "name", "type": "text", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "alignment": "left", "verticalAlignment": "middle", "fontName": "NotoSerifJP", "fontColor": "#000000", "fontSize": 9, "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 } } },
+                    { "schema": { "name": "position", "type": "text", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "alignment": "left", "verticalAlignment": "middle", "fontName": "NotoSerifJP", "fontColor": "#000000", "fontSize": 9, "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 } } },
+                    { "schema": { "name": "experience", "type": "text", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "alignment": "center", "verticalAlignment": "middle", "fontName": "NotoSerifJP", "fontColor": "#000000", "fontSize": 9, "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 } } },
+                    { "schema": { "name": "rating", "type": "text", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "alignment": "center", "verticalAlignment": "middle", "fontName": "NotoSerifJP", "fontColor": "#000000", "fontSize": 9, "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 } } },
+                    { "schema": { "name": "salary", "type": "text", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "alignment": "right", "verticalAlignment": "middle", "fontName": "NotoSerifJP", "fontColor": "#000000", "fontSize": 9, "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 } } }
+                ],
+                "fields": []
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 210,
+        "height": 297,
+        "padding": [20, 10, 20, 10]
+    },
+    "pdfmeVersion": "5.3.8"
+}
