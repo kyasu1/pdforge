@@ -163,7 +163,7 @@ impl BodyStyles {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonTableSchema {
-    name: String,
+    pub name: String,
     position: JsonPosition,
     width: f32,
     height: f32,
@@ -175,7 +175,7 @@ pub struct JsonTableSchema {
     table_styles: JsonTableStyles,
     //
     columns: Vec<JsonCellStyle>,
-    fields: Vec<Vec<String>>,
+    pub fields: Vec<Vec<String>>,
 }
 
 //

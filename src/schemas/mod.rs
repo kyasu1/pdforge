@@ -464,6 +464,176 @@ impl Template {
         self.render_schemas(doc, schemas)
     }
 
+    // テーブルデータを動的に注入するrender関数
+    pub fn render_with_table_data(
+        &self,
+        doc: &mut PdfDocument,
+        font_map: &FontMap,
+        table_data: HashMap<String, Vec<Vec<String>>>,
+    ) -> Result<Vec<u8>, Error> {
+        let mut schemas: Vec<Vec<Schema>> = Vec::new();
+
+        // 各ページのschemaを変換し、テーブルデータを動的に注入
+        for page_schema in &self.schemas {
+            let json_schemas: Vec<JsonSchema> = serde_json::from_value(page_schema.clone())
+                .map_err(|e| Error::TemplateDeserialize {
+                    source: e,
+                    message: "Failed to parse schema with table data".to_string(),
+                })?;
+
+            let converted: Vec<Schema> = json_schemas
+                .into_iter()
+                .map(|schema| -> Result<Schema, Error> {
+                    match schema {
+                        JsonSchema::Text(json) => {
+                            Ok(Schema::Text(Text::from_json(json, font_map)?))
+                        }
+                        JsonSchema::DynamicText(json) => Ok(Schema::DynamicText(
+                            dynamic_text::DynamicText::from_json(json, font_map)?,
+                        )),
+                        JsonSchema::Table(mut json) => {
+                            // テーブル名に対応するデータがあれば、それで置き換える
+                            if let Some(data) = table_data.get(&json.name) {
+                                json.fields = data.clone();
+                            }
+                            Ok(Schema::Table(Table::from_json(json, font_map)?))
+                        }
+                        JsonSchema::QrCode(json) => Ok(json.into()),
+                        JsonSchema::Image(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Image".to_string(),
+                            source: Box::new(e),
+                        })?),
+                        JsonSchema::Svg(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Svg".to_string(),
+                            source: Box::new(e),
+                        })?),
+                        JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Rectangle".to_string(),
+                            source: Box::new(e),
+                        })?),
+                        JsonSchema::Group(json) => {
+                            Ok(Schema::Group(group::Group::from_json(json, font_map)?))
+                        }
+                    }
+                })
+                .collect::<Result<Vec<Schema>, Error>>()?;
+
+            schemas.push(converted);
+        }
+
+        self.render_schemas(doc, schemas)
+    }
+
+    // inputsとテーブルデータの両方を使用するrender関数
+    pub fn render_with_inputs_and_table_data(
+        &self,
+        doc: &mut PdfDocument,
+        font_map: &FontMap,
+        inputs: Vec<Vec<HashMap<&'static str, String>>>,
+        table_data: HashMap<String, Vec<Vec<String>>>,
+    ) -> Result<Vec<u8>, Error> {
+        if inputs.len() != self.schemas.len() {
+            return Err(Error::Whatever {
+                message: "Input length does not match page length".to_string(),
+                source: None,
+            });
+        }
+
+        let mut schemas: Vec<Vec<Schema>> = Vec::new();
+
+        for (index, group) in inputs.iter().enumerate() {
+            let json_schema = serde_json::to_string(&self.schemas[index]).map_err(|e| Error::Whatever {
+                message: "Failed to serialize schema to JSON".to_string(),
+                source: Some(Box::new(e)),
+            })?;
+
+            // Teraを使ってテンプレートをレンダリングする
+            let mut tera = tera::Tera::default();
+            tera.add_raw_template("schema_template", &json_schema)
+                .map_err(|e| Error::Whatever {
+                    message: "Failed to add template to Tera".to_string(),
+                    source: Some(Box::new(e)),
+                })?;
+
+            let mut json_schemas: Vec<Vec<JsonSchema>> = Vec::new();
+            
+            // groupが空の場合も、1つのページとして処理する
+            let page_inputs = if group.is_empty() {
+                vec![HashMap::new()]  // 空のHashMapを作成
+            } else {
+                group.clone()
+            };
+            
+            for input in page_inputs {
+                let mut context = tera::Context::new();
+                for (key, value) in input.iter() {
+                    context.insert(*key, value);
+                }
+                let rendered = tera.render("schema_template", &context).map_err(|e| Error::Whatever {
+                    message: "Failed to render template".to_string(),
+                    source: Some(Box::new(e)),
+                })?;
+                let mut parsed: Vec<JsonSchema> = serde_json::from_str(&rendered).map_err(|e| Error::TemplateDeserialize {
+                    source: e,
+                    message: "Failed to parse rendered template".to_string(),
+                })?;
+
+                // テーブルデータを動的に注入
+                for schema in &mut parsed {
+                    if let JsonSchema::Table(ref mut table_json) = schema {
+                        if let Some(data) = table_data.get(&table_json.name) {
+                            table_json.fields = data.clone();
+                        }
+                    }
+                }
+
+                json_schemas.push(parsed);
+            }
+
+            // JSONをSchemaに変換する
+            let converted: Vec<Vec<Schema>> = json_schemas
+                .into_iter()
+                .map(|page| -> Result<Vec<Schema>, Error> {
+                    page.into_iter()
+                        .map(|schema| -> Result<Schema, Error> {
+                            match schema {
+                                JsonSchema::Text(json) => {
+                                    Ok(Schema::Text(Text::from_json(json, font_map)?))
+                                }
+                                JsonSchema::DynamicText(json) => Ok(Schema::DynamicText(
+                                    dynamic_text::DynamicText::from_json(json, font_map)?,
+                                )),
+                                JsonSchema::Table(json) => {
+                                    Ok(Schema::Table(Table::from_json(json, font_map)?))
+                                }
+                                JsonSchema::QrCode(json) => Ok(json.into()),
+                                JsonSchema::Image(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                    schema_type: "Image".to_string(),
+                                    source: Box::new(e),
+                                })?),
+                                JsonSchema::Svg(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                    schema_type: "Svg".to_string(),
+                                    source: Box::new(e),
+                                })?),
+                                JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                    schema_type: "Rectangle".to_string(),
+                                    source: Box::new(e),
+                                })?),
+                                JsonSchema::Group(json) => {
+                                    Ok(Schema::Group(group::Group::from_json(json, font_map)?))
+                                }
+                            }
+                        })
+                        .collect::<Result<Vec<Schema>, Error>>()
+                })
+                .collect::<Result<Vec<Vec<Schema>>, Error>>()?;
+
+            schemas.extend(converted);
+        }
+
+        self.render_schemas(doc, schemas)
+    }
+
     // 共通のレンダリング処理
     fn render_schemas(
         &self,

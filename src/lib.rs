@@ -37,6 +37,35 @@ impl PDForge {
             }),
         }
     }
+
+    pub fn render_with_table_data(
+        &mut self,
+        template_name: &str,
+        table_data: HashMap<String, Vec<Vec<String>>>,
+    ) -> Result<Vec<u8>, Error> {
+        match self.template_map.get(template_name) {
+            Some(template) => template.render_with_table_data(&mut self.doc, &self.font_map, table_data),
+            None => Err(Error::Whatever {
+                message: format!("Template not found: {}", template_name),
+                source: None,
+            }),
+        }
+    }
+
+    pub fn render_with_inputs_and_table_data(
+        &mut self,
+        template_name: &str,
+        inputs: Vec<Vec<HashMap<&'static str, String>>>,
+        table_data: HashMap<String, Vec<Vec<String>>>,
+    ) -> Result<Vec<u8>, Error> {
+        match self.template_map.get(template_name) {
+            Some(template) => template.render_with_inputs_and_table_data(&mut self.doc, &self.font_map, inputs, table_data),
+            None => Err(Error::Whatever {
+                message: format!("Template not found: {}", template_name),
+                source: None,
+            }),
+        }
+    }
 }
 
 pub struct PDForgeBuilder {
