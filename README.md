@@ -6,6 +6,8 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 
 - **Template-based PDF generation** - Define PDF layouts using JSON templates
 - **Multiple content types** - Support for text, dynamic text, tables, images, QR codes, SVG graphics, and rectangles
+- **Static schema support** - Add headers, footers, and page elements that appear on all pages
+- **Special template variables** - Built-in support for page numbering, dates, and timestamps
 - **Font management** - Easy font loading and management with support for Japanese fonts (Noto Sans JP, Noto Serif JP)
 - **Dynamic content** - Template rendering with variable substitution using Tera templating engine
 - **Multi-page support** - Generate PDFs with multiple pages from single templates
@@ -147,7 +149,19 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
   "basePdf": {
     "width": 210,
     "height": 297,
-    "padding": [20, 10, 20, 10]
+    "padding": [20, 10, 20, 10],
+    "staticSchema": [
+      {
+        "type": "text",
+        "name": "header",
+        "content": "Page {{currentPage}} of {{totalPages}}",
+        "position": { "x": 10, "y": 5 },
+        "width": 100,
+        "height": 10,
+        "fontSize": 10,
+        "fontName": "NotoSansJP"
+      }
+    ]
   },
   "pdfmeVersion": "5.3.8"
 }
@@ -322,6 +336,126 @@ The Group schema allows you to:
 - **Coordinate positioning**: Position child elements relative to the group's origin
 - **Maintain hierarchy**: Organize complex layouts with nested structures
 
+## Static Schema Support
+
+PDForge supports **static schemas** that appear on every page of your PDF. This is perfect for headers, footers, page numbers, and other recurring elements.
+
+### Basic Static Schema
+
+```json
+{
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [20, 10, 20, 10],
+    "staticSchema": [
+      {
+        "type": "text",
+        "name": "header",
+        "content": "Document Title",
+        "position": { "x": 20, "y": 10 },
+        "width": 170,
+        "height": 15,
+        "fontSize": 14,
+        "fontName": "NotoSansJP",
+        "alignment": "center"
+      },
+      {
+        "type": "text",
+        "name": "footer",
+        "content": "Generated on {{date}}",
+        "position": { "x": 20, "y": 280 },
+        "width": 170,
+        "height": 10,
+        "fontSize": 9,
+        "fontName": "NotoSansJP",
+        "alignment": "right"
+      }
+    ]
+  }
+}
+```
+
+### Special Template Variables
+
+Static schemas support special template variables that are automatically populated:
+
+- **`{{currentPage}}`** - Current page number (1-based)
+- **`{{totalPages}}`** - Total number of pages in the document
+- **`{{date}}`** - Current date in YYYY-MM-DD format
+- **`{{dateTime}}`** - Current date and time in YYYY-MM-DD HH:MM:SS format
+
+### Complete Static Schema Example
+
+```json
+{
+  "schemas": [
+    [
+      {
+        "type": "table",
+        "name": "data_table",
+        "position": { "x": 20, "y": 30 },
+        "width": 170,
+        "height": 200,
+        "showHead": true,
+        "headWidthPercentages": [
+          { "content": "Name", "percent": 40 },
+          { "content": "Value", "percent": 60 }
+        ],
+        "fields": []
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [20, 20, 20, 20],
+    "staticSchema": [
+      {
+        "type": "text",
+        "name": "title",
+        "content": "Monthly Report",
+        "position": { "x": 20, "y": 10 },
+        "width": 170,
+        "height": 15,
+        "fontSize": 16,
+        "fontName": "NotoSansJP",
+        "alignment": "center"
+      },
+      {
+        "type": "text",
+        "name": "page_number",
+        "content": "Page {{currentPage}} of {{totalPages}}",
+        "position": { "x": 150, "y": 280 },
+        "width": 40,
+        "height": 10,
+        "fontSize": 9,
+        "fontName": "NotoSansJP",
+        "alignment": "right"
+      },
+      {
+        "type": "text",
+        "name": "generated_time",
+        "content": "Generated: {{dateTime}}",
+        "position": { "x": 20, "y": 280 },
+        "width": 120,
+        "height": 10,
+        "fontSize": 8,
+        "fontName": "NotoSansJP",
+        "alignment": "left"
+      }
+    ]
+  },
+  "pdfmeVersion": "5.3.8"
+}
+```
+
+This creates a document where:
+- Every page has a "Monthly Report" title at the top
+- Page numbers appear in the bottom right ("Page 1 of 3", "Page 2 of 3", etc.)
+- Generation timestamp appears in the bottom left
+- The main content (table) can span multiple pages, with static elements on each page
+
 ## Examples
 
 The project includes several examples and templates:
@@ -338,6 +472,10 @@ cargo run --example simple templates/table.json
 cargo run --example simple templates/large-tables-spanning.json
 cargo run --example simple templates/multi-table-fixed.json
 
+# Static schema examples
+cargo run --example simple templates/static-schema-test.json
+cargo run --example print-renews  # Multi-page table with static headers/footers
+
 # Image examples
 cargo run --example image assets/images/test-image-1.jpg assets/images/test-image-2.jpg
 cargo run --example object_fit_test
@@ -347,6 +485,17 @@ cargo run --example simple templates/multipage.json
 cargo run --example simple templates/tiger-svg.json
 ```
 
+### Using the CLI Binary
+
+You can also use the main binary to generate PDFs from templates:
+
+```bash
+# Generate PDF using main binary
+cargo run --bin pdforge templates/static-schema-test.json
+
+# This will create: examples/pdf/static-schema-test.pdf
+```
+
 ### Available Templates
 
 - **`table.json`** - Basic table example
@@ -354,6 +503,8 @@ cargo run --example simple templates/tiger-svg.json
   - Financial report table (76 rows) across pages 1-2
   - Inventory management table (57 rows) across pages 3-4
 - **`multi-table-fixed.json`** - 3-page document with multiple separate tables
+- **`static-schema-test.json`** - Demonstrates static schema with page numbering and timestamps
+- **`print-renews.json`** - Multi-page table with comprehensive static headers and footers
 - **`multipage.json`** - Multi-page document example
 - **`tiger-svg.json`** - SVG graphics example
 - **`svg.json`** - Basic SVG example
@@ -398,6 +549,17 @@ PDForge uses the [Tera](https://tera.netlify.app/) templating engine for dynamic
 - Apply filters: `{{ name | upper }}`
 - Loop through data: `{% for item in items %}`
 
+### Built-in Template Variables
+
+For static schemas, PDForge provides these special variables:
+
+- **`{{currentPage}}`** - Current page number (starts from 1)
+- **`{{totalPages}}`** - Total number of pages in the document
+- **`{{date}}`** - Current date (YYYY-MM-DD format)
+- **`{{dateTime}}`** - Current date and time (YYYY-MM-DD HH:MM:SS format)
+
+These variables are automatically populated during PDF generation and are especially useful for headers, footers, and page numbering.
+
 ## Dependencies
 
 PDForge is built on top of several excellent Rust crates:
@@ -405,6 +567,7 @@ PDForge is built on top of several excellent Rust crates:
 - **printpdf**: Core PDF generation functionality
 - **tera**: Template engine for dynamic content
 - **serde**: JSON serialization/deserialization
+- **time**: Date and time handling for template variables
 - **qrcode**: QR code generation
 - **image**: Image processing and embedding
 - **uuid**: Unique identifier generation
@@ -443,11 +606,12 @@ cargo run --example pdfium
 pdforge/
 ├── src/
 │   ├── lib.rs              # Main library interface
+│   ├── main.rs             # CLI binary for template processing
 │   ├── font.rs             # Font management
 │   ├── common.rs           # Common utilities
 │   ├── utils.rs            # Helper functions
 │   └── schemas/            # Schema implementations
-│       ├── mod.rs          # Schema definitions
+│       ├── mod.rs          # Schema definitions with static schema support
 │       ├── text.rs         # Text schema
 │       ├── table.rs        # Table schema with multi-page support
 │       ├── qrcode.rs       # QR code schema
@@ -456,10 +620,13 @@ pdforge/
 │       └── rect.rs         # Rectangle schema
 ├── examples/               # Usage examples and CLI tools
 │   ├── simple.rs          # Main CLI for template processing
+│   ├── print-renews.rs    # Multi-page table with static schema example
 │   └── ...                # Other specialized examples
 ├── templates/              # JSON template files
 │   ├── large-tables-spanning.json  # Comprehensive multi-page tables
 │   ├── multi-table-fixed.json      # Multiple tables example
+│   ├── static-schema-test.json     # Static schema demonstration
+│   ├── print-renews.json           # Multi-page with headers/footers
 │   └── ...                # Other template examples
 ├── examples/pdf/          # Generated PDF output (gitignored)
 ├── assets/fonts/          # Font files (gitignored)
