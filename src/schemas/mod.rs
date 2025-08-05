@@ -16,6 +16,7 @@ use printpdf::{Mm, PdfDocument, PdfPage, PdfSaveOptions};
 use serde::{Deserialize, Serialize};
 use snafu::prelude::*;
 use std::collections::HashMap;
+use time;
 
 // Snafu context for error handling
 pub use snafu::ResultExt;
@@ -117,6 +118,8 @@ struct JsonBasePdf {
     width: f32,
     height: f32,
     padding: Vec<f32>,
+    #[serde(rename = "staticSchema", default)]
+    static_schema: Vec<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -238,9 +241,10 @@ impl SchemaTrait for Schema {
 
 #[derive(Debug, Clone)]
 pub struct BasePdf {
-    width: Mm,
-    height: Mm,
-    padding: Frame,
+    pub width: Mm,
+    pub height: Mm,
+    pub padding: Frame,
+    pub static_schema: Vec<Schema>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -288,6 +292,7 @@ pub struct Template {
     pub schemas: Vec<serde_json::Value>,
     base_pdf: BasePdf,
     version: String,
+    static_schema_json: Vec<serde_json::Value>,
 }
 
 impl Template {
@@ -298,18 +303,126 @@ impl Template {
             message: "Failed to parse JSON",
         })?;
 
+        // Parse static schemas if they exist
+        let static_schemas = Self::parse_static_schemas(&json.base_pdf.static_schema)?;
+
         let base_pdf = BasePdf {
             width: Mm(json.base_pdf.width),
             height: Mm(json.base_pdf.height),
             padding: json.base_pdf.padding.try_into()?,
+            static_schema: static_schemas,
         };
 
         let template = Template {
             schemas: json.schemas,
             base_pdf,
             version: json.version,
+            static_schema_json: json.base_pdf.static_schema.clone(),
         };
         Ok(template)
+    }
+
+    // Parse static schemas from JSON (placeholder - actual parsing happens during rendering)
+    fn parse_static_schemas(_static_schema_json: &[serde_json::Value]) -> Result<Vec<Schema>, Error> {
+        // We don't pre-parse static schemas since they need template processing with special variables
+        // The actual parsing happens in render_static_schemas_for_page
+        Ok(Vec::new())
+    }
+
+    // Create context with special variables
+    fn create_special_context(current_page: usize, total_pages: usize) -> tera::Context {
+        let mut context = tera::Context::new();
+        context.insert("currentPage", &(current_page + 1)); // 1-based page numbering
+        context.insert("totalPages", &total_pages);
+        
+        // Add date and dateTime using time crate
+        let now = time::OffsetDateTime::now_utc();
+        let date_format = time::format_description::parse("[year]-[month]-[day]").unwrap();
+        let datetime_format = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
+        
+        context.insert("date", &now.format(&date_format).unwrap_or_default());
+        context.insert("dateTime", &now.format(&datetime_format).unwrap_or_default());
+        
+        context
+    }
+
+    // Render static schemas with special variables
+    fn render_static_schemas_for_page(
+        &self,
+        font_map: &FontMap,
+        current_page: usize,
+        total_pages: usize,
+    ) -> Result<Vec<Schema>, Error> {
+        if self.static_schema_json.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Create context with special variables
+        let context = Self::create_special_context(current_page, total_pages);
+        
+        // Serialize the static schema JSON for template processing
+        let json_string = serde_json::to_string(&self.static_schema_json)
+            .map_err(|e| Error::Whatever {
+                message: "Failed to serialize static schema JSON".to_string(),
+                source: Some(Box::new(e)),
+            })?;
+
+        // Use Tera to process templates with special variables
+        let mut tera = tera::Tera::default();
+        tera.add_raw_template("static_schema_template", &json_string)
+            .map_err(|e| Error::Whatever {
+                message: "Failed to add static schema template to Tera".to_string(),
+                source: Some(Box::new(e)),
+            })?;
+
+        let rendered = tera.render("static_schema_template", &context)
+            .map_err(|e| Error::Whatever {
+                message: "Failed to render static schema template".to_string(),
+                source: Some(Box::new(e)),
+            })?;
+
+        // Parse the rendered JSON back to schemas
+        let json_schemas: Vec<JsonSchema> = serde_json::from_str(&rendered)
+            .map_err(|e| Error::TemplateDeserialize {
+                source: e,
+                message: "Failed to parse rendered static schemas".to_string(),
+            })?;
+
+        // Convert JSON schemas to Schema objects
+        let schemas: Result<Vec<Schema>, Error> = json_schemas
+            .into_iter()
+            .map(|schema| -> Result<Schema, Error> {
+                match schema {
+                    JsonSchema::Text(json) => {
+                        Ok(Schema::Text(Text::from_json(json, font_map)?))
+                    }
+                    JsonSchema::DynamicText(json) => Ok(Schema::DynamicText(
+                        dynamic_text::DynamicText::from_json(json, font_map)?,
+                    )),
+                    JsonSchema::Table(json) => {
+                        Ok(Schema::Table(Table::from_json(json, font_map)?))
+                    }
+                    JsonSchema::QrCode(json) => Ok(json.into()),
+                    JsonSchema::Image(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                        schema_type: "Image".to_string(),
+                        source: Box::new(e),
+                    })?),
+                    JsonSchema::Svg(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                        schema_type: "Svg".to_string(),
+                        source: Box::new(e),
+                    })?),
+                    JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                        schema_type: "Rectangle".to_string(),
+                        source: Box::new(e),
+                    })?),
+                    JsonSchema::Group(json) => {
+                        Ok(Schema::Group(group::Group::from_json(json, font_map)?))
+                    }
+                }
+            })
+            .collect();
+
+        schemas
     }
 
     /*
@@ -370,7 +483,7 @@ impl Template {
             schemas.push(converted);
         }
 
-        self.render_schemas(doc, schemas)
+        self.render_schemas(font_map, doc, schemas)
     }
 
     // inputsがある場合のrender関数
@@ -461,7 +574,7 @@ impl Template {
             schemas.extend(converted);
         }
 
-        self.render_schemas(doc, schemas)
+        self.render_schemas(font_map, doc, schemas)
     }
 
     // テーブルデータを動的に注入するrender関数
@@ -521,7 +634,7 @@ impl Template {
             schemas.push(converted);
         }
 
-        self.render_schemas(doc, schemas)
+        self.render_schemas(font_map, doc, schemas)
     }
 
     // inputsとテーブルデータの両方を使用するrender関数
@@ -631,12 +744,13 @@ impl Template {
             schemas.extend(converted);
         }
 
-        self.render_schemas(doc, schemas)
+        self.render_schemas(font_map, doc, schemas)
     }
 
     // 共通のレンダリング処理
     fn render_schemas(
         &self,
+        font_map: &FontMap,
         mut doc: &mut PdfDocument,
         schemas: Vec<Vec<Schema>>,
     ) -> Result<Vec<u8>, Error> {
@@ -644,6 +758,7 @@ impl Template {
         let mut current_page = 0;
         let mut y: Option<Mm> = None;
 
+        // First render all page content to determine actual page count
         for (page_index, page) in schemas.iter().enumerate() {
             println!("Rendering page {}", page_index + 1);
             for schema in page {
@@ -673,6 +788,49 @@ impl Template {
                     }
                     Schema::Group(mut obj) => {
                         obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?;
+                    }
+                }
+            }
+        }
+
+        // Now we know the actual number of pages, add static schemas to each page
+        let actual_page_count = buffer.buffer.len();
+        println!("Total pages generated: {}", actual_page_count);
+        
+        // Add static schemas to each page
+        for page_idx in 0..actual_page_count {
+            let static_schemas = self.render_static_schemas_for_page(font_map, page_idx, actual_page_count)?;
+            for static_schema in static_schemas {
+                match static_schema {
+                    Schema::Text(mut obj) => {
+                        obj.render(self.base_pdf.height, page_idx, &mut buffer)?;
+                    }
+                    Schema::DynamicText(mut obj) => {
+                        // For static schemas, we render directly to the specific page
+                        let mut temp_current_page = page_idx;
+                        let mut temp_y = None;
+                        let _ = obj.render(&self.base_pdf, temp_current_page, temp_y, &mut buffer)?;
+                    }
+                    Schema::Table(mut obj) => {
+                        // For static schemas, we render directly to the specific page
+                        let mut temp_current_page = page_idx;
+                        let mut temp_y = None;
+                        let _ = obj.render(&self.base_pdf, doc, page_idx, temp_y, &mut buffer)?;
+                    }
+                    Schema::QrCode(obj) => {
+                        obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?;
+                    }
+                    Schema::Image(obj) => {
+                        obj.render(self.base_pdf.height, doc, page_idx, &mut buffer)?
+                    }
+                    Schema::Svg(obj) => {
+                        obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?
+                    }
+                    Schema::Rect(obj) => {
+                        obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?
+                    }
+                    Schema::Group(mut obj) => {
+                        obj.render(&self.base_pdf, &mut doc, page_idx, &mut buffer)?;
                     }
                 }
             }

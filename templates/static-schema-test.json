@@ -1,0 +1,68 @@
+{
+  "schemas": [
+    [
+      {
+        "name": "page1-content",
+        "type": "text",
+        "content": "This is page 1 content",
+        "position": {
+          "x": 50,
+          "y": 100
+        },
+        "width": 100,
+        "height": 20,
+        "fontSize": 14,
+        "fontName": "NotoSansJP-Regular"
+      }
+    ],
+    [
+      {
+        "name": "page2-content", 
+        "type": "text",
+        "content": "This is page 2 content",
+        "position": {
+          "x": 50,
+          "y": 100
+        },
+        "width": 100,
+        "height": 20,
+        "fontSize": 14,
+        "fontName": "NotoSansJP-Regular"
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [10, 10, 10, 10],
+    "staticSchema": [
+      {
+        "name": "header",
+        "type": "text",
+        "content": "Page {{currentPage}} of {{totalPages}} - {{date}}",
+        "position": {
+          "x": 50,
+          "y": 20
+        },
+        "width": 120,
+        "height": 15,
+        "fontSize": 12,
+        "fontName": "NotoSansJP-Regular"
+      },
+      {
+        "name": "footer",
+        "type": "text", 
+        "content": "Generated at {{dateTime}}",
+        "position": {
+          "x": 50,
+          "y": 270
+        },
+        "width": 120,
+        "height": 15,
+        "fontSize": 10,
+        "fontName": "NotoSansJP-Regular"
+      }
+    ]
+  },
+  "pdfmeVersion": "4.0.0"
+}

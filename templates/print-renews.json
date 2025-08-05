@@ -1,0 +1,424 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "renewsTable",
+                "type": "table",
+                "position": {
+                    "x": 20,
+                    "y": 20
+                },
+                "showHead": true,
+                "required": false,
+                "content": "",
+                "width": 257,
+                "height": 170,
+                "headWidthPercentages": [
+                    {
+                        "content": "日付",
+                        "percent": 10,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "名前",
+                        "percent": 32,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "台帳番号",
+                        "percent": 10,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "質入日",
+                        "percent": 10,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "元金",
+                        "percent": 10,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "期間",
+                        "percent": 8,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "質料",
+                        "percent": 10,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "利済日",
+                        "percent": 10,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    }
+                ],
+                "tableStyles": {
+                    "borderWidth": 0.3,
+                    "borderColor": "#34495e"
+                },
+                "headStyles": {
+                    "fontSize": 10,
+                    "fontName": "NotoSansJP",
+                    "characterSpacing": 0,
+                    "alignment": "center",
+                    "verticalAlignment": "middle",
+                    "lineHeight": 1,
+                    "fontColor": "#ffffff",
+                    "borderColor": "",
+                    "backgroundColor": "#e74c3c",
+                    "borderWidth": {
+                        "top": 0,
+                        "right": 0,
+                        "bottom": 0,
+                        "left": 0
+                    },
+                    "padding": {
+                        "top": 3,
+                        "right": 3,
+                        "bottom": 3,
+                        "left": 3
+                    }
+                },
+                "bodyStyles": {
+                    "fontSize": 9,
+                    "fontName": "NotoSansJP",
+                    "characterSpacing": 0,
+                    "alignment": "left",
+                    "verticalAlignment": "middle",
+                    "lineHeight": 1.2,
+                    "fontColor": "#000000",
+                    "borderColor": "#bdc3c7",
+                    "backgroundColor": "#ffffff",
+                    "alternateBackgroundColor": "#f8f9fa",
+                    "borderWidth": {
+                        "top": 0.1,
+                        "right": 0.1,
+                        "bottom": 0.1,
+                        "left": 0.1
+                    },
+                    "padding": {
+                        "top": 2,
+                        "right": 3,
+                        "bottom": 2,
+                        "left": 3
+                    }
+                },
+                "columns": [
+                    {
+                        "schema": {
+                            "name": "日付",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "center",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 9,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 5.0
+                    },
+                    {
+                        "schema": {
+                            "name": "名前",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "left",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 9,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 5.0
+                    },
+                    {
+                        "schema": {
+                            "name": "台帳番号",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "center",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 9,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 5.0
+                    },
+                    {
+                        "schema": {
+                            "name": "質入日",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "right",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 9,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 5.0
+                    },
+                    {
+                        "schema": {
+                            "name": "元金",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "right",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 9,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 5.0
+                    },
+                    {
+                        "schema": {
+                            "name": "期間",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "right",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 9,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 5.0
+                    },
+                    {
+                        "schema": {
+                            "name": "質料",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "right",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 9,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 5.0
+                    },
+                    {
+                        "schema": {
+                            "name": "利済日",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "right",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 9,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 5.0
+                    }
+                ],
+                "fields": []
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 297,
+        "height": 210,
+        "padding": [
+            20,
+            20,
+            10,
+            20
+        ],
+        "staticSchema": [
+            {
+                "name": "title",
+                "type": "text",
+                "position": {
+                    "x": 20,
+                    "y": 10
+                },
+                "required": false,
+                "content": "利上台帳",
+                "width": 257,
+                "height": 10,
+                "rotate": 0,
+                "alignment": "center",
+                "verticalAlignment": "top",
+                "fontSize": 16,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "printDateTime",
+                "type": "text",
+                "position": {
+                    "x": 200,
+                    "y": 10
+                },
+                "required": false,
+                "content": "印刷日時: {{dateTime}}",
+                "width": 77,
+                "height": 8,
+                "rotate": 0,
+                "alignment": "right",
+                "verticalAlignment": "top",
+                "fontSize": 10,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "fontName": "NotoSansJP",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "pageNumber",
+                "type": "text",
+                "position": {
+                    "x": 270,
+                    "y": 200
+                },
+                "required": false,
+                "content": "{{currentPage}} / {{totalPages}}",
+                "width": 50,
+                "height": 8,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#666666",
+                "fontName": "NotoSansJP",
+                "opacity": 1,
+                "readOnly": false
+            },
+            {
+                "name": "currentDate",
+                "type": "text",
+                "position": {
+                    "x": 227,
+                    "y": 195
+                },
+                "required": false,
+                "content": "{{date}}",
+                "width": 50,
+                "height": 8,
+                "rotate": 0,
+                "alignment": "right",
+                "verticalAlignment": "top",
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#666666",
+                "fontName": "NotoSansJP",
+                "opacity": 1,
+                "readOnly": false
+            }
+        ]
+    },
+    "pdfmeVersion": "5.3.5"
+}
