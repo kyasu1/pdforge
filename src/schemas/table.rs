@@ -218,7 +218,7 @@ pub struct Table {
 impl Table {
     fn cell_widths(&self, base_pdf: &BasePdf) -> Vec<Mm> {
         // Calculate available width considering horizontal padding
-        let available_width = base_pdf.width - base_pdf.padding.left - base_pdf.padding.right;
+        let available_width = (base_pdf.width - base_pdf.padding.left - base_pdf.padding.right).max(Mm(0.0));
         // Use the smaller of template width or available width
         let effective_width = self.base.width.min(available_width);
         
@@ -311,7 +311,6 @@ impl Table {
         self.base
     }
 
-
     fn create_header_row(
         &self,
         y_line_mm: Mm,
@@ -321,6 +320,16 @@ impl Table {
         let mut cols: Vec<Schema> = vec![];
         // Apply left padding to the table start position
         let mut x = self.base.x.max(base_pdf.padding.left);
+        
+        // Ensure table doesn't exceed right padding boundary
+        let max_right_x = base_pdf.width - base_pdf.padding.right;
+        let total_width: Mm = cell_widths.iter().fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
+        if x + total_width > max_right_x {
+            x = max_right_x - total_width;
+            // Ensure x doesn't go below left padding
+            x = x.max(base_pdf.padding.left);
+        }
+        
         let mut max_height = Mm(0.0);
 
         for (head_index, head) in self.head_width_percentages.iter().enumerate() {
@@ -362,6 +371,16 @@ impl Table {
         let mut cols: Vec<Schema> = vec![];
         // Apply left padding to the table start position
         let mut x = self.base.x.max(base_pdf.padding.left);
+        
+        // Ensure table doesn't exceed right padding boundary
+        let max_right_x = base_pdf.width - base_pdf.padding.right;
+        let total_width: Mm = cell_widths.iter().fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
+        if x + total_width > max_right_x {
+            x = max_right_x - total_width;
+            // Ensure x doesn't go below left padding
+            x = x.max(base_pdf.padding.left);
+        }
+        
         let mut max_height = Mm(0.0);
 
         for (col_index, col) in row.into_iter().enumerate() {
