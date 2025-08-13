@@ -1,0 +1,429 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "items",
+                "type": "table",
+                "position": {
+                    "x": 10,
+                    "y": 75
+                },
+                "showHead": true,
+                "required": false,
+                "content": "",
+                "width": 190,
+                "height": 160,
+                "headWidthPercentages": [
+                    {
+                        "content": "No",
+                        "percent": 10,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "商品名",
+                        "percent": 50,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "買取査定",
+                        "percent": 20,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    },
+                    {
+                        "content": "質入査定",
+                        "percent": 20,
+                        "fontSize": 10,
+                        "alignment": "center"
+                    }
+                ],
+                "tableStyles": {
+                    "borderWidth": 0.3,
+                    "borderColor": "#000000"
+                },
+                "headStyles": {
+                    "fontSize": 10,
+                    "fontName": "NotoSansJP",
+                    "characterSpacing": 0,
+                    "alignment": "center",
+                    "verticalAlignment": "middle",
+                    "lineHeight": 1,
+                    "fontColor": "#000000",
+                    "borderColor": "#888888",
+                    "backgroundColor": "#ffffff",
+                    "borderWidth": {
+                        "top": 0.1,
+                        "right": 0.1,
+                        "bottom": 0.1,
+                        "left": 0.1
+                    },
+                    "padding": {
+                        "top": 1,
+                        "right": 1,
+                        "bottom": 1,
+                        "left": 1
+                    }
+                },
+                "bodyStyles": {
+                    "fontSize": 10,
+                    "fontName": "NotoSansJP",
+                    "characterSpacing": 0,
+                    "alignment": "left",
+                    "verticalAlignment": "middle",
+                    "lineHeight": 1.2,
+                    "fontColor": "#000000",
+                    "borderColor": "#888888",
+                    "backgroundColor": "#ffffff",
+                    "alternateBackgroundColor": "#f5f5f5",
+                    "borderWidth": {
+                        "top": 0.1,
+                        "right": 0.1,
+                        "bottom": 0.1,
+                        "left": 0.1
+                    },
+                    "padding": {
+                        "top": 2,
+                        "right": 1,
+                        "bottom": 2,
+                        "left": 1
+                    }
+                },
+                "columns": [
+                    {
+                        "schema": {
+                            "name": "No",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "center",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 10,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 4.5
+                    },
+                    {
+                        "schema": {
+                            "name": "商品名",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "left",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 10,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 4.5
+                    },
+                    {
+                        "schema": {
+                            "name": "買取査定",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "right",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 10,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 4.5
+                    },
+                    {
+                        "schema": {
+                            "name": "質入査定",
+                            "type": "text",
+                            "content": "",
+                            "position": {
+                                "x": 0,
+                                "y": 0
+                            },
+                            "width": 0,
+                            "height": 0,
+                            "alignment": "right",
+                            "verticalAlignment": "middle",
+                            "fontName": "NotoSansJP",
+                            "fontColor": "#000000",
+                            "fontSize": 10,
+                            "padding": {
+                                "top": 1,
+                                "right": 1,
+                                "bottom": 1,
+                                "left": 1
+                            }
+                        },
+                        "height": 4.5
+                    }
+                ],
+                "fields": []
+            },
+            {
+                "name": "title",
+                "type": "text",
+                "content": "査定見積書",
+                "position": {
+                    "x": 80,
+                    "y": 10
+                },
+                "width": 45,
+                "height": 10,
+                "rotate": 0,
+                "alignment": "center",
+                "verticalAlignment": "top",
+                "fontSize": 14,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": true,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "customerName",
+                "type": "text",
+                "content": "{{customerName}} 様",
+                "position": {
+                    "x": 10,
+                    "y": 30
+                },
+                "width": 112,
+                "height": 8,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 16,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": false,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "buyoutTotal",
+                "type": "text",
+                "content": "買取合計{{buyout_total}}円",
+                "position": {
+                    "x": 120,
+                    "y": 44
+                },
+                "width": 80,
+                "height": 10,
+                "rotate": 0,
+                "alignment": "right",
+                "verticalAlignment": "top",
+                "fontSize": 16,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": false,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "pawnTotal",
+                "type": "text",
+                "content": "質入合計{{pawn_total}}円",
+                "position": {
+                    "x": 120,
+                    "y": 55
+                },
+                "width": 80,
+                "height": 10,
+                "rotate": 0,
+                "alignment": "right",
+                "verticalAlignment": "top",
+                "fontSize": 16,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": false,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "disclaimer",
+                "type": "text",
+                "content": "下記のとおり、お見積りいたします。全て消費税を含んだ金額です（非課税の商品を除く）。為替相場および世界情勢の変化により査定金額が変化する場合もありますのでご了承ください。",
+                "position": {
+                    "x": 10,
+                    "y": 65
+                },
+                "width": 189.99,
+                "height": 10,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": true,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "company",
+                "type": "text",
+                "content": "株式会社オフイスイコー\n埼玉県越谷市七左町1-299-1\nTEL 048-987-1020",
+                "position": {
+                    "x": 126,
+                    "y": 20
+                },
+                "width": 46,
+                "height": 16,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 9,
+                "lineHeight": 1.2,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": true,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "labelUser",
+                "type": "text",
+                "content": "担当：",
+                "position": {
+                    "x": 126,
+                    "y": 32
+                },
+                "width": 10,
+                "height": 5,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": true,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "userName",
+                "type": "text",
+                "content": "{{userName}}",
+                "position": {
+                    "x": 136,
+                    "y": 32
+                },
+                "width": 20,
+                "height": 5,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 9,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": false,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "date",
+                "type": "text",
+                "content": "査定日{{date}}({{version}})",
+                "position": {
+                    "x": 150,
+                    "y": 10
+                },
+                "width": 50,
+                "height": 6,
+                "rotate": 0,
+                "alignment": "left",
+                "verticalAlignment": "top",
+                "fontSize": 10,
+                "lineHeight": 1,
+                "characterSpacing": 0,
+                "fontColor": "#000000",
+                "opacity": 1,
+                "readOnly": false,
+                "fontName": "NotoSansJP"
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 210,
+        "height": 297,
+        "padding": [
+            10,
+            10,
+            20,
+            20
+        ],
+        "staticSchema": [
+            {
+                "name": "dateTime",
+                "type": "text",
+                "content": "発行日時 {{dateTime}}",
+                "position": {
+                    "x": 15,
+                    "y": 287
+                },
+                "width": 100,
+                "height": 12,
+                "readOnly": true,
+                "fontSize": 9,
+                "fontName": "NotoSansJP"
+            },
+            {
+                "name": "pageInfo",
+                "type": "text",
+                "content": "{{currentPage}} / {{totalPages}}",
+                "position": {
+                    "x": 190,
+                    "y": 287
+                },
+                "width": 10,
+                "height": 12,
+                "readOnly": true,
+                "fontSize": 9,
+                "fontName": "NotoSansJP"
+            }
+        ]
+    },
+    "pdfmeVersion": "5.3.5"
+}
