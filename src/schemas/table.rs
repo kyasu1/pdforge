@@ -216,12 +216,16 @@ pub struct Table {
 }
 
 impl Table {
-    fn cell_widths(&self) -> Vec<Mm> {
-        let box_width = self.base.width;
+    fn cell_widths(&self, base_pdf: &BasePdf) -> Vec<Mm> {
+        // Calculate available width considering horizontal padding
+        let available_width = (base_pdf.width - base_pdf.padding.left - base_pdf.padding.right).max(Mm(0.0));
+        // Use the smaller of template width or available width
+        let effective_width = self.base.width.min(available_width);
+        
         self.head_width_percentages
             .clone()
             .into_iter()
-            .map(|head| Mm(box_width.0 * head.percent / 100.0))
+            .map(|head| Mm(effective_width.0 * head.percent / 100.0))
             .collect()
     }
 
@@ -311,9 +315,21 @@ impl Table {
         &self,
         y_line_mm: Mm,
         cell_widths: &[Mm],
+        base_pdf: &BasePdf,
     ) -> Result<(Vec<Schema>, Mm), Error> {
         let mut cols: Vec<Schema> = vec![];
-        let mut x = self.base.x;
+        // Apply left padding to the table start position
+        let mut x = self.base.x.max(base_pdf.padding.left);
+        
+        // Ensure table doesn't exceed right padding boundary
+        let max_right_x = base_pdf.width - base_pdf.padding.right;
+        let total_width: Mm = cell_widths.iter().fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
+        if x + total_width > max_right_x {
+            x = max_right_x - total_width;
+            // Ensure x doesn't go below left padding
+            x = x.max(base_pdf.padding.left);
+        }
+        
         let mut max_height = Mm(0.0);
 
         for (head_index, head) in self.head_width_percentages.iter().enumerate() {
@@ -350,9 +366,21 @@ impl Table {
         row: Vec<String>,
         y_line_mm: Mm,
         cell_widths: &[Mm],
+        base_pdf: &BasePdf,
     ) -> Result<(Vec<Schema>, Mm), Error> {
         let mut cols: Vec<Schema> = vec![];
-        let mut x = self.base.x;
+        // Apply left padding to the table start position
+        let mut x = self.base.x.max(base_pdf.padding.left);
+        
+        // Ensure table doesn't exceed right padding boundary
+        let max_right_x = base_pdf.width - base_pdf.padding.right;
+        let total_width: Mm = cell_widths.iter().fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
+        if x + total_width > max_right_x {
+            x = max_right_x - total_width;
+            // Ensure x doesn't go below left padding
+            x = x.max(base_pdf.padding.left);
+        }
+        
         let mut max_height = Mm(0.0);
 
         for (col_index, col) in row.into_iter().enumerate() {
@@ -405,17 +433,16 @@ impl Table {
         buffer: &mut OpBuffer,
     ) -> Result<(usize, Option<Mm>), Error> {
         let top_margin_in_mm = base_pdf.padding.top;
-        let bottom_margin_in_mm = base_pdf.padding.bottom;
         let mut internal_page_counter: usize = 0;
         let y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
-        let y_bottom_mm = base_pdf.height - bottom_margin_in_mm;
+        let y_bottom_mm = base_pdf.height - base_pdf.padding.bottom;
         let mut y_line_mm: Mm = y_top_mm;
-        let cell_widths = self.cell_widths();
+        let cell_widths = self.cell_widths(base_pdf);
 
         let mut pages: HashMap<usize, Vec<Vec<Schema>>> = HashMap::new();
 
         let (header_row, header_height) = if self.show_head {
-            let header = self.create_header_row(top_margin_in_mm, &cell_widths)?;
+            let header = self.create_header_row(top_margin_in_mm, &cell_widths, base_pdf)?;
             (Some(header.0), header.1)
         } else {
             (None, Mm(0.0))
@@ -427,7 +454,7 @@ impl Table {
                 return Ok((current_page, None));
             }
             [head, tail @ ..] => {
-                let (cols, max_height) = self.process_row(head.clone(), y_line_mm, &cell_widths)?;
+                let (cols, max_height) = self.process_row(head.clone(), y_line_mm, &cell_widths, base_pdf)?;
 
                 if y_line_mm + header_height + max_height > y_bottom_mm {
                     // If the header row exceeds the page height, we need to create a new page
@@ -480,7 +507,7 @@ impl Table {
 
                 for row in tail.iter() {
                     let (cols, max_height) =
-                        self.process_row(row.clone(), y_line_mm, &cell_widths)?;
+                        self.process_row(row.clone(), y_line_mm, &cell_widths, base_pdf)?;
 
                     // Check if the next row will exceed the page height
                     // If it does, create a new page and reset the y_line_mm
