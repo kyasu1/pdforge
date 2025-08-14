@@ -32,7 +32,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.2.2"
+pdforge = "0.5.0"
 ```
 
 ## Quick Start
