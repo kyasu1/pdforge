@@ -1,0 +1,122 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "title",
+                "type": "text",
+                "content": "{{ document_title }}",
+                "position": { "x": 20, "y": 20 },
+                "width": 170,
+                "height": 10,
+                "fontSize": 16,
+                "fontName": "NotoSansJP",
+                "fontColor": "#000000",
+                "alignment": "center"
+            },
+            {
+                "name": "title_underline",
+                "type": "line",
+                "position": { "x": 20, "y": 35 },
+                "width": 170,
+                "height": 0,
+                "rotate": 0,
+                "borderWidth": 2,
+                "color": "{{ title_line_color }}"
+            },
+            {
+                "name": "section_1_title",
+                "type": "text",
+                "content": "{{ section_1_title }}",
+                "position": { "x": 20, "y": 50 },
+                "width": 170,
+                "height": 8,
+                "fontSize": 14,
+                "fontName": "NotoSansJP",
+                "fontColor": "#333333"
+            },
+            {
+                "name": "section_1_content",
+                "type": "text",
+                "content": "{{ section_1_content }}",
+                "position": { "x": 20, "y": 65 },
+                "width": 170,
+                "height": 30,
+                "fontSize": 10,
+                "fontName": "NotoSerifJP",
+                "fontColor": "#000000",
+                "lineHeight": 1.5
+            },
+            {
+                "name": "separator_line_1",
+                "type": "line",
+                "position": { "x": 20, "y": 105 },
+                "width": 120,
+                "height": 0,
+                "rotate": 0,
+                "borderWidth": 1,
+                "color": "#cccccc"
+            },
+            {
+                "name": "section_2_title",
+                "type": "text",
+                "content": "{{ section_2_title }}",
+                "position": { "x": 20, "y": 120 },
+                "width": 170,
+                "height": 8,
+                "fontSize": 14,
+                "fontName": "NotoSansJP",
+                "fontColor": "#333333"
+            },
+            {
+                "name": "section_2_content",
+                "type": "text",
+                "content": "{{ section_2_content }}",
+                "position": { "x": 20, "y": 135 },
+                "width": 170,
+                "height": 30,
+                "fontSize": 10,
+                "fontName": "NotoSerifJP",
+                "fontColor": "#000000",
+                "lineHeight": 1.5
+            },
+            {
+                "name": "highlight_line",
+                "type": "line",
+                "position": { "x": 15, "y": 140 },
+                "width": 5,
+                "height": 0,
+                "rotate": 90,
+                "borderWidth": 3,
+                "color": "{{ highlight_color }}"
+            },
+            {
+                "name": "footer_line",
+                "type": "line",
+                "position": { "x": 20, "y": 180 },
+                "width": 170,
+                "height": 0,
+                "rotate": 0,
+                "borderWidth": 0.5,
+                "color": "#999999"
+            },
+            {
+                "name": "footer",
+                "type": "text",
+                "content": "Generated on {{ date }} by {{ author }}",
+                "position": { "x": 20, "y": 190 },
+                "width": 170,
+                "height": 6,
+                "fontSize": 9,
+                "fontName": "NotoSerifJP",
+                "fontColor": "#666666",
+                "alignment": "center"
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 210,
+        "height": 297,
+        "padding": [10, 10, 10, 10]
+    },
+    "pdfmeVersion": "5.3.8"
+}

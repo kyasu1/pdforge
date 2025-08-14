@@ -2,6 +2,7 @@ pub mod base;
 pub mod dynamic_text;
 pub mod group;
 pub mod image;
+pub mod line;
 pub mod pdf_utils;
 pub mod qrcode;
 pub mod rect;
@@ -110,6 +111,7 @@ enum JsonSchema {
     Image(image::JsonImageSchema),
     Svg(svg::JsonSvgSchema),
     Rectangle(rect::JsonRectSchema),
+    Line(line::JsonLineSchema),
     Group(group::JsonGroupSchema),
 }
 
@@ -159,6 +161,7 @@ pub enum Schema {
     Image(image::Image),
     Svg(svg::Svg),
     Rect(rect::Rect),
+    Line(line::Line),
     Group(group::Group),
 }
 
@@ -172,6 +175,7 @@ impl Schema {
             Schema::Image(image) => image.get_base(),
             Schema::Svg(svg) => svg.get_base(),
             Schema::Rect(rect) => rect.get_base(),
+            Schema::Line(line) => line.get_base(),
             Schema::Group(group) => group.get_base(),
         }
     }
@@ -206,6 +210,10 @@ impl SchemaTrait for Schema {
                 rect.render(parent_height, doc, page, buffer)?;
                 Ok(())
             }
+            Schema::Line(line) => {
+                line.render(parent_height, doc, page, buffer)?;
+                Ok(())
+            }
             _ => unimplemented!(),
         }
     }
@@ -220,6 +228,9 @@ impl SchemaTrait for Schema {
             Schema::Group(group) => {
                 group.set_y(y);
             }
+            Schema::Line(line) => {
+                line.set_y(y);
+            }
             _ => unimplemented!(),
         }
     }
@@ -233,6 +244,9 @@ impl SchemaTrait for Schema {
             }
             Schema::Group(group) => {
                 group.set_height(height);
+            }
+            Schema::Line(line) => {
+                line.set_height(height);
             }
             _ => unimplemented!(),
         }
@@ -415,6 +429,10 @@ impl Template {
                         schema_type: "Rectangle".to_string(),
                         source: Box::new(e),
                     })?),
+                    JsonSchema::Line(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                        schema_type: "Line".to_string(),
+                        source: Box::new(e),
+                    })?),
                     JsonSchema::Group(json) => {
                         Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                     }
@@ -471,6 +489,10 @@ impl Template {
                         })?),
                         JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
                             schema_type: "Rectangle".to_string(),
+                            source: Box::new(e),
+                        })?),
+                        JsonSchema::Line(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Line".to_string(),
                             source: Box::new(e),
                         })?),
                         JsonSchema::Group(json) => {
@@ -562,6 +584,10 @@ impl Template {
                                     schema_type: "Rectangle".to_string(),
                                     source: Box::new(e),
                                 })?),
+                                JsonSchema::Line(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                    schema_type: "Line".to_string(),
+                                    source: Box::new(e),
+                                })?),
                                 JsonSchema::Group(json) => {
                                     Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                                 }
@@ -622,6 +648,10 @@ impl Template {
                         })?),
                         JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
                             schema_type: "Rectangle".to_string(),
+                            source: Box::new(e),
+                        })?),
+                        JsonSchema::Line(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Line".to_string(),
                             source: Box::new(e),
                         })?),
                         JsonSchema::Group(json) => {
@@ -732,6 +762,10 @@ impl Template {
                                     schema_type: "Rectangle".to_string(),
                                     source: Box::new(e),
                                 })?),
+                                JsonSchema::Line(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                    schema_type: "Line".to_string(),
+                                    source: Box::new(e),
+                                })?),
                                 JsonSchema::Group(json) => {
                                     Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                                 }
@@ -786,6 +820,9 @@ impl Template {
                     Schema::Rect(obj) => {
                         obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
                     }
+                    Schema::Line(obj) => {
+                        obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
+                    }
                     Schema::Group(mut obj) => {
                         obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?;
                     }
@@ -827,6 +864,9 @@ impl Template {
                         obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?
                     }
                     Schema::Rect(obj) => {
+                        obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?
+                    }
+                    Schema::Line(obj) => {
                         obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?
                     }
                     Schema::Group(mut obj) => {
