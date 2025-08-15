@@ -203,7 +203,7 @@ impl Text {
             ops.extend_from_slice(&bg_ops);
         }
 
-        // 枠線があれば枠線を描画
+        // Draw border if specified
         if let Some(border_ops) = self.create_border_ops(bounding_matrix) {
             ops.extend_from_slice(&border_ops);
         }
@@ -343,63 +343,62 @@ impl Text {
         })
     }
 
-    // 枠線のオペレーションを作成
+    // Create border drawing operations
     fn create_border_ops(&self, bounding_matrix: [f32; 6]) -> Option<Vec<Op>> {
-        if let (Some(border_color), Some(border_width)) = (&self.border_color, &self.border_width) {
-            let matrix: Op = Op::SetTransformationMatrix {
-                matrix: CurTransMat::Raw(bounding_matrix),
-            };
+        let border_color = self.border_color.as_ref()?;
+        let border_width = self.border_width.as_ref()?;
 
-            let x1 = Pt(0.0);
-            let x2: Pt = self.base.width.into();
-            let y1: Pt = Pt(0.0);
-            let y2: Pt = self.base.height.into();
+        let matrix: Op = Op::SetTransformationMatrix {
+            matrix: CurTransMat::Raw(bounding_matrix),
+        };
 
-            Some(vec![
-                Op::SaveGraphicsState,
-                matrix,
-                Op::SetOutlineColor {
-                    col: Color::Rgb(Rgb {
-                        r: border_color.r,
-                        g: border_color.g,
-                        b: border_color.b,
-                        icc_profile: None,
-                    }),
+        let x1 = Pt(0.0);
+        let x2: Pt = self.base.width.into();
+        let y1: Pt = Pt(0.0);
+        let y2: Pt = self.base.height.into();
+
+        Some(vec![
+            Op::SaveGraphicsState,
+            matrix,
+            Op::SetOutlineColor {
+                col: Color::Rgb(Rgb {
+                    r: border_color.r,
+                    g: border_color.g,
+                    b: border_color.b,
+                    icc_profile: None,
+                }),
+            },
+            Op::SetOutlineThickness {
+                pt: (*border_width).into(),
+            },
+            Op::DrawPolygon {
+                polygon: Polygon {
+                    rings: vec![PolygonRing {
+                        points: vec![
+                            LinePoint {
+                                p: Point { x: x1, y: y1 },
+                                bezier: false,
+                            },
+                            LinePoint {
+                                p: Point { x: x2, y: y1 },
+                                bezier: false,
+                            },
+                            LinePoint {
+                                p: Point { x: x2, y: y2 },
+                                bezier: false,
+                            },
+                            LinePoint {
+                                p: Point { x: x1, y: y2 },
+                                bezier: false,
+                            },
+                        ],
+                    }],
+                    mode: printpdf::PaintMode::Stroke,
+                    winding_order: printpdf::WindingOrder::NonZero,
                 },
-                Op::SetOutlineThickness {
-                    pt: (*border_width).into(),
-                },
-                Op::DrawPolygon {
-                    polygon: Polygon {
-                        rings: vec![PolygonRing {
-                            points: vec![
-                                LinePoint {
-                                    p: Point { x: x1, y: y1 },
-                                    bezier: false,
-                                },
-                                LinePoint {
-                                    p: Point { x: x2, y: y1 },
-                                    bezier: false,
-                                },
-                                LinePoint {
-                                    p: Point { x: x2, y: y2 },
-                                    bezier: false,
-                                },
-                                LinePoint {
-                                    p: Point { x: x1, y: y2 },
-                                    bezier: false,
-                                },
-                            ],
-                        }],
-                        mode: printpdf::PaintMode::Stroke,
-                        winding_order: printpdf::WindingOrder::NonZero,
-                    },
-                },
-                Op::RestoreGraphicsState,
-            ])
-        } else {
-            None
-        }
+            },
+            Op::RestoreGraphicsState,
+        ])
     }
 
     // テキスト描画のオペレーションを作成
@@ -658,5 +657,54 @@ mod tests {
         let (x, _) = text.calculate_horizontal_alignment(Mm(100.0), Mm(70.0), "Test");
         assert_eq!(x, Mm(0.0)); // padding.left = 0
                                  // 文字間隔は実際の計算結果に依存するため、ここではテストしない
+    }
+
+    #[test]
+    fn test_create_border_ops_with_both_fields() {
+        let mut text = create_test_text();
+        text.border_color = Some("#ff0000".parse().expect("Failed to parse test border color"));
+        text.border_width = Some(Pt(2.0));
+
+        let matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+        let ops = text.create_border_ops(matrix);
+
+        assert!(ops.is_some());
+        let ops_vec = ops.unwrap();
+        assert_eq!(ops_vec.len(), 6); // SaveGraphicsState, SetTransformationMatrix, SetOutlineColor, SetOutlineThickness, DrawPolygon, RestoreGraphicsState
+    }
+
+    #[test]
+    fn test_create_border_ops_without_color() {
+        let mut text = create_test_text();
+        text.border_color = None;
+        text.border_width = Some(Pt(2.0));
+
+        let matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+        let ops = text.create_border_ops(matrix);
+
+        assert!(ops.is_none());
+    }
+
+    #[test]
+    fn test_create_border_ops_without_width() {
+        let mut text = create_test_text();
+        text.border_color = Some("#ff0000".parse().expect("Failed to parse test border color"));
+        text.border_width = None;
+
+        let matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+        let ops = text.create_border_ops(matrix);
+
+        assert!(ops.is_none());
+    }
+
+    #[test]
+    fn test_create_border_ops_without_both_fields() {
+        let text = create_test_text();
+        // Both border_color and border_width are None by default
+
+        let matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+        let ops = text.create_border_ops(matrix);
+
+        assert!(ops.is_none());
     }
 }
