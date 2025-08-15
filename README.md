@@ -12,12 +12,13 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 - **Dynamic content** - Template rendering with variable substitution using Tera templating engine
 - **Multi-page support** - Generate PDFs with multiple pages from single templates
 - **Advanced table rendering** - Tables can span multiple pages automatically with proper pagination
+- **Text styling with borders** - Text elements support borders, backgrounds, and comprehensive styling options
 - **Flexible styling** - Comprehensive styling options for colors, borders, alignment, and spacing
 - **High-quality output** - Built on the robust printpdf library
 
 ## Supported Schema Types
 
-- **Text**: Static text with font styling and positioning
+- **Text**: Static text with font styling, borders, backgrounds, and precise positioning
 - **Dynamic Text**: Template-driven text with variable substitution
 - **Table**: Structured tables with headers, borders, cell styling, and multi-page spanning
 - **QR Code**: QR code generation with customizable size and positioning
@@ -32,7 +33,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.5.0"
+pdforge = "0.7.0"
 ```
 
 ## Quick Start
@@ -182,9 +183,20 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
   "fontSize": 12,
   "fontName": "NotoSansJP",
   "fontColor": "#000000",
+  "backgroundColor": "#f0f0f0",
+  "borderColor": "#ff0000",
+  "borderWidth": 1,
   "alignment": "left"
 }
 ```
+
+**Text Border Support**: Text elements now support borders with customizable color and width:
+
+- **`borderColor`** - Border color in CSS color format (hex, rgb, named colors, etc.)
+- **`borderWidth`** - Border thickness in points (pt)
+- **`backgroundColor`** - Background color for text elements
+
+Both border and background features are optional and work together seamlessly.
 
 #### Table Schema
 
@@ -510,6 +522,7 @@ cargo run --bin pdforge templates/static-schema-test.json
 - **`svg.json`** - Basic SVG example
 - **`image-test.json`** - Image embedding with object-fit controls
 - **`object-fit-test.json`** - Demonstrates all five object-fit modes side by side
+- **`text-border-test.json`** - Showcases text border and background styling features
 
 ### Generating PDFs
 
