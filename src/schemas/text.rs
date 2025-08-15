@@ -30,6 +30,8 @@ pub struct JsonTextSchema {
     rotate: Option<f32>,
     scale_x: Option<f32>,
     scale_y: Option<f32>,
+    border_color: Option<String>,
+    border_width: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +51,8 @@ pub struct Text {
     rotate: Option<f32>,
     scale_x: Option<f32>,
     scale_y: Option<f32>,
+    border_color: Option<csscolorparser::Color>,
+    border_width: Option<Pt>,
 }
 
 impl Text {
@@ -89,6 +93,8 @@ impl Text {
             rotate: None,
             scale_x: None,
             scale_y: None,
+            border_color: None,
+            border_width: None,
         })
     }
 
@@ -147,6 +153,12 @@ impl Text {
             rotate: json.rotate,
             scale_x: json.scale_x,
             scale_y: json.scale_y,
+            border_color: json
+                .border_color
+                .as_ref()
+                .map(|c| csscolorparser::parse(c).context(InvalidColorSnafu))
+                .transpose()?,
+            border_width: json.border_width.map(|w| Pt(w)),
         };
 
         Ok(text)
@@ -189,6 +201,11 @@ impl Text {
         // 背景色があれば背景を描画
         if let Some(bg_ops) = self.create_background_ops(bounding_matrix) {
             ops.extend_from_slice(&bg_ops);
+        }
+
+        // 枠線があれば枠線を描画
+        if let Some(border_ops) = self.create_border_ops(bounding_matrix) {
+            ops.extend_from_slice(&border_ops);
         }
 
         // 各行のテキストを描画
@@ -324,6 +341,65 @@ impl Text {
                 Op::RestoreGraphicsState,
             ]
         })
+    }
+
+    // 枠線のオペレーションを作成
+    fn create_border_ops(&self, bounding_matrix: [f32; 6]) -> Option<Vec<Op>> {
+        if let (Some(border_color), Some(border_width)) = (&self.border_color, &self.border_width) {
+            let matrix: Op = Op::SetTransformationMatrix {
+                matrix: CurTransMat::Raw(bounding_matrix),
+            };
+
+            let x1 = Pt(0.0);
+            let x2: Pt = self.base.width.into();
+            let y1: Pt = Pt(0.0);
+            let y2: Pt = self.base.height.into();
+
+            Some(vec![
+                Op::SaveGraphicsState,
+                matrix,
+                Op::SetOutlineColor {
+                    col: Color::Rgb(Rgb {
+                        r: border_color.r,
+                        g: border_color.g,
+                        b: border_color.b,
+                        icc_profile: None,
+                    }),
+                },
+                Op::SetOutlineThickness {
+                    pt: (*border_width).into(),
+                },
+                Op::DrawPolygon {
+                    polygon: Polygon {
+                        rings: vec![PolygonRing {
+                            points: vec![
+                                LinePoint {
+                                    p: Point { x: x1, y: y1 },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point { x: x2, y: y1 },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point { x: x2, y: y2 },
+                                    bezier: false,
+                                },
+                                LinePoint {
+                                    p: Point { x: x1, y: y2 },
+                                    bezier: false,
+                                },
+                            ],
+                        }],
+                        mode: printpdf::PaintMode::Stroke,
+                        winding_order: printpdf::WindingOrder::NonZero,
+                    },
+                },
+                Op::RestoreGraphicsState,
+            ])
+        } else {
+            None
+        }
     }
 
     // テキスト描画のオペレーションを作成
@@ -486,6 +562,8 @@ mod tests {
             rotate: None,
             scale_x: None,
             scale_y: None,
+            border_color: None,
+            border_width: None,
         }
     }
 
