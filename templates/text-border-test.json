@@ -1,0 +1,116 @@
+{
+  "schemas": [
+    [
+      {
+        "name": "bordered-text-sample",
+        "type": "text",
+        "content": "Text with Red Border",
+        "position": {
+          "x": 20,
+          "y": 50
+        },
+        "width": 170,
+        "height": 40,
+        "fontSize": 16,
+        "fontName": "NotoSansJP-Regular",
+        "fontColor": "#000000",
+        "backgroundColor": "#f8f8f8",
+        "borderColor": "#ff0000",
+        "borderWidth": 2,
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      },
+      {
+        "name": "background-only-text",
+        "type": "text",
+        "content": "Text with Background Only",
+        "position": {
+          "x": 20,
+          "y": 100
+        },
+        "width": 170,
+        "height": 30,
+        "fontSize": 14,
+        "fontName": "NotoSansJP-Regular",
+        "fontColor": "#ffffff",
+        "backgroundColor": "#2980ba",
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      },
+      {
+        "name": "border-only-text",
+        "type": "text",
+        "content": "Text with Border Only",
+        "position": {
+          "x": 20,
+          "y": 140
+        },
+        "width": 170,
+        "height": 30,
+        "fontSize": 14,
+        "fontName": "NotoSansJP-Regular",
+        "fontColor": "#2c3e50",
+        "borderColor": "#27ae60",
+        "borderWidth": 1.5,
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      },
+      {
+        "name": "plain-text",
+        "type": "text",
+        "content": "Plain Text (no styling)",
+        "position": {
+          "x": 20,
+          "y": 180
+        },
+        "width": 170,
+        "height": 30,
+        "fontSize": 14,
+        "fontName": "NotoSansJP-Regular",
+        "fontColor": "#34495e",
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [10, 10, 10, 10],
+    "staticSchema": [
+      {
+        "name": "header",
+        "type": "text",
+        "content": "Text Border Styling Examples",
+        "position": {
+          "x": 20,
+          "y": 20
+        },
+        "width": 170,
+        "height": 20,
+        "fontSize": 18,
+        "fontName": "NotoSansJP-Regular",
+        "fontColor": "#2c3e50",
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      },
+      {
+        "name": "footer",
+        "type": "text", 
+        "content": "Generated: {{dateTime}}",
+        "position": {
+          "x": 20,
+          "y": 270
+        },
+        "width": 170,
+        "height": 15,
+        "fontSize": 9,
+        "fontName": "NotoSansJP-Regular",
+        "fontColor": "#7f8c8d",
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      }
+    ]
+  },
+  "pdfmeVersion": "4.0.0"
+}
