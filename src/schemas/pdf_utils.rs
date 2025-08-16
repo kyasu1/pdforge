@@ -1,5 +1,41 @@
 use printpdf::*;
 
+/// Replace characters that don't have glyphs in the font with a replacement character
+/// Uses .notdef glyph approach by falling back to basic ASCII characters that should exist in most fonts
+pub fn sanitize_text_for_font(text: &str, font: &ParsedFont) -> String {
+    // We can't directly access .notdef glyph (index 0) through normal text rendering
+    // in printpdf library, so we use a fallback hierarchy of replacement characters
+    const FALLBACK_CHARS: &[char] = &[
+        '□',    // U+25A1 White Square (classic TOFU character)
+        '\u{FFFD}', // U+FFFD Replacement Character (Unicode standard replacement)
+        '?',    // Question mark (widely supported)
+        '.',    // Period (basic punctuation)
+        'X',    // Letter X (ASCII fallback)
+        ' ',    // Space (should exist in any font)
+    ];
+    
+    text.chars()
+        .map(|ch| {
+            // Check if the character has a glyph in the font
+            match font.lookup_glyph_index(ch as u32) {
+                Some(_) => ch, // Character exists in font
+                None => {
+                    // Try each fallback character in order of preference
+                    // This simulates .notdef behavior by using the best available replacement
+                    for &fallback in FALLBACK_CHARS {
+                        if font.lookup_glyph_index(fallback as u32).is_some() {
+                            return fallback;
+                        }
+                    }
+                    // Ultimate fallback - return the original character
+                    // This may cause the font's actual .notdef glyph to be used at PDF level
+                    ch
+                }
+            }
+        })
+        .collect()
+}
+
 // 2D変換行列を計算する独立した関数
 pub fn calculate_transform_matrix(
     x: Mm,
@@ -72,8 +108,44 @@ pub fn create_text_ops(
     line_height: Option<f32>,
     font_color: &csscolorparser::Color,
 ) -> Vec<Op> {
+    create_text_ops_with_font(
+        bounding_matrix,
+        font_id,
+        font_size,
+        x_line,
+        y,
+        scale_x,
+        scale_y,
+        character_spacing,
+        line,
+        line_height,
+        font_color,
+        None,
+    )
+}
+
+pub fn create_text_ops_with_font(
+    bounding_matrix: [f32; 6],
+    font_id: &FontId,
+    font_size: Pt,
+    x_line: Mm,
+    y: Mm,
+    scale_x: Option<f32>,
+    scale_y: Option<f32>,
+    character_spacing: Pt,
+    line: &str,
+    line_height: Option<f32>,
+    font_color: &csscolorparser::Color,
+    font: Option<&ParsedFont>,
+) -> Vec<Op> {
     let matrix_values = calculate_transform_matrix(x_line, y, scale_x, scale_y);
     let matrix = TextMatrix::Raw(matrix_values);
+
+    // Sanitize text if font is provided, otherwise use original text
+    let sanitized_line = match font {
+        Some(font_ref) => sanitize_text_for_font(line, font_ref),
+        None => line.to_string(),
+    };
 
     vec![
         Op::SaveGraphicsState,
@@ -101,7 +173,7 @@ pub fn create_text_ops(
             multiplier: character_spacing.0,
         },
         Op::WriteText {
-            items: vec![TextItem::Text(line.to_string())],
+            items: vec![TextItem::Text(sanitized_line)],
             font: font_id.clone(),
         },
         Op::EndTextSection,

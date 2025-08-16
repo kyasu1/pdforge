@@ -45,6 +45,7 @@ pub struct Text {
     font_size: FontSize,
     font_id: FontId,
     font_spec: Arc<dyn FontSpecTrait>,
+    font: Box<ParsedFont>,
     font_color: csscolorparser::Color,
     background_color: Option<csscolorparser::Color>,
     padding: Option<Frame>,
@@ -85,6 +86,7 @@ impl Text {
             font_size: FontSize::Fixed(font_size),
             font_id: font_id.clone(),
             font_spec: Arc::new(font_spec.clone()),
+            font: font.clone(),
             font_color: "#000"
                 .parse::<csscolorparser::Color>()
                 .context(InvalidColorSnafu)?,
@@ -147,6 +149,7 @@ impl Text {
             font_size,
             font_id: font_id.clone(),
             font_spec: Arc::new(font_spec.clone()),
+            font: font.clone(),
             font_color,
             background_color,
             padding: json.padding,
@@ -411,7 +414,7 @@ impl Text {
         character_spacing: Pt,
         line: &str,
     ) -> Vec<Op> {
-        super::pdf_utils::create_text_ops(
+        super::pdf_utils::create_text_ops_with_font(
             matrix,
             &self.font_id,
             font_size,
@@ -423,6 +426,7 @@ impl Text {
             line,
             self.line_height,
             &self.font_color,
+            Some(&self.font),
         )
     }
 
@@ -496,6 +500,7 @@ mod tests {
     }
 
     impl MockFontSpec {
+        #[allow(dead_code)]
         pub fn new(width_result: Pt, height: Pt) -> Self {
             MockFontSpec {
                 width_result,
@@ -544,6 +549,19 @@ mod tests {
             width_result: Pt(20.0),
             height: Pt(12.0),
         };
+        
+        // Create a minimal dummy font for testing
+        let dummy_font = Box::new(ParsedFont {
+            font_metrics: printpdf::FontMetrics {
+                units_per_em: 1000,
+                ascender: 800,
+                descender: -200,
+                line_gap: 0,
+            },
+            glyphs: std::collections::BTreeMap::new(),
+            space_width: Some(250),
+            char_width_cache: std::collections::HashMap::new(),
+        });
 
         Text {
             base,
@@ -555,6 +573,7 @@ mod tests {
             font_size: FontSize::Fixed(Pt(12.0)),
             font_id,
             font_spec: Arc::new(font_spec),
+            font: dummy_font,
             font_color: "#000".parse().expect("Failed to parse test color"),
             background_color: None,
             padding: None,

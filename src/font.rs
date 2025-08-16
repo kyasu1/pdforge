@@ -298,31 +298,28 @@ impl FontSpecTrait for FontSpec {
         character_spacing: Pt,
     ) -> Result<Pt, Error> {
         let percentage_font_scaling = 1000.0 / (self.font.font_metrics.units_per_em as f32);
+        
+        // TOFU (replacement character) width - use a reasonable default based on font size
+        let tofu_width = 500.0; // Units in font metrics
 
-        let possible_standard_sizes: Result<Vec<f32>, char> = text
+        let standard_sizes: Vec<f32> = text
             .chars()
             .map(|char| {
                 if char == ' ' {
-                    Ok(self.font.space_width.unwrap_or(0) as f32 * percentage_font_scaling)
+                    self.font.space_width.unwrap_or(0) as f32 * percentage_font_scaling
                 } else {
                     self.font
                         .lookup_glyph_index(char as u32)
                         .map(|glyph_index| self.font.get_horizontal_advance(glyph_index))
                         .map(|width| (width as f32) * percentage_font_scaling)
-                        .ok_or(char)
+                        .unwrap_or(tofu_width * percentage_font_scaling) // Use TOFU width if glyph not found
                 }
             })
             .collect();
 
-        match possible_standard_sizes {
-            Ok(standard_sizes) => {
-                let scaled =
-                    standard_sizes.into_iter().sum::<f32>() * (font_size.0 as f32) / 1000.0;
-                let additional_spacing = ((text.chars().count() - 1) as f32) * character_spacing.0;
-                Ok(Pt(scaled + additional_spacing))
-            }
-            Err(char) => Err(Error::CharacterNotInFont { char }),
-        }
+        let scaled = standard_sizes.into_iter().sum::<f32>() * (font_size.0 as f32) / 1000.0;
+        let additional_spacing = ((text.chars().count() - 1) as f32) * character_spacing.0;
+        Ok(Pt(scaled + additional_spacing))
     }
 }
 
