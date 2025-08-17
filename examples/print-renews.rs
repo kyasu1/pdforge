@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut pdforge = pdforge::PDForgeBuilder::new("TEST".to_string())
+    let mut pdforge = pdforge::PDForgeBuilder::new("利上台帳".to_string())
         .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("print-renews", "./templates/print-renews.json")?
         .build();
@@ -36,7 +36,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bytes: Vec<u8> =
         pdforge.render_with_inputs_and_table_data("print-renews", vec![inputs], table_data)?;
 
-    std::fs::write("./examples/pdf/print-renews.pdf", bytes.clone()).unwrap();
+    let updated = pdforge::PDForge::set_pdf_metadata(
+        bytes,
+        Some("利上台帳"),
+        Some("株式会社オフイスイコー"),
+    )?;
+    std::fs::write("./examples/pdf/print-renews.pdf", updated.clone()).unwrap();
 
     Ok(())
 }
