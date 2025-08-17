@@ -350,7 +350,7 @@ impl Template {
         context.insert("totalPages", &total_pages);
         
         // Add date and dateTime using time crate
-        let now = time::OffsetDateTime::now_utc();
+        let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
         let date_format = time::format_description::parse("[year]-[month]-[day]").unwrap();
         let datetime_format = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
         
