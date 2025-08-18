@@ -129,7 +129,7 @@ struct JsonBasePdf {
 struct JsonTemplate {
     schemas: Vec<serde_json::Value>,
     base_pdf: JsonBasePdf,
-    #[serde(rename = "pdfmeVersion")]
+    #[serde(rename = "schemaVersion")]
     version: String,
 }
 
