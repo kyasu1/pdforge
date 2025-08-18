@@ -14,6 +14,7 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 - **Advanced table rendering** - Tables can span multiple pages automatically with proper pagination
 - **Text styling with borders** - Text elements support borders, backgrounds, and comprehensive styling options
 - **Flexible styling** - Comprehensive styling options for colors, borders, alignment, and spacing
+- **Schema versioning** - Templates now use `schemaVersion` field for better version management
 - **High-quality output** - Built on the robust printpdf library
 
 ## Supported Schema Types
@@ -33,7 +34,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.7.0"
+pdforge = "0.8.0"
 ```
 
 ## Quick Start
@@ -164,7 +165,7 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
       }
     ]
   },
-  "pdfmeVersion": "5.3.8"
+  "schemaVersion": "1.0.0"
 }
 ```
 
@@ -458,7 +459,7 @@ Static schemas support special template variables that are automatically populat
       }
     ]
   },
-  "pdfmeVersion": "5.3.8"
+  "schemaVersion": "1.0.0"
 }
 ```
 
@@ -653,6 +654,12 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Version 0.8.0 Changes
+
+- **Breaking Change**: Template schema version field renamed from `pdfmeVersion` to `schemaVersion`
+- All templates now use `schemaVersion: "1.0.0"` for consistency and proper version management
+- Updated to version 0.8.0 to reflect this schema format change
 
 ## Acknowledgments
 
