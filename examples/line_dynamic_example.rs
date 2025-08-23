@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let inputs = vec![vec![template_data]];
 
     // テンプレートをレンダリングしてPDFを生成
-    let bytes: Vec<u8> = pdforge.render_with_inputs("line_dynamic_template", inputs)?;
+    let bytes: Vec<u8> = pdforge.render("line_dynamic_template", inputs, None, None)?;
 
     // PDFファイルを保存
     let output_file = "./examples/pdf/line_dynamic_example.pdf";

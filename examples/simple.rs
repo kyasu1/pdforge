@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .load_template("template", template_file)?
         .build();
 
-    let bytes: Vec<u8> = pdforge.render("template")?;
+    let bytes: Vec<u8> = pdforge.render("template", vec![vec![]], None, None)?;
 
     // 出力ファイル名を元のファイル名をベースに生成
     let output_file = format!("./examples/pdf/{}.pdf", file_stem);

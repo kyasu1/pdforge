@@ -19,10 +19,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let inputs = vec![vec![HashMap::new()]];
 
     // Render PDF with static schema custom inputs
-    let pdf_bytes = pdforge.render_with_inputs_and_static_inputs(
+    let pdf_bytes = pdforge.render(
         "static-schema-custom-test",
         inputs,
-        static_inputs,
+        None,
+        Some(static_inputs),
     )?;
 
     // Save PDF

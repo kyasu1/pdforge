@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     input.insert("testImage", base64_image);
     inputs.push(input);
 
-    let bytes: Vec<u8> = pdforge.render_with_inputs("legacy-test", vec![inputs])?;
+    let bytes: Vec<u8> = pdforge.render("legacy-test", vec![inputs], None, None)?;
 
     std::fs::write("./legacy-test.pdf", bytes.clone()).unwrap();
 

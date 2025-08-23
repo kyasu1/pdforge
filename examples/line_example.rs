@@ -11,18 +11,21 @@ fn main() -> Result<(), Box<dyn Error>> {
         .build();
 
     // テンプレートをレンダリングしてPDFを生成
-    let bytes: Vec<u8> = pdforge.render("line_template")?;
+    let bytes: Vec<u8> = pdforge.render("line_template", vec![vec![]], None, None)?;
 
     // PDFファイルを保存
     let output_file = "./examples/pdf/line_example.pdf";
     std::fs::write(output_file, bytes)?;
 
-    println!("✅ Line example PDF generated successfully: {}", output_file);
+    println!(
+        "✅ Line example PDF generated successfully: {}",
+        output_file
+    );
     println!("📄 The PDF demonstrates:");
     println!("   • Basic horizontal lines with different thickness");
     println!("   • Colored lines (red, green, blue)");
     println!("   • Rotated lines (15°, 45°, 90°)");
     println!("   • Various line styles and positions");
-    
+
     Ok(())
 }

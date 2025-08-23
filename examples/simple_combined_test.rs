@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Inputs prepared: {:?}", inputs);
 
     // 新しいAPIを使ってPDF生成
-    let pdf_bytes = pdforge.render_with_inputs_and_table_data("table_test", inputs, table_data)?;
+    let pdf_bytes = pdforge.render("table_test", inputs, Some(table_data), None)?;
     println!("PDF bytes generated: {} bytes", pdf_bytes.len());
 
     // ファイルに保存

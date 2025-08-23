@@ -35,7 +35,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.8.2"
+pdforge = "0.9.0"
 ```
 
 ## Quick Start
@@ -53,8 +53,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .load_template("table-test", "./templates/table-test.json")?
         .build();
 
-    // Generate PDF
-    let bytes: Vec<u8> = pdforge.render("table-test")?;
+    // Generate PDF (empty inputs required for static templates)
+    let bytes: Vec<u8> = pdforge.render("table-test", vec![vec![]], None, None)?;
 
     // Save to file
     std::fs::write("./output.pdf", bytes)?;
@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .load_template("template", template_file)?
         .build();
 
-    let bytes: Vec<u8> = pdforge.render("template")?;
+    let bytes: Vec<u8> = pdforge.render("template", vec![vec![]], None, None)?;
 
     // Generate output filename based on input template
     let output_file = format!("{}.pdf", file_stem);
@@ -122,7 +122,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     input.insert("amount", "100,000".to_string());
 
     let inputs = vec![vec![input]];
-    let bytes: Vec<u8> = pdforge.render_with_inputs("pawn-ticket", inputs)?;
+    let bytes: Vec<u8> = pdforge.render("pawn-ticket", inputs, None, None)?;
 
     std::fs::write("./dynamic_output.pdf", bytes)?;
     Ok(())
@@ -415,7 +415,7 @@ input.insert("company_name", "Acme Corporation".to_string());
 input.insert("document_type", "Invoice".to_string());
 
 // Custom variables are available in static schemas
-let bytes = pdforge.render_with_inputs("template", vec![vec![input]])?;
+let bytes = pdforge.render("template", vec![vec![input]], None, None)?;
 ```
 
 Then reference these in your static schema:
@@ -700,6 +700,13 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Version 0.9.0
+- **Breaking Change**: Simplified render API - consolidated 7 different render methods into a single unified `render()` method
+- **New API**: `render(template_name, inputs, table_data, static_inputs)` where inputs is required, others are optional
+- **Input Validation**: Empty inputs vector now returns an error for better error handling
+- **Code Cleanup**: Removed redundant render methods from both lib.rs and schemas/mod.rs
+- **Examples Updated**: All example files updated to use the new simplified API
 
 ### Version 0.8.2
 - **Code Cleanup**: Removed unused `set_pdf_metadata` method from lib.rs for cleaner API

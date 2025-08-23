@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     table_data.insert("renewsTable".to_string(), rows);
 
     let bytes: Vec<u8> =
-        pdforge.render_with_inputs_and_table_data("print-renews", vec![inputs], table_data)?;
+        pdforge.render("print-renews", vec![inputs], Some(table_data), None)?;
     std::fs::write("./examples/pdf/print-renews.pdf", bytes.clone()).unwrap();
 
     // let updated = pdforge::PDForge::set_pdf_metadata(

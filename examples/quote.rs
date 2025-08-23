@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     table_data.insert("items".to_string(), items);
 
     let bytes: Vec<u8> =
-        pdforge.render_with_inputs_and_table_data("quote", vec![inputs], table_data)?;
+        pdforge.render("quote", vec![inputs], Some(table_data), None)?;
 
     std::fs::write("./examples/pdf/quote.pdf", bytes.clone()).unwrap();
 

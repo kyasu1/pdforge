@@ -32,11 +32,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     static_inputs.insert("confidentiality_level".to_string(), "CONFIDENTIAL".to_string());
 
     // Render PDF with all three types of inputs: page inputs, table data, and static inputs
-    let pdf_bytes = pdforge.render_with_all_inputs(
+    let pdf_bytes = pdforge.render(
         "table-with-static-simple",
         inputs,
-        table_data,
-        static_inputs,
+        Some(table_data),
+        Some(static_inputs),
     )?;
 
     // Save PDF

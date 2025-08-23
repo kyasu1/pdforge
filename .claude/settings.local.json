@@ -4,7 +4,10 @@
       "Bash(git add:*)",
       "Bash(find:*)",
       "WebSearch",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(git checkout:*)",
+      "Bash(cargo check:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

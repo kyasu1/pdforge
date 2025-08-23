@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ]);
 
     // 新しいAPIを使ってPDFを生成
-    let pdf_bytes = pdforge.render_with_table_data("table_test", table_data)?;
+    let pdf_bytes = pdforge.render("table_test", vec![vec![]], Some(table_data), None)?;
 
     // PDFファイルに書き出し
     std::fs::write("examples/pdf/table_dynamic_data.pdf", pdf_bytes)?;

@@ -14,81 +14,23 @@ pub struct PDForge {
 }
 
 impl PDForge {
-    pub fn render(&mut self, template_name: &str) -> Result<Vec<u8>, Error> {
-        match self.template_map.get(template_name) {
-            Some(template) => template.render_static(&mut self.doc, &self.font_map),
-            None => Err(Error::Whatever {
-                message: format!("Template not found: {}", template_name),
+    pub fn render(
+        &mut self,
+        template_name: &str,
+        inputs: Vec<Vec<HashMap<&'static str, String>>>,
+        table_data: Option<HashMap<String, Vec<Vec<String>>>>,
+        static_inputs: Option<HashMap<String, String>>,
+    ) -> Result<Vec<u8>, Error> {
+        if inputs.is_empty() {
+            return Err(Error::Whatever {
+                message: "Inputs cannot be empty".to_string(),
                 source: None,
-            }),
+            });
         }
-    }
 
+        let table_data = table_data.unwrap_or_default();
+        let static_inputs = static_inputs.unwrap_or_default();
 
-    pub fn render_with_inputs(
-        &mut self,
-        template_name: &str,
-        inputs: Vec<Vec<HashMap<&'static str, String>>>,
-    ) -> Result<Vec<u8>, Error> {
-        self.render_with_inputs_and_static_inputs(template_name, inputs, HashMap::new())
-    }
-
-    pub fn render_with_inputs_and_static_inputs(
-        &mut self,
-        template_name: &str,
-        inputs: Vec<Vec<HashMap<&'static str, String>>>,
-        static_inputs: HashMap<String, String>,
-    ) -> Result<Vec<u8>, Error> {
-        match self.template_map.get(template_name) {
-            Some(template) => template.render_with_static_inputs(&mut self.doc, &self.font_map, inputs, static_inputs),
-            None => Err(Error::Whatever {
-                message: format!("Template not found: {}", template_name),
-                source: None,
-            }),
-        }
-    }
-
-    pub fn render_with_table_data(
-        &mut self,
-        template_name: &str,
-        table_data: HashMap<String, Vec<Vec<String>>>,
-    ) -> Result<Vec<u8>, Error> {
-        self.render_with_table_data_and_static_inputs(template_name, table_data, HashMap::new())
-    }
-
-    pub fn render_with_table_data_and_static_inputs(
-        &mut self,
-        template_name: &str,
-        table_data: HashMap<String, Vec<Vec<String>>>,
-        static_inputs: HashMap<String, String>,
-    ) -> Result<Vec<u8>, Error> {
-        match self.template_map.get(template_name) {
-            Some(template) => {
-                template.render_with_table_data_and_static_inputs(&mut self.doc, &self.font_map, table_data, static_inputs)
-            }
-            None => Err(Error::Whatever {
-                message: format!("Template not found: {}", template_name),
-                source: None,
-            }),
-        }
-    }
-
-    pub fn render_with_inputs_and_table_data(
-        &mut self,
-        template_name: &str,
-        inputs: Vec<Vec<HashMap<&'static str, String>>>,
-        table_data: HashMap<String, Vec<Vec<String>>>,
-    ) -> Result<Vec<u8>, Error> {
-        self.render_with_all_inputs(template_name, inputs, table_data, HashMap::new())
-    }
-
-    pub fn render_with_all_inputs(
-        &mut self,
-        template_name: &str,
-        inputs: Vec<Vec<HashMap<&'static str, String>>>,
-        table_data: HashMap<String, Vec<Vec<String>>>,
-        static_inputs: HashMap<String, String>,
-    ) -> Result<Vec<u8>, Error> {
         match self.template_map.get(template_name) {
             Some(template) => template.render_with_inputs_table_data_and_static_inputs(
                 &mut self.doc,

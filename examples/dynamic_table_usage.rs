@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 従来の方法: JSONテンプレートのハードコードされたデータを使用
     println!("Generating PDF with static data...");
-    let static_pdf = pdforge.render("table_template")?;
+    let static_pdf = pdforge.render("table_template", vec![vec![]], None, None)?;
     std::fs::write("examples/pdf/static_table.pdf", static_pdf)?;
     println!("Static PDF generated: examples/pdf/static_table.pdf");
 
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ]);
 
     // 動的データを使用してPDFを生成
-    let dynamic_pdf = pdforge.render_with_table_data("table_template", table_data)?;
+    let dynamic_pdf = pdforge.render("table_template", vec![vec![]], Some(table_data), None)?;
     std::fs::write("examples/pdf/dynamic_table.pdf", dynamic_pdf)?;
     println!("Dynamic PDF generated: examples/pdf/dynamic_table.pdf");
 

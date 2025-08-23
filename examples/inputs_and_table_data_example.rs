@@ -67,7 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 両方を組み合わせてPDFを生成
     println!("Generating PDF with both template variables and dynamic table data...");
-    let pdf_bytes = pdforge.render_with_inputs_and_table_data("combined", inputs, table_data)?;
+    let pdf_bytes = pdforge.render("combined", inputs, Some(table_data), None)?;
 
     // PDFファイルに保存
     std::fs::write("examples/pdf/inputs_and_table_combined.pdf", pdf_bytes)?;

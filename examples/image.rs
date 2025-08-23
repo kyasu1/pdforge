@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     inputs.push(input);
 
-    let bytes: Vec<u8> = pdforge.render_with_inputs("image-test", vec![inputs])?;
+    let bytes: Vec<u8> = pdforge.render("image-test", vec![inputs], None, None)?;
 
     std::fs::write("./image-test.pdf", bytes.clone()).unwrap();
 
