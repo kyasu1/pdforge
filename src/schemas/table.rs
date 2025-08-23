@@ -7,10 +7,7 @@ use crate::{
     schemas::{Alignment, Error, JsonPosition},
     utils::OpBuffer,
 };
-use printpdf::{
-    Color, LinePoint, Mm, Op, PaintMode, PdfDocument, Point, Polygon, PolygonRing, Pt, Rgb,
-    WindingOrder,
-};
+use printpdf::{Color, Mm, PdfDocument, Pt, Rgb};
 use serde::Deserialize;
 use snafu::prelude::*;
 use std::cmp::max;
@@ -167,7 +164,6 @@ pub struct JsonTableSchema {
     position: JsonPosition,
     width: f32,
     height: f32,
-    content: String,
     show_head: bool,
     head_styles: JsonHeadStyles,
     head_width_percentages: Vec<JsonHead>,
@@ -206,7 +202,6 @@ pub struct Head {
 #[derive(Debug, Clone)]
 pub struct Table {
     base: BaseSchema,
-    content: String,
     show_head: bool,
     head_width_percentages: Vec<Head>,
     body_styles: BodyStyles,
@@ -218,10 +213,11 @@ pub struct Table {
 impl Table {
     fn cell_widths(&self, base_pdf: &BasePdf) -> Vec<Mm> {
         // Calculate available width considering horizontal padding
-        let available_width = (base_pdf.width - base_pdf.padding.left - base_pdf.padding.right).max(Mm(0.0));
+        let available_width =
+            (base_pdf.width - base_pdf.padding.left - base_pdf.padding.right).max(Mm(0.0));
         // Use the smaller of template width or available width
         let effective_width = self.base.width.min(available_width);
-        
+
         self.head_width_percentages
             .clone()
             .into_iter()
@@ -296,7 +292,6 @@ impl Table {
         }
         let table = Table {
             base,
-            content: json.content,
             show_head: json.show_head,
             head_width_percentages: heads,
             body_styles,
@@ -320,16 +315,18 @@ impl Table {
         let mut cols: Vec<Schema> = vec![];
         // Apply left padding to the table start position
         let mut x = self.base.x.max(base_pdf.padding.left);
-        
+
         // Ensure table doesn't exceed right padding boundary
         let max_right_x = base_pdf.width - base_pdf.padding.right;
-        let total_width: Mm = cell_widths.iter().fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
+        let total_width: Mm = cell_widths
+            .iter()
+            .fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
         if x + total_width > max_right_x {
             x = max_right_x - total_width;
             // Ensure x doesn't go below left padding
             x = x.max(base_pdf.padding.left);
         }
-        
+
         let mut max_height = Mm(0.0);
 
         for (head_index, head) in self.head_width_percentages.iter().enumerate() {
@@ -371,16 +368,18 @@ impl Table {
         let mut cols: Vec<Schema> = vec![];
         // Apply left padding to the table start position
         let mut x = self.base.x.max(base_pdf.padding.left);
-        
+
         // Ensure table doesn't exceed right padding boundary
         let max_right_x = base_pdf.width - base_pdf.padding.right;
-        let total_width: Mm = cell_widths.iter().fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
+        let total_width: Mm = cell_widths
+            .iter()
+            .fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
         if x + total_width > max_right_x {
             x = max_right_x - total_width;
             // Ensure x doesn't go below left padding
             x = x.max(base_pdf.padding.left);
         }
-        
+
         let mut max_height = Mm(0.0);
 
         for (col_index, col) in row.into_iter().enumerate() {
@@ -454,7 +453,8 @@ impl Table {
                 return Ok((current_page, None));
             }
             [head, tail @ ..] => {
-                let (cols, max_height) = self.process_row(head.clone(), y_line_mm, &cell_widths, base_pdf)?;
+                let (cols, max_height) =
+                    self.process_row(head.clone(), y_line_mm, &cell_widths, base_pdf)?;
 
                 if y_line_mm + header_height + max_height > y_bottom_mm {
                     // If the header row exceeds the page height, we need to create a new page
@@ -640,221 +640,10 @@ impl Table {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct DrawRoundedRectangle {
-    x: Mm,
-    y: Mm,
-    width: Mm,
-    height: Mm,
-    page_height: Mm,
-    color: Option<Color>,
-    border_width: Option<Mm>,
-    border_color: Option<Color>,
-    radius: Mm,
-}
-
-fn draw_rounded_rectangle(props: DrawRoundedRectangle) -> Vec<Op> {
-    if props.radius.0 > props.width.0 / 2.0 || props.radius.0 > props.height.0 / 2.0 {
-        return vec![];
-    }
-
-    const C: f32 = 0.551915024494;
-    let kappa: Mm = Mm(C * props.radius.0);
-
-    let mode = match props.color {
-        Some(_) => PaintMode::FillStroke,
-        None => PaintMode::Stroke,
-    };
-
-    let color = props.color.unwrap_or(Color::Rgb(Rgb {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
-        icc_profile: None,
-    }));
-
-    let border_color = props.border_color.unwrap_or(Color::Rgb(Rgb {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        icc_profile: None,
-    }));
-
-    let border_width = props.border_width.unwrap_or(Mm(0.1));
-
-    let bottom_y = props.page_height - props.y;
-    let top_y = bottom_y + props.height;
-    let right_x = props.x + props.width;
-
-    // start drawing from lower left corner of the box counter clockwise direction
-    let p10 = Point {
-        x: (props.x).into(),
-        y: (bottom_y + props.radius).into(),
-    };
-    let p11 = Point {
-        x: (props.x).into(),
-        y: (bottom_y + props.radius - kappa).into(),
-    };
-    let p12 = Point {
-        x: (props.x + props.radius - kappa).into(),
-        y: (bottom_y).into(),
-    };
-    let p13 = Point {
-        x: (props.x + props.radius).into(),
-        y: (bottom_y).into(),
-    };
-
-    let p20 = Point {
-        x: (right_x - props.radius).into(),
-        y: (bottom_y).into(),
-    };
-
-    let p21 = Point {
-        x: (right_x - props.radius + kappa).into(),
-        y: (bottom_y).into(),
-    };
-
-    let p22 = Point {
-        x: (right_x).into(),
-        y: (bottom_y + props.radius - kappa).into(),
-    };
-
-    let p23 = Point {
-        x: (right_x).into(),
-        y: (bottom_y + props.radius).into(),
-    };
-
-    let p30 = Point {
-        x: (right_x).into(),
-        y: (top_y - props.radius).into(),
-    };
-
-    let p31 = Point {
-        x: (right_x).into(),
-        y: (top_y - props.radius + kappa).into(),
-    };
-
-    let p32 = Point {
-        x: (right_x - props.radius + kappa).into(),
-        y: (top_y).into(),
-    };
-
-    let p33 = Point {
-        x: (right_x - props.radius).into(),
-        y: (top_y).into(),
-    };
-
-    let p40 = Point {
-        x: (props.x + props.radius).into(),
-        y: (top_y).into(),
-    };
-
-    let p41 = Point {
-        x: (props.x + props.radius - kappa).into(),
-        y: (top_y).into(),
-    };
-
-    let p42 = Point {
-        x: (props.x).into(),
-        y: (top_y - props.radius + kappa).into(),
-    };
-
-    let p43 = Point {
-        x: (props.x).into(),
-        y: (top_y - props.radius).into(),
-    };
-
-    let polygon = Polygon {
-        rings: vec![PolygonRing {
-            points: vec![
-                LinePoint {
-                    p: p10,
-                    bezier: false,
-                },
-                LinePoint {
-                    p: p11,
-                    bezier: true,
-                },
-                LinePoint {
-                    p: p12,
-                    bezier: true,
-                },
-                LinePoint {
-                    p: p13,
-                    bezier: false,
-                },
-                LinePoint {
-                    p: p20,
-                    bezier: false,
-                },
-                LinePoint {
-                    p: p21,
-                    bezier: true,
-                },
-                LinePoint {
-                    p: p22,
-                    bezier: true,
-                },
-                LinePoint {
-                    p: p23,
-                    bezier: false,
-                },
-                LinePoint {
-                    p: p30,
-                    bezier: false,
-                },
-                LinePoint {
-                    p: p31,
-                    bezier: true,
-                },
-                LinePoint {
-                    p: p32,
-                    bezier: true,
-                },
-                LinePoint {
-                    p: p33,
-                    bezier: false,
-                },
-                LinePoint {
-                    p: p40,
-                    bezier: false,
-                },
-                LinePoint {
-                    p: p41,
-                    bezier: true,
-                },
-                LinePoint {
-                    p: p42,
-                    bezier: true,
-                },
-                LinePoint {
-                    p: p43,
-                    bezier: false,
-                },
-            ],
-        }],
-        mode,
-        winding_order: WindingOrder::NonZero,
-    };
-
-    let ops: Vec<Op> = vec![
-        Op::SetOutlineColor { col: border_color },
-        Op::SetFillColor { col: color },
-        Op::SetOutlineThickness {
-            pt: border_width.into(),
-        },
-        Op::DrawPolygon {
-            polygon: polygon.clone(),
-        },
-    ];
-    ops
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::font::FontMap;
-    use std::collections::HashMap;
 
     fn create_test_font_map() -> FontMap {
         // Create an empty FontMap for testing purposes
@@ -916,7 +705,6 @@ mod tests {
             position: JsonPosition { x: 10.0, y: 50.0 },
             width: 190.0,
             height: 100.0,
-            content: "test_content".to_string(),
             show_head: true,
             head_styles: create_test_head_styles(),
             head_width_percentages: vec![
@@ -954,7 +742,7 @@ mod tests {
     fn test_head_styles_from_json() {
         let json = create_test_head_styles();
         let result = HeadStyles::from_json(json);
-        
+
         assert!(result.is_ok());
         let head_styles = result.unwrap();
         assert_eq!(head_styles.font_size, Pt(12.0));
@@ -970,7 +758,7 @@ mod tests {
     fn test_body_styles_from_json() {
         let json = create_test_body_styles();
         let result = BodyStyles::from_json(json);
-        
+
         assert!(result.is_ok());
         let body_styles = result.unwrap();
         assert_eq!(body_styles.font_size, Pt(10.0));
@@ -984,7 +772,7 @@ mod tests {
     fn test_body_styles_invalid_color() {
         let mut json = create_test_body_styles();
         json.font_color = "invalid_color".to_string();
-        
+
         let result = BodyStyles::from_json(json);
         assert!(result.is_err());
     }
@@ -993,7 +781,7 @@ mod tests {
     fn test_table_styles_from_json() {
         let json = create_test_table_styles();
         let result = TableStyles::from_json(json);
-        
+
         assert!(result.is_ok());
         let table_styles = result.unwrap();
         assert_eq!(table_styles.border_width, Mm(0.3));
@@ -1003,7 +791,7 @@ mod tests {
     fn test_table_styles_invalid_color() {
         let mut json = create_test_table_styles();
         json.border_color = "invalid_color".to_string();
-        
+
         let result = TableStyles::from_json(json);
         assert!(result.is_err());
     }
@@ -1014,50 +802,13 @@ mod tests {
         // Make percentages not add up to 100%
         json.head_width_percentages[0].percent = 40.0;
         json.head_width_percentages[1].percent = 40.0; // Total = 80%, not 100%
-        
+
         let font_map = create_test_font_map();
         let result = Table::from_json(json, &font_map);
-        
+
         assert!(result.is_err());
         let error_message = format!("{}", result.unwrap_err());
         assert!(error_message.contains("total of column width must be 100%"));
-    }
-
-    #[test]
-    fn test_draw_rounded_rectangle_valid_radius() {
-        let props = DrawRoundedRectangle {
-            x: Mm(10.0),
-            y: Mm(20.0),
-            width: Mm(100.0),
-            height: Mm(50.0),
-            page_height: Mm(297.0),
-            color: Some(Color::Rgb(Rgb { r: 1.0, g: 0.0, b: 0.0, icc_profile: None })),
-            border_width: Some(Mm(1.0)),
-            border_color: Some(Color::Rgb(Rgb { r: 0.0, g: 0.0, b: 0.0, icc_profile: None })),
-            radius: Mm(5.0),
-        };
-
-        let ops = draw_rounded_rectangle(props);
-        assert!(!ops.is_empty());
-        assert_eq!(ops.len(), 4); // SetOutlineColor, SetFillColor, SetOutlineThickness, DrawPolygon
-    }
-
-    #[test]
-    fn test_draw_rounded_rectangle_invalid_radius() {
-        let props = DrawRoundedRectangle {
-            x: Mm(10.0),
-            y: Mm(20.0),
-            width: Mm(100.0),
-            height: Mm(50.0),
-            page_height: Mm(297.0),
-            color: Some(Color::Rgb(Rgb { r: 1.0, g: 0.0, b: 0.0, icc_profile: None })),
-            border_width: Some(Mm(1.0)),
-            border_color: Some(Color::Rgb(Rgb { r: 0.0, g: 0.0, b: 0.0, icc_profile: None })),
-            radius: Mm(60.0), // Too large radius
-        };
-
-        let ops = draw_rounded_rectangle(props);
-        assert!(ops.is_empty()); // Should return empty when radius is invalid
     }
 
     #[test]
