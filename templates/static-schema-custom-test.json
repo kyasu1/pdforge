@@ -1,0 +1,79 @@
+{
+  "schemas": [
+    [
+      {
+        "name": "title",
+        "type": "text",
+        "content": "PDF Document Title",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "width": 120,
+        "height": 20,
+        "fontSize": 18,
+        "fontName": "NotoSansJP-Regular"
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "content": "This is a sample document to test custom static schema variables.",
+        "position": {
+          "x": 50,
+          "y": 80
+        },
+        "width": 150,
+        "height": 30,
+        "fontSize": 12,
+        "fontName": "NotoSansJP-Regular"
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [10, 10, 10, 10],
+    "staticSchema": [
+      {
+        "name": "custom_header",
+        "type": "text",
+        "content": "{{company_name}} - {{document_type}}",
+        "position": {
+          "x": 50,
+          "y": 20
+        },
+        "width": 120,
+        "height": 15,
+        "fontSize": 14,
+        "fontName": "NotoSansJP-Regular"
+      },
+      {
+        "name": "page_info",
+        "type": "text",
+        "content": "Page {{currentPage}} of {{totalPages}} | Generated: {{date}}",
+        "position": {
+          "x": 50,
+          "y": 270
+        },
+        "width": 120,
+        "height": 15,
+        "fontSize": 10,
+        "fontName": "NotoSansJP-Regular"
+      },
+      {
+        "name": "author",
+        "type": "text",
+        "content": "Created by: {{author_name}}",
+        "position": {
+          "x": 130,
+          "y": 20
+        },
+        "width": 60,
+        "height": 15,
+        "fontSize": 10,
+        "fontName": "NotoSansJP-Regular"
+      }
+    ]
+  },
+  "schemaVersion": "1.0.0"
+}

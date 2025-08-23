@@ -343,8 +343,12 @@ impl Template {
         Ok(Vec::new())
     }
 
-    // Create context with special variables
-    fn create_special_context(current_page: usize, total_pages: usize) -> tera::Context {
+    // Create context with special variables and custom static inputs
+    fn create_special_context(
+        current_page: usize, 
+        total_pages: usize, 
+        static_inputs: &HashMap<String, String>
+    ) -> tera::Context {
         let mut context = tera::Context::new();
         context.insert("currentPage", &(current_page + 1)); // 1-based page numbering
         context.insert("totalPages", &total_pages);
@@ -357,22 +361,28 @@ impl Template {
         context.insert("date", &now.format(&date_format).unwrap_or_default());
         context.insert("dateTime", &now.format(&datetime_format).unwrap_or_default());
         
+        // Add custom static inputs
+        for (key, value) in static_inputs {
+            context.insert(key, value);
+        }
+        
         context
     }
 
-    // Render static schemas with special variables
+    // Render static schemas with special variables and custom inputs
     fn render_static_schemas_for_page(
         &self,
         font_map: &FontMap,
         current_page: usize,
         total_pages: usize,
+        static_inputs: &HashMap<String, String>,
     ) -> Result<Vec<Schema>, Error> {
         if self.static_schema_json.is_empty() {
             return Ok(Vec::new());
         }
 
-        // Create context with special variables
-        let context = Self::create_special_context(current_page, total_pages);
+        // Create context with special variables and custom inputs
+        let context = Self::create_special_context(current_page, total_pages, static_inputs);
         
         // Serialize the static schema JSON for template processing
         let json_string = serde_json::to_string(&self.static_schema_json)
@@ -455,6 +465,16 @@ impl Template {
         doc: &mut PdfDocument,
         font_map: &FontMap,
     ) -> Result<Vec<u8>, Error> {
+        self.render_static_with_static_inputs(doc, font_map, HashMap::new())
+    }
+
+    // inputsがない場合でstatic_inputsがある場合のrender関数
+    pub fn render_static_with_static_inputs(
+        &self,
+        doc: &mut PdfDocument,
+        font_map: &FontMap,
+        static_inputs: HashMap<String, String>,
+    ) -> Result<Vec<u8>, Error> {
         let mut schemas: Vec<Vec<Schema>> = Vec::new();
 
         // 各ページのschemaを直接変換（テンプレート処理なし）
@@ -505,7 +525,7 @@ impl Template {
             schemas.push(converted);
         }
 
-        self.render_schemas(font_map, doc, schemas)
+        self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs)
     }
 
     // inputsがある場合のrender関数
@@ -514,6 +534,16 @@ impl Template {
         doc: &mut PdfDocument,
         font_map: &FontMap,
         inputs: Vec<Vec<HashMap<&'static str, String>>>,
+    ) -> Result<Vec<u8>, Error> {
+        self.render_with_static_inputs(doc, font_map, inputs, HashMap::new())
+    }
+
+    pub fn render_with_static_inputs(
+        &self,
+        doc: &mut PdfDocument,
+        font_map: &FontMap,
+        inputs: Vec<Vec<HashMap<&'static str, String>>>,
+        static_inputs: HashMap<String, String>,
     ) -> Result<Vec<u8>, Error> {
         if inputs.len() != self.schemas.len() {
             return Err(Error::Whatever {
@@ -600,7 +630,7 @@ impl Template {
             schemas.extend(converted);
         }
 
-        self.render_schemas(font_map, doc, schemas)
+        self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs)
     }
 
     // テーブルデータを動的に注入するrender関数
@@ -609,6 +639,17 @@ impl Template {
         doc: &mut PdfDocument,
         font_map: &FontMap,
         table_data: HashMap<String, Vec<Vec<String>>>,
+    ) -> Result<Vec<u8>, Error> {
+        self.render_with_table_data_and_static_inputs(doc, font_map, table_data, HashMap::new())
+    }
+
+    // テーブルデータとstatic_inputsを動的に注入するrender関数
+    pub fn render_with_table_data_and_static_inputs(
+        &self,
+        doc: &mut PdfDocument,
+        font_map: &FontMap,
+        table_data: HashMap<String, Vec<Vec<String>>>,
+        static_inputs: HashMap<String, String>,
     ) -> Result<Vec<u8>, Error> {
         let mut schemas: Vec<Vec<Schema>> = Vec::new();
 
@@ -664,7 +705,7 @@ impl Template {
             schemas.push(converted);
         }
 
-        self.render_schemas(font_map, doc, schemas)
+        self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs)
     }
 
     // inputsとテーブルデータの両方を使用するrender関数
@@ -674,6 +715,18 @@ impl Template {
         font_map: &FontMap,
         inputs: Vec<Vec<HashMap<&'static str, String>>>,
         table_data: HashMap<String, Vec<Vec<String>>>,
+    ) -> Result<Vec<u8>, Error> {
+        self.render_with_inputs_table_data_and_static_inputs(doc, font_map, inputs, table_data, HashMap::new())
+    }
+
+    // inputsとテーブルデータ、staticInputsをすべて使用するrender関数
+    pub fn render_with_inputs_table_data_and_static_inputs(
+        &self,
+        doc: &mut PdfDocument,
+        font_map: &FontMap,
+        inputs: Vec<Vec<HashMap<&'static str, String>>>,
+        table_data: HashMap<String, Vec<Vec<String>>>,
+        static_inputs: HashMap<String, String>,
     ) -> Result<Vec<u8>, Error> {
         if inputs.len() != self.schemas.len() {
             return Err(Error::Whatever {
@@ -778,7 +831,7 @@ impl Template {
             schemas.extend(converted);
         }
 
-        self.render_schemas(font_map, doc, schemas)
+        self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs)
     }
 
     // 共通のレンダリング処理
@@ -787,6 +840,17 @@ impl Template {
         font_map: &FontMap,
         mut doc: &mut PdfDocument,
         schemas: Vec<Vec<Schema>>,
+    ) -> Result<Vec<u8>, Error> {
+        self.render_schemas_with_static_inputs(font_map, doc, schemas, HashMap::new())
+    }
+
+    // static inputs対応の共通レンダリング処理
+    fn render_schemas_with_static_inputs(
+        &self,
+        font_map: &FontMap,
+        mut doc: &mut PdfDocument,
+        schemas: Vec<Vec<Schema>>,
+        static_inputs: HashMap<String, String>,
     ) -> Result<Vec<u8>, Error> {
         let mut buffer = OpBuffer::default();
         let mut current_page = 0;
@@ -836,7 +900,7 @@ impl Template {
         
         // Add static schemas to each page
         for page_idx in 0..actual_page_count {
-            let static_schemas = self.render_static_schemas_for_page(font_map, page_idx, actual_page_count)?;
+            let static_schemas = self.render_static_schemas_for_page(font_map, page_idx, actual_page_count, &static_inputs)?;
             for static_schema in static_schemas {
                 match static_schema {
                     Schema::Text(mut obj) => {

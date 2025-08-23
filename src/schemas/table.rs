@@ -167,7 +167,6 @@ pub struct JsonTableSchema {
     position: JsonPosition,
     width: f32,
     height: f32,
-    content: String,
     show_head: bool,
     head_styles: JsonHeadStyles,
     head_width_percentages: Vec<JsonHead>,
@@ -206,7 +205,6 @@ pub struct Head {
 #[derive(Debug, Clone)]
 pub struct Table {
     base: BaseSchema,
-    content: String,
     show_head: bool,
     head_width_percentages: Vec<Head>,
     body_styles: BodyStyles,
@@ -296,7 +294,6 @@ impl Table {
         }
         let table = Table {
             base,
-            content: json.content,
             show_head: json.show_head,
             head_width_percentages: heads,
             body_styles,
@@ -916,7 +913,6 @@ mod tests {
             position: JsonPosition { x: 10.0, y: 50.0 },
             width: 190.0,
             height: 100.0,
-            content: "test_content".to_string(),
             show_head: true,
             head_styles: create_test_head_styles(),
             head_width_percentages: vec![
