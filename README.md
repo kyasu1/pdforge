@@ -35,7 +35,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.8.1"
+pdforge = "0.8.2"
 ```
 
 ## Quick Start
@@ -700,6 +700,10 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Version 0.8.2
+- **Code Cleanup**: Removed unused `set_pdf_metadata` method from lib.rs for cleaner API
+- **Maintenance**: Code simplification and cleanup
 
 ### Version 0.8.1
 - **Custom Variable Support**: Static schemas now support custom input variables for dynamic content
