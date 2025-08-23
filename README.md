@@ -7,6 +7,7 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 - **Template-based PDF generation** - Define PDF layouts using JSON templates
 - **Multiple content types** - Support for text, dynamic text, tables, images, QR codes, SVG graphics, and rectangles
 - **Static schema support** - Add headers, footers, and page elements that appear on all pages
+- **Custom variable support** - Static schemas support custom input variables for dynamic content
 - **Special template variables** - Built-in support for page numbering, dates, and timestamps
 - **Font management** - Easy font loading and management with support for Japanese fonts (Noto Sans JP, Noto Serif JP)
 - **Dynamic content** - Template rendering with variable substitution using Tera templating engine
@@ -34,7 +35,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.8.0"
+pdforge = "0.8.1"
 ```
 
 ## Quick Start
@@ -353,6 +354,10 @@ The Group schema allows you to:
 
 PDForge supports **static schemas** that appear on every page of your PDF. This is perfect for headers, footers, page numbers, and other recurring elements.
 
+### Custom Variables in Static Schema
+
+Static schemas now support custom input variables, allowing you to pass dynamic data that appears on every page. This is useful for document titles, company names, or other metadata that should be consistent across all pages.
+
 ### Basic Static Schema
 
 ```json
@@ -397,6 +402,40 @@ Static schemas support special template variables that are automatically populat
 - **`{{totalPages}}`** - Total number of pages in the document
 - **`{{date}}`** - Current date in YYYY-MM-DD format
 - **`{{dateTime}}`** - Current date and time in YYYY-MM-DD HH:MM:SS format
+
+### Custom Variable Support
+
+In addition to special variables, static schemas can also use custom variables from your input data. These variables are passed through the `render_with_inputs` method and can be referenced in static schema content:
+
+```rust
+use std::collections::HashMap;
+
+let mut input: HashMap<&'static str, String> = HashMap::new();
+input.insert("company_name", "Acme Corporation".to_string());
+input.insert("document_type", "Invoice".to_string());
+
+// Custom variables are available in static schemas
+let bytes = pdforge.render_with_inputs("template", vec![vec![input]])?;
+```
+
+Then reference these in your static schema:
+
+```json
+{
+  "staticSchema": [
+    {
+      "type": "text", 
+      "name": "company_header",
+      "content": "{{company_name}} - {{document_type}}",
+      "position": { "x": 20, "y": 10 },
+      "width": 170,
+      "height": 15,
+      "fontSize": 16,
+      "fontName": "NotoSansJP"
+    }
+  ]
+}
+```
 
 ### Complete Static Schema Example
 
@@ -487,6 +526,8 @@ cargo run --example simple templates/multi-table-fixed.json
 
 # Static schema examples
 cargo run --example simple templates/static-schema-test.json
+cargo run --example static_schema_custom_test  # Custom variables in static schema
+cargo run --example table_with_static_test     # Table with static elements
 cargo run --example print-renews  # Multi-page table with static headers/footers
 
 # Image examples
@@ -517,6 +558,9 @@ cargo run --bin pdforge templates/static-schema-test.json
   - Inventory management table (57 rows) across pages 3-4
 - **`multi-table-fixed.json`** - 3-page document with multiple separate tables
 - **`static-schema-test.json`** - Demonstrates static schema with page numbering and timestamps
+- **`static-schema-custom-test.json`** - Demonstrates static schema with custom variables
+- **`table-with-static-test.json`** - Shows table content with static headers and custom variables
+- **`table-with-static-simple.json`** - Simplified example of tables with static elements
 - **`print-renews.json`** - Multi-page table with comprehensive static headers and footers
 - **`multipage.json`** - Multi-page document example
 - **`tiger-svg.json`** - SVG graphics example
@@ -655,8 +699,15 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Version 0.8.0 Changes
+## Recent Changes
 
+### Version 0.8.1
+- **Custom Variable Support**: Static schemas now support custom input variables for dynamic content
+- **Code Organization**: Moved `DrawRoundedRectangle` utility from table.rs to rect.rs for better modularity
+- **Schema Cleanup**: Removed unused table content field to simplify schema structure
+- **New Examples**: Added examples demonstrating custom variable functionality with static schemas
+
+### Version 0.8.0
 - **Breaking Change**: Template schema version field renamed from `pdfmeVersion` to `schemaVersion`
 - All templates now use `schemaVersion: "1.0.0"` for consistency and proper version management
 - Updated to version 0.8.0 to reflect this schema format change
