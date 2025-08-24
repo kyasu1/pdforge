@@ -61,29 +61,19 @@ pub enum Error {
     },
 
     #[snafu(display("Font parsing error: {message}"))]
-    FontParsing {
-        message: String,
-    },
+    FontParsing { message: String },
 
     #[snafu(display("Template loading error: {message}"))]
-    TemplateLoading {
-        message: String,
-    },
+    TemplateLoading { message: String },
 
     #[snafu(display("Image decoding error: {message}"))]
-    ImageDecoding {
-        message: String,
-    },
+    ImageDecoding { message: String },
 
     #[snafu(display("Image encoding error: {message}"))]
-    ImageEncoding {
-        message: String,
-    },
+    ImageEncoding { message: String },
 
     #[snafu(display("QR code generation error: {message}"))]
-    QrCodeGeneration {
-        message: String,
-    },
+    QrCodeGeneration { message: String },
 
     #[snafu(display("Color parsing error: {message}"))]
     ColorParsing {
@@ -337,7 +327,9 @@ impl Template {
     }
 
     // Parse static schemas from JSON (placeholder - actual parsing happens during rendering)
-    fn parse_static_schemas(_static_schema_json: &[serde_json::Value]) -> Result<Vec<Schema>, Error> {
+    fn parse_static_schemas(
+        _static_schema_json: &[serde_json::Value],
+    ) -> Result<Vec<Schema>, Error> {
         // We don't pre-parse static schemas since they need template processing with special variables
         // The actual parsing happens in render_static_schemas_for_page
         Ok(Vec::new())
@@ -345,27 +337,33 @@ impl Template {
 
     // Create context with special variables and custom static inputs
     fn create_special_context(
-        current_page: usize, 
-        total_pages: usize, 
-        static_inputs: &HashMap<String, String>
+        current_page: usize,
+        total_pages: usize,
+        static_inputs: &HashMap<&'static str, String>,
     ) -> tera::Context {
         let mut context = tera::Context::new();
         context.insert("currentPage", &(current_page + 1)); // 1-based page numbering
         context.insert("totalPages", &total_pages);
-        
+
         // Add date and dateTime using time crate
-        let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+        let now =
+            time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
         let date_format = time::format_description::parse("[year]-[month]-[day]").unwrap();
-        let datetime_format = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
-        
+        let datetime_format =
+            time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
+                .unwrap();
+
         context.insert("date", &now.format(&date_format).unwrap_or_default());
-        context.insert("dateTime", &now.format(&datetime_format).unwrap_or_default());
-        
+        context.insert(
+            "dateTime",
+            &now.format(&datetime_format).unwrap_or_default(),
+        );
+
         // Add custom static inputs
         for (key, value) in static_inputs {
-            context.insert(key, value);
+            context.insert(*key, value);
         }
-        
+
         context
     }
 
@@ -375,7 +373,7 @@ impl Template {
         font_map: &FontMap,
         current_page: usize,
         total_pages: usize,
-        static_inputs: &HashMap<String, String>,
+        static_inputs: &HashMap<&'static str, String>,
     ) -> Result<Vec<Schema>, Error> {
         if self.static_schema_json.is_empty() {
             return Ok(Vec::new());
@@ -383,10 +381,10 @@ impl Template {
 
         // Create context with special variables and custom inputs
         let context = Self::create_special_context(current_page, total_pages, static_inputs);
-        
+
         // Serialize the static schema JSON for template processing
-        let json_string = serde_json::to_string(&self.static_schema_json)
-            .map_err(|e| Error::Whatever {
+        let json_string =
+            serde_json::to_string(&self.static_schema_json).map_err(|e| Error::Whatever {
                 message: "Failed to serialize static schema JSON".to_string(),
                 source: Some(Box::new(e)),
             })?;
@@ -399,15 +397,16 @@ impl Template {
                 source: Some(Box::new(e)),
             })?;
 
-        let rendered = tera.render("static_schema_template", &context)
+        let rendered = tera
+            .render("static_schema_template", &context)
             .map_err(|e| Error::Whatever {
                 message: "Failed to render static schema template".to_string(),
                 source: Some(Box::new(e)),
             })?;
 
         // Parse the rendered JSON back to schemas
-        let json_schemas: Vec<JsonSchema> = serde_json::from_str(&rendered)
-            .map_err(|e| Error::TemplateDeserialize {
+        let json_schemas: Vec<JsonSchema> =
+            serde_json::from_str(&rendered).map_err(|e| Error::TemplateDeserialize {
                 source: e,
                 message: "Failed to parse rendered static schemas".to_string(),
             })?;
@@ -417,32 +416,36 @@ impl Template {
             .into_iter()
             .map(|schema| -> Result<Schema, Error> {
                 match schema {
-                    JsonSchema::Text(json) => {
-                        Ok(Schema::Text(Text::from_json(json, font_map)?))
-                    }
+                    JsonSchema::Text(json) => Ok(Schema::Text(Text::from_json(json, font_map)?)),
                     JsonSchema::DynamicText(json) => Ok(Schema::DynamicText(
                         dynamic_text::DynamicText::from_json(json, font_map)?,
                     )),
-                    JsonSchema::Table(json) => {
-                        Ok(Schema::Table(Table::from_json(json, font_map)?))
-                    }
+                    JsonSchema::Table(json) => Ok(Schema::Table(Table::from_json(json, font_map)?)),
                     JsonSchema::QrCode(json) => Ok(json.into()),
-                    JsonSchema::Image(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                        schema_type: "Image".to_string(),
-                        source: Box::new(e),
-                    })?),
-                    JsonSchema::Svg(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                        schema_type: "Svg".to_string(),
-                        source: Box::new(e),
-                    })?),
-                    JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                        schema_type: "Rectangle".to_string(),
-                        source: Box::new(e),
-                    })?),
-                    JsonSchema::Line(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                        schema_type: "Line".to_string(),
-                        source: Box::new(e),
-                    })?),
+                    JsonSchema::Image(json) => {
+                        Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Image".to_string(),
+                            source: Box::new(e),
+                        })?)
+                    }
+                    JsonSchema::Svg(json) => {
+                        Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Svg".to_string(),
+                            source: Box::new(e),
+                        })?)
+                    }
+                    JsonSchema::Rectangle(json) => {
+                        Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Rectangle".to_string(),
+                            source: Box::new(e),
+                        })?)
+                    }
+                    JsonSchema::Line(json) => {
+                        Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                            schema_type: "Line".to_string(),
+                            source: Box::new(e),
+                        })?)
+                    }
                     JsonSchema::Group(json) => {
                         Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                     }
@@ -473,7 +476,7 @@ impl Template {
         &self,
         doc: &mut PdfDocument,
         font_map: &FontMap,
-        static_inputs: HashMap<String, String>,
+        static_inputs: HashMap<&'static str, String>,
     ) -> Result<Vec<u8>, Error> {
         let mut schemas: Vec<Vec<Schema>> = Vec::new();
 
@@ -499,22 +502,30 @@ impl Template {
                             Ok(Schema::Table(Table::from_json(json, font_map)?))
                         }
                         JsonSchema::QrCode(json) => Ok(json.into()),
-                        JsonSchema::Image(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                            schema_type: "Image".to_string(),
-                            source: Box::new(e),
-                        })?),
-                        JsonSchema::Svg(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                            schema_type: "Svg".to_string(),
-                            source: Box::new(e),
-                        })?),
-                        JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                            schema_type: "Rectangle".to_string(),
-                            source: Box::new(e),
-                        })?),
-                        JsonSchema::Line(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                            schema_type: "Line".to_string(),
-                            source: Box::new(e),
-                        })?),
+                        JsonSchema::Image(json) => {
+                            Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                schema_type: "Image".to_string(),
+                                source: Box::new(e),
+                            })?)
+                        }
+                        JsonSchema::Svg(json) => {
+                            Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                schema_type: "Svg".to_string(),
+                                source: Box::new(e),
+                            })?)
+                        }
+                        JsonSchema::Rectangle(json) => {
+                            Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                schema_type: "Rectangle".to_string(),
+                                source: Box::new(e),
+                            })?)
+                        }
+                        JsonSchema::Line(json) => {
+                            Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                schema_type: "Line".to_string(),
+                                source: Box::new(e),
+                            })?)
+                        }
                         JsonSchema::Group(json) => {
                             Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                         }
@@ -534,8 +545,8 @@ impl Template {
         doc: &mut PdfDocument,
         font_map: &FontMap,
         inputs: Vec<Vec<HashMap<&'static str, String>>>,
-        table_data: HashMap<String, Vec<Vec<String>>>,
-        static_inputs: HashMap<String, String>,
+        table_data: HashMap<&'static str, Vec<Vec<String>>>,
+        static_inputs: HashMap<&'static str, String>,
     ) -> Result<Vec<u8>, Error> {
         if inputs.len() != self.schemas.len() {
             return Err(Error::Whatever {
@@ -547,10 +558,11 @@ impl Template {
         let mut schemas: Vec<Vec<Schema>> = Vec::new();
 
         for (index, group) in inputs.iter().enumerate() {
-            let json_schema = serde_json::to_string(&self.schemas[index]).map_err(|e| Error::Whatever {
-                message: "Failed to serialize schema to JSON".to_string(),
-                source: Some(Box::new(e)),
-            })?;
+            let json_schema =
+                serde_json::to_string(&self.schemas[index]).map_err(|e| Error::Whatever {
+                    message: "Failed to serialize schema to JSON".to_string(),
+                    source: Some(Box::new(e)),
+                })?;
 
             // Teraを使ってテンプレートをレンダリングする
             let mut tera = tera::Tera::default();
@@ -561,32 +573,35 @@ impl Template {
                 })?;
 
             let mut json_schemas: Vec<Vec<JsonSchema>> = Vec::new();
-            
+
             // groupが空の場合も、1つのページとして処理する
             let page_inputs = if group.is_empty() {
-                vec![HashMap::new()]  // 空のHashMapを作成
+                vec![HashMap::new()] // 空のHashMapを作成
             } else {
                 group.clone()
             };
-            
+
             for input in page_inputs {
                 let mut context = tera::Context::new();
                 for (key, value) in input.iter() {
                     context.insert(*key, value);
                 }
-                let rendered = tera.render("schema_template", &context).map_err(|e| Error::Whatever {
-                    message: "Failed to render template".to_string(),
-                    source: Some(Box::new(e)),
-                })?;
-                let mut parsed: Vec<JsonSchema> = serde_json::from_str(&rendered).map_err(|e| Error::TemplateDeserialize {
-                    source: e,
-                    message: "Failed to parse rendered template".to_string(),
-                })?;
+                let rendered =
+                    tera.render("schema_template", &context)
+                        .map_err(|e| Error::Whatever {
+                            message: "Failed to render template".to_string(),
+                            source: Some(Box::new(e)),
+                        })?;
+                let mut parsed: Vec<JsonSchema> =
+                    serde_json::from_str(&rendered).map_err(|e| Error::TemplateDeserialize {
+                        source: e,
+                        message: "Failed to parse rendered template".to_string(),
+                    })?;
 
                 // テーブルデータを動的に注入
                 for schema in &mut parsed {
                     if let JsonSchema::Table(ref mut table_json) = schema {
-                        if let Some(data) = table_data.get(&table_json.name) {
+                        if let Some(data) = table_data.get(table_json.name.as_str()) {
                             table_json.fields = data.clone();
                         }
                     }
@@ -612,22 +627,30 @@ impl Template {
                                     Ok(Schema::Table(Table::from_json(json, font_map)?))
                                 }
                                 JsonSchema::QrCode(json) => Ok(json.into()),
-                                JsonSchema::Image(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                                    schema_type: "Image".to_string(),
-                                    source: Box::new(e),
-                                })?),
-                                JsonSchema::Svg(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                                    schema_type: "Svg".to_string(),
-                                    source: Box::new(e),
-                                })?),
-                                JsonSchema::Rectangle(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                                    schema_type: "Rectangle".to_string(),
-                                    source: Box::new(e),
-                                })?),
-                                JsonSchema::Line(json) => Ok(json.try_into().map_err(|e| Error::SchemaConversion {
-                                    schema_type: "Line".to_string(),
-                                    source: Box::new(e),
-                                })?),
+                                JsonSchema::Image(json) => {
+                                    Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                        schema_type: "Image".to_string(),
+                                        source: Box::new(e),
+                                    })?)
+                                }
+                                JsonSchema::Svg(json) => {
+                                    Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                        schema_type: "Svg".to_string(),
+                                        source: Box::new(e),
+                                    })?)
+                                }
+                                JsonSchema::Rectangle(json) => {
+                                    Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                        schema_type: "Rectangle".to_string(),
+                                        source: Box::new(e),
+                                    })?)
+                                }
+                                JsonSchema::Line(json) => {
+                                    Ok(json.try_into().map_err(|e| Error::SchemaConversion {
+                                        schema_type: "Line".to_string(),
+                                        source: Box::new(e),
+                                    })?)
+                                }
                                 JsonSchema::Group(json) => {
                                     Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                                 }
@@ -659,7 +682,7 @@ impl Template {
         font_map: &FontMap,
         mut doc: &mut PdfDocument,
         schemas: Vec<Vec<Schema>>,
-        static_inputs: HashMap<String, String>,
+        static_inputs: HashMap<&'static str, String>,
     ) -> Result<Vec<u8>, Error> {
         let mut buffer = OpBuffer::default();
         let mut current_page = 0;
@@ -706,10 +729,15 @@ impl Template {
         // Now we know the actual number of pages, add static schemas to each page
         let actual_page_count = buffer.buffer.len();
         println!("Total pages generated: {}", actual_page_count);
-        
+
         // Add static schemas to each page
         for page_idx in 0..actual_page_count {
-            let static_schemas = self.render_static_schemas_for_page(font_map, page_idx, actual_page_count, &static_inputs)?;
+            let static_schemas = self.render_static_schemas_for_page(
+                font_map,
+                page_idx,
+                actual_page_count,
+                &static_inputs,
+            )?;
             for static_schema in static_schemas {
                 match static_schema {
                     Schema::Text(mut obj) => {
@@ -719,7 +747,8 @@ impl Template {
                         // For static schemas, we render directly to the specific page
                         let mut temp_current_page = page_idx;
                         let mut temp_y = None;
-                        let _ = obj.render(&self.base_pdf, temp_current_page, temp_y, &mut buffer)?;
+                        let _ =
+                            obj.render(&self.base_pdf, temp_current_page, temp_y, &mut buffer)?;
                     }
                     Schema::Table(mut obj) => {
                         // For static schemas, we render directly to the specific page

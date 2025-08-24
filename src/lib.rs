@@ -18,8 +18,8 @@ impl PDForge {
         &mut self,
         template_name: &str,
         inputs: Vec<Vec<HashMap<&'static str, String>>>,
-        table_data: Option<HashMap<String, Vec<Vec<String>>>>,
-        static_inputs: Option<HashMap<String, String>>,
+        table_data: Option<HashMap<&'static str, Vec<Vec<String>>>>,
+        static_inputs: Option<HashMap<&'static str, String>>,
     ) -> Result<Vec<u8>, Error> {
         if inputs.is_empty() {
             return Err(Error::Whatever {

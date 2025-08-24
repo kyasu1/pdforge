@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut table_data = HashMap::new();
-    table_data.insert("renewsTable".to_string(), rows);
+    table_data.insert("renewsTable", rows);
 
     let bytes: Vec<u8> =
         pdforge.render("print-renews", vec![inputs], Some(table_data), None)?;

@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // テーブルデータ
     let mut table_data = HashMap::new();
     table_data.insert(
-        "field1".to_string(),
+        "field1",
         vec![
             vec![
                 "名前".to_string(),

@@ -35,7 +35,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.9.0"
+pdforge = "0.9.1"
 ```
 
 ## Quick Start
@@ -700,6 +700,16 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Version 0.9.1
+- **Breaking Change**: HashMap keys changed to `&'static str` for improved performance and memory efficiency
+- **API Update**: All HashMap parameters now use `&'static str` keys instead of `String` keys:
+  - `inputs: Vec<Vec<HashMap<&'static str, String>>>`
+  - `table_data: HashMap<&'static str, Vec<Vec<String>>>`
+  - `static_inputs: HashMap<&'static str, String>`
+- **Performance Improvement**: Reduced memory allocation and improved lookup performance
+- **Examples Updated**: All example files updated to use `&'static str` keys
+- **Type Safety**: Compile-time string literal validation for HashMap keys
 
 ### Version 0.9.0
 - **Breaking Change**: Simplified render API - consolidated 7 different render methods into a single unified `render()` method

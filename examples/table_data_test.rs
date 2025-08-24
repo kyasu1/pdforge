@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 動的なテーブルデータを準備
     let mut table_data = HashMap::new();
-    table_data.insert("field1".to_string(), vec![
+    table_data.insert("field1", vec![
         vec!["Alice".to_string(), "Tokyo".to_string(), "Software Engineer".to_string(), "Bob".to_string(), "Osaka".to_string(), "Designer".to_string(), "120,000円".to_string()],
         vec!["Charlie".to_string(), "Kyoto".to_string(), "Product Manager".to_string(), "Diana".to_string(), "Fukuoka".to_string(), "Analyst".to_string(), "95,000円".to_string()],
         vec!["Eve".to_string(), "Sendai".to_string(), "Data Scientist".to_string(), "Frank".to_string(), "Hiroshima".to_string(), "Consultant".to_string(), "110,000円".to_string()],

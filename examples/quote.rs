@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut table_data = HashMap::new();
-    table_data.insert("items".to_string(), items);
+    table_data.insert("items", items);
 
     let bytes: Vec<u8> =
         pdforge.render("quote", vec![inputs], Some(table_data), None)?;

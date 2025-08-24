@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // "field1"という名前のテーブルにデータを注入
     // この例では、社員情報テーブルを作成
-    table_data.insert("field1".to_string(), vec![
+    table_data.insert("field1", vec![
         // ヘッダー行
         vec![
             "名前".to_string(), 
