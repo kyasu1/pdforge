@@ -1,0 +1,99 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "group1",
+                "type": "group",
+                "position": {
+                    "x": 26.5,
+                    "y": 6.5
+                },
+                "width": 42,
+                "height": 29,
+                "rotate": 90,
+                "schemas": [
+                    {
+                        "name": "content",
+                        "type": "text",
+                        "position": {
+                            "x": 0,
+                            "y": 1
+                        },
+                        "required": false,
+                        "content": "{{content}}",
+                        "width": 42,
+                        "height": 14,
+                        "alignment": "left",
+                        "verticalAlignment": "middle",
+                        "fontSize": {
+                            "min": 6,
+                            "max": 12,
+                            "fit": "horizontal"
+                        },
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "inventoryId",
+                        "type": "text",
+                        "position": {
+                            "x": 14,
+                            "y": 20
+                        },
+                        "required": false,
+                        "content": "{{inventoryId}}",
+                        "width": 28,
+                        "height": 5,
+                        "alignment": "center",
+                        "verticalAlignment": "top",
+                        "fontSize": 11,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#FFFFFF",
+                        "fontName": "NotoSansJP",
+                        "backgroundColor": "#000000",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "qrCode",
+                        "type": "qrCode",
+                        "position": {
+                            "x": 0,
+                            "y": 15
+                        },
+                        "required": false,
+                        "content": "{{qrCode}}",
+                        "width": 14,
+                        "height": 14,
+                        "rotate": 0,
+                        "alignment": "center",
+                        "verticalAlignment": "top",
+                        "fontSize": 24,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSans",
+                        "opacity": 1,
+                        "readOnly": false
+                    }
+                ]
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 62,
+        "height": 42,
+        "padding": [
+            0,
+            0,
+            0,
+            0
+        ]
+    },
+    "schemaVersion": "5.3.5"
+}
