@@ -434,3 +434,181 @@ impl FontMap {
         self.map.get(font_name)
     }
 }
+
+// Line breaking constants for Japanese typography rules
+const LINE_START_FORBIDDEN_CHARS_JA: &[char] = &[
+    // 句読点 (punctuation)
+    '、', '。', ',', '.',
+    // 閉じカッコ類 (closing brackets)
+    '」', '』', ')', '}', '】', '>', '≫', ']',
+    // 記号 (symbols)
+    '・', 'ー', '―', '-',
+    // 約物 (punctuation marks)
+    '!', '！', '?', '？', ':', '：', ';', '；', '/', '／',
+    // 繰り返し記号 (iteration marks)
+    'ゝ', '々', '〃',
+    // 拗音・促音（小書きのかな） (small kana)
+    'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'っ', 'ゃ', 'ゅ', 'ょ',
+    'ァ', 'ィ', 'ゥ', 'ェ', 'ォ', 'ッ', 'ャ', 'ュ', 'ョ',
+];
+
+const LINE_END_FORBIDDEN_CHARS_JA: &[char] = &[
+    // 始め括弧類 (opening brackets)
+    '「', '『', '（', '｛', '【', '＜', '≪', '［',
+    '〘', '〖', '〝', '\'', '"', '｟', '«',
+];
+
+// Line breaking constants for German typography rules
+const LINE_END_FORBIDDEN_CHARS_DE: &[char] = &[
+    '-', '–', '—', '(', '[', '{', '„', '"', '\'',
+];
+
+const LINE_START_FORBIDDEN_CHARS_DE: &[char] = &[
+    '.', ',', '!', '?', ':', ';', ')', ']', '}',
+    '"', '"', '"', '\'',
+];
+
+/// Generic function to filter lines to prevent forbidden characters at line start
+/// Processes lines in reverse order to handle character movement properly
+pub fn filter_start_forbidden_chars(lines: Vec<String>, forbidden_chars: &[char]) -> Vec<String> {
+    let mut filtered: Vec<String> = Vec::new();
+    let mut char_to_append: Option<char> = None;
+
+    // Process lines in reverse order
+    for line in lines.iter().rev() {
+        if line.trim().is_empty() {
+            filtered.push(String::new());
+        } else {
+            let chars: Vec<char> = line.chars().collect();
+            if chars.is_empty() {
+                continue;
+            }
+            
+            let char_at_start = chars[0];
+            
+            if forbidden_chars.contains(&char_at_start) {
+                if line.trim().len() == 1 {
+                    // Single character line - keep it as is
+                    filtered.push(line.clone());
+                    char_to_append = None;
+                } else {
+                    // Multi-character line - remove first character
+                    let remaining_line: String = chars[1..].iter().collect();
+                    if let Some(append_char) = char_to_append {
+                        filtered.push(format!("{}{}", remaining_line, append_char));
+                    } else {
+                        filtered.push(remaining_line);
+                    }
+                    char_to_append = Some(char_at_start);
+                }
+            } else {
+                // Not a forbidden character
+                if let Some(append_char) = char_to_append {
+                    filtered.push(format!("{}{}", line, append_char));
+                    char_to_append = None;
+                } else {
+                    filtered.push(line.clone());
+                }
+            }
+        }
+    }
+
+    // Handle leftover character
+    if let Some(append_char) = char_to_append {
+        if !filtered.is_empty() {
+            let first_item = &filtered[0];
+            let combined_item = format!("{}{}", append_char, first_item);
+            filtered[0] = combined_item;
+        } else {
+            filtered.push(append_char.to_string());
+        }
+    }
+
+    // Reverse back to original order
+    filtered.reverse();
+    filtered
+}
+
+/// Generic function to filter lines to prevent forbidden characters at line end
+/// Processes lines in forward order
+pub fn filter_end_forbidden_chars(lines: Vec<String>, forbidden_chars: &[char]) -> Vec<String> {
+    let mut filtered: Vec<String> = Vec::new();
+    let mut char_to_prepend: Option<char> = None;
+
+    // Process lines in forward order
+    for line in lines.iter() {
+        if line.trim().is_empty() {
+            filtered.push(String::new());
+        } else {
+            let chars: Vec<char> = line.chars().collect();
+            if chars.is_empty() {
+                continue;
+            }
+            
+            let char_at_end = chars[chars.len() - 1];
+            
+            if forbidden_chars.contains(&char_at_end) {
+                if line.trim().len() == 1 {
+                    // Single character line - keep it as is
+                    filtered.push(line.clone());
+                    char_to_prepend = None;
+                } else {
+                    // Multi-character line - remove last character
+                    let remaining_line: String = chars[..chars.len() - 1].iter().collect();
+                    if let Some(prepend_char) = char_to_prepend {
+                        filtered.push(format!("{}{}", prepend_char, remaining_line));
+                    } else {
+                        filtered.push(remaining_line);
+                    }
+                    char_to_prepend = Some(char_at_end);
+                }
+            } else {
+                // Not a forbidden character
+                if let Some(prepend_char) = char_to_prepend {
+                    filtered.push(format!("{}{}", prepend_char, line));
+                    char_to_prepend = None;
+                } else {
+                    filtered.push(line.clone());
+                }
+            }
+        }
+    }
+
+    // Handle leftover character
+    if let Some(prepend_char) = char_to_prepend {
+        if !filtered.is_empty() {
+            let last_index = filtered.len() - 1;
+            let last_item = &filtered[last_index];
+            let combined_item = format!("{}{}", last_item, prepend_char);
+            filtered[last_index] = combined_item;
+        } else {
+            filtered.push(prepend_char.to_string());
+        }
+    }
+
+    filtered
+}
+
+/// Japanese line start forbidden characters processing (行頭禁則)
+/// Prevents certain characters from appearing at the beginning of lines
+pub fn filter_start_jp(lines: Vec<String>) -> Vec<String> {
+    filter_start_forbidden_chars(lines, LINE_START_FORBIDDEN_CHARS_JA)
+}
+
+/// Japanese line end forbidden characters processing (行末禁則)
+/// Prevents certain characters from appearing at the end of lines
+pub fn filter_end_jp(lines: Vec<String>) -> Vec<String> {
+    filter_end_forbidden_chars(lines, LINE_END_FORBIDDEN_CHARS_JA)
+}
+
+/// German line start forbidden characters processing
+/// Prevents certain characters from appearing at the beginning of lines
+pub fn filter_start_de(lines: Vec<String>) -> Vec<String> {
+    filter_start_forbidden_chars(lines, LINE_START_FORBIDDEN_CHARS_DE)
+}
+
+/// German line end forbidden characters processing
+/// Prevents certain characters from appearing at the end of lines
+pub fn filter_end_de(lines: Vec<String>) -> Vec<String> {
+    filter_end_forbidden_chars(lines, LINE_END_FORBIDDEN_CHARS_DE)
+}
