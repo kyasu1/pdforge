@@ -3,9 +3,15 @@ use icu_segmenter::WordSegmenter;
 use printpdf::*;
 use serde::Deserialize;
 use snafu::prelude::*;
+use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+
+// Thread-local WordSegmenter instance cached for performance
+thread_local! {
+    static WORD_SEGMENTER: RefCell<WordSegmenter> = RefCell::new(WordSegmenter::new_auto());
+}
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -36,7 +42,7 @@ pub trait FontSpecTrait {
 
     fn width_of_text_at_size(
         &self,
-        text: String,
+        text: &str,
         font_size: Pt,
         character_spacing: Pt,
     ) -> Result<Pt, Error>;
@@ -81,49 +87,45 @@ impl FontSpec {
 
         for segment in segments.iter() {
             let text_width: Pt =
-                self.width_of_text_at_size(segment.clone(), font_size, character_spacing)?;
+                self.width_of_text_at_size(segment, font_size, character_spacing)?;
 
             if current_text_size + text_width <= box_width {
-                match lines.get(line_count) {
-                    Some(current) => {
-                        lines[line_count] = format!("{}{}", current, segment);
-                        current_text_size = current_text_size + text_width + character_spacing
-                    }
-                    None => {
-                        lines.push(String::from(segment));
-                        current_text_size = text_width + character_spacing
-                    }
+                if let Some(current_line) = lines.get_mut(line_count) {
+                    current_line.push_str(segment);
+                    current_text_size = current_text_size + text_width + character_spacing
+                } else {
+                    lines.push(segment.to_string());
+                    current_text_size = text_width + character_spacing
                 }
             } else if segment.is_empty() {
                 line_count += 1;
-                lines.push(String::from(""));
+                lines.push(String::new());
                 current_text_size = Pt(0.0);
             } else if text_width <= box_width {
                 line_count += 1;
-                lines.push(String::from(segment));
+                lines.push(segment.to_string());
                 current_text_size = text_width + character_spacing;
             } else {
-                for char in segment.chars() {
+                let mut char_buf = [0u8; 4];
+                for c in segment.chars() {
+                    let char_str = c.encode_utf8(&mut char_buf);
                     let size = self.width_of_text_at_size(
-                        char.clone().to_string(),
+                        char_str,
                         font_size,
                         character_spacing,
                     )?;
 
                     if current_text_size + size <= box_width {
-                        match lines.get(line_count) {
-                            Some(current) => {
-                                lines[line_count] = format!("{}{}", current, char);
-                                current_text_size = current_text_size + size + character_spacing;
-                            }
-                            None => {
-                                lines.push(char.to_string());
-                                current_text_size = size + character_spacing;
-                            }
+                        if let Some(current_line) = lines.get_mut(line_count) {
+                            current_line.push(c);
+                            current_text_size = current_text_size + size + character_spacing;
+                        } else {
+                            lines.push(c.to_string());
+                            current_text_size = size + character_spacing;
                         }
                     } else {
                         line_count += 1;
-                        lines.push(char.to_string());
+                        lines.push(c.to_string());
                         current_text_size = size + character_spacing;
                     }
                 }
@@ -134,8 +136,9 @@ impl FontSpec {
     }
 
     fn split_text_by_segmenter(paragraph: String) -> Vec<String> {
-        let segmenter = WordSegmenter::new_auto();
-        let breakpoints: Vec<usize> = segmenter.segment_str(&paragraph).collect();
+        let breakpoints: Vec<usize> = WORD_SEGMENTER.with(|segmenter| {
+            segmenter.borrow().segment_str(&paragraph).collect()
+        });
 
         let mut segments: Vec<String> = vec![];
         let mut last_breakpoint = 0;
@@ -173,8 +176,9 @@ impl FontSpec {
 
         for (line_index, line) in splitted_paragraphs.into_iter().enumerate() {
             if dynamic.is_fit_vertical() {
+                let cleaned_line = line.replace("\n", "");
                 let text_width = self.width_of_text_at_size(
-                    line.replace("\n", ""),
+                    &cleaned_line,
                     font_size,
                     character_spacing,
                 )?;
@@ -189,7 +193,7 @@ impl FontSpec {
 
             if dynamic.is_fit_horizontal() {
                 let text_width =
-                    self.width_of_text_at_size(line.to_string(), font_size, character_spacing)?;
+                    self.width_of_text_at_size(&line, font_size, character_spacing)?;
 
                 total_width_in_mm = max(total_width_in_mm, text_width.into());
             }
@@ -293,12 +297,12 @@ impl FontSpecTrait for FontSpec {
 
     fn width_of_text_at_size(
         &self,
-        text: String,
+        text: &str,
         font_size: Pt,
         character_spacing: Pt,
     ) -> Result<Pt, Error> {
         let percentage_font_scaling = 1000.0 / (self.font.font_metrics.units_per_em as f32);
-        
+
         // TOFU (replacement character) width - use a reasonable default based on font size
         let tofu_width = 500.0; // Units in font metrics
 

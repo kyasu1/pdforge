@@ -169,6 +169,20 @@ impl Schema {
             Schema::Group(group) => group.get_base(),
         }
     }
+
+    pub fn get_base_copy(&self) -> BaseSchema {
+        match self {
+            Schema::Text(text) => text.clone().get_base(),
+            Schema::DynamicText(text) => text.clone().get_base(),
+            Schema::Table(_) => panic!("Table does not support get_base_copy"),
+            Schema::QrCode(qr_code) => qr_code.clone().get_base(),
+            Schema::Image(image) => image.clone().get_base(),
+            Schema::Svg(svg) => svg.clone().get_base(),
+            Schema::Rect(rect) => rect.clone().get_base(),
+            Schema::Line(line) => line.clone().get_base(),
+            Schema::Group(group) => group.clone().get_base(),
+        }
+    }
 }
 
 impl SchemaTrait for Schema {

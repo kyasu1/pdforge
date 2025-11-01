@@ -331,9 +331,6 @@ impl Table {
 
         for (head_index, head) in self.head_width_percentages.iter().enumerate() {
             let mut text = head.text.clone();
-            let height = text.get_height()?;
-
-            max_height = max(max_height, height);
 
             text.set_x(x);
             text.set_y(y_line_mm);
@@ -383,10 +380,11 @@ impl Table {
         let mut max_height = Mm(0.0);
 
         for (col_index, col) in row.into_iter().enumerate() {
-            let schema = self.columns[col_index].clone();
+            let schema = &self.columns[col_index];
             let cell_width = cell_widths[col_index];
-            match schema.clone() {
-                Schema::Text(mut text) => {
+            match schema {
+                Schema::Text(text) => {
+                    let mut text = text.clone();
                     text.set_x(x);
                     text.set_y(y_line_mm);
                     text.set_width(cell_width);
@@ -399,14 +397,15 @@ impl Table {
 
                     cols.push(Schema::Text(text));
                 }
-                Schema::QrCode(mut qr_code) => {
+                Schema::QrCode(qr_code) => {
+                    let mut qr_code = qr_code.clone();
                     max_height = max_height.max(qr_code.get_height());
 
                     let bounding_box = BoundingBox {
-                        x: x,
+                        x,
                         y: y_line_mm,
                         width: cell_width,
-                        height: max_height.clone(),
+                        height: max_height,
                     };
 
                     qr_code.set_bounding_box(bounding_box);
@@ -610,8 +609,8 @@ impl Table {
                     })
                 };
 
-                for (col_index, schema) in rows.into_iter().enumerate() {
-                    let base = schema.clone().get_base();
+                for (col_index, schema) in rows.iter().enumerate() {
+                    let base = schema.get_base_copy();
 
                     let width = cell_widths[col_index];
                     let rect = DrawRectangle {
