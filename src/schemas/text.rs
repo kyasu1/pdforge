@@ -284,7 +284,7 @@ impl Text {
                     self.character_spacing
                 } else {
                     self.character_spacing
-                        + FontSpec::calculate_character_spacing(line.to_string(), residual).into()
+                        + FontSpec::calculate_character_spacing(line, residual).into()
                 }
             }
             _ => self.character_spacing,

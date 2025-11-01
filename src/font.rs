@@ -65,11 +65,31 @@ impl FontSpec {
         Self { font: font.clone() }
     }
 
-    pub fn calculate_character_spacing(text: String, residual: Mm) -> Mm {
+    pub fn calculate_character_spacing(text: &str, residual: Mm) -> Mm {
         use icu_segmenter::GraphemeClusterSegmenter;
-        let segmenter = GraphemeClusterSegmenter::new();
-        let len = segmenter.segment_str(&text).count() as f32;
-        residual / len
+
+        // Early return for empty text
+        if text.is_empty() {
+            return Mm(0.0);
+        }
+
+        // Use thread-local segmenter to avoid repeated initialization
+        thread_local! {
+            static GRAPHEME_SEGMENTER: std::cell::RefCell<GraphemeClusterSegmenter> =
+                std::cell::RefCell::new(GraphemeClusterSegmenter::new());
+        }
+
+        let char_count = GRAPHEME_SEGMENTER.with(|segmenter| {
+            segmenter.borrow().segment_str(text).count()
+        });
+
+        // For justify alignment, distribute space between characters
+        // If we have N characters, we have N-1 gaps between them
+        if char_count <= 1 {
+            return Mm(0.0);
+        }
+
+        residual / (char_count - 1) as f32
     }
 
     fn get_splitted_lines_by_segmenter(
@@ -83,50 +103,67 @@ impl FontSpec {
 
         let mut lines: Vec<String> = vec![];
         let mut line_count: usize = 0;
-        let mut current_text_size = Pt(0.0);
 
         for segment in segments.iter() {
+            // Skip empty segments
+            if segment.is_empty() {
+                continue;
+            }
+
             let text_width: Pt =
                 self.width_of_text_at_size(segment, font_size, character_spacing)?;
 
-            if current_text_size + text_width <= box_width {
-                if let Some(current_line) = lines.get_mut(line_count) {
-                    current_line.push_str(segment);
-                    current_text_size = current_text_size + text_width + character_spacing
-                } else {
-                    lines.push(segment.to_string());
-                    current_text_size = text_width + character_spacing
-                }
-            } else if segment.is_empty() {
-                line_count += 1;
-                lines.push(String::new());
-                current_text_size = Pt(0.0);
-            } else if text_width <= box_width {
-                line_count += 1;
-                lines.push(segment.to_string());
-                current_text_size = text_width + character_spacing;
-            } else {
-                let mut char_buf = [0u8; 4];
-                for c in segment.chars() {
-                    let char_str = c.encode_utf8(&mut char_buf);
-                    let size = self.width_of_text_at_size(
-                        char_str,
-                        font_size,
-                        character_spacing,
-                    )?;
+            // Try to add to current line
+            if let Some(current_line) = lines.get_mut(line_count) {
+                if !current_line.is_empty() {
+                    // Calculate combined width
+                    let combined = format!("{}{}", current_line, segment);
+                    let combined_width = self.width_of_text_at_size(&combined, font_size, character_spacing)?;
 
-                    if current_text_size + size <= box_width {
-                        if let Some(current_line) = lines.get_mut(line_count) {
-                            current_line.push(c);
-                            current_text_size = current_text_size + size + character_spacing;
-                        } else {
-                            lines.push(c.to_string());
-                            current_text_size = size + character_spacing;
+                    if combined_width <= box_width {
+                        *current_line = combined;
+                        continue;
+                    }
+                }
+            }
+
+            // Start new line if segment fits
+            if text_width <= box_width {
+                if lines.get(line_count).map_or(false, |l| !l.is_empty()) {
+                    line_count += 1;
+                }
+                if lines.len() <= line_count {
+                    lines.push(segment.to_string());
+                } else {
+                    lines[line_count] = segment.to_string();
+                }
+            } else {
+                // Segment is too wide, split character by character
+                for c in segment.chars() {
+                    let char_str = c.to_string();
+
+                    // Try to add to current line
+                    if let Some(current_line) = lines.get_mut(line_count) {
+                        if !current_line.is_empty() {
+                            let mut combined = current_line.clone();
+                            combined.push(c);
+                            let combined_width = self.width_of_text_at_size(&combined, font_size, character_spacing)?;
+
+                            if combined_width <= box_width {
+                                *current_line = combined;
+                                continue;
+                            }
                         }
-                    } else {
+                    }
+
+                    // Start new line
+                    if lines.get(line_count).map_or(false, |l| !l.is_empty()) {
                         line_count += 1;
-                        lines.push(c.to_string());
-                        current_text_size = size + character_spacing;
+                    }
+                    if lines.len() <= line_count {
+                        lines.push(char_str);
+                    } else {
+                        lines[line_count] = char_str;
                     }
                 }
             }
@@ -136,23 +173,19 @@ impl FontSpec {
     }
 
     fn split_text_by_segmenter(paragraph: String) -> Vec<String> {
-        let breakpoints: Vec<usize> = WORD_SEGMENTER.with(|segmenter| {
-            segmenter.borrow().segment_str(&paragraph).collect()
+        let mut segments: Vec<String> = Vec::new();
+        let mut last_breakpoint = 0;
+
+        WORD_SEGMENTER.with(|segmenter| {
+            for breakpoint in segmenter.borrow().segment_str(&paragraph) {
+                if last_breakpoint > 0 || breakpoint > 0 {
+                    segments.push(paragraph[last_breakpoint..breakpoint].to_string());
+                }
+                last_breakpoint = breakpoint;
+            }
         });
 
-        let mut segments: Vec<String> = vec![];
-        let mut last_breakpoint = 0;
-        for breakpoint in breakpoints {
-            segments.push(paragraph[last_breakpoint..breakpoint].to_string());
-            last_breakpoint = breakpoint;
-        }
-
-        if segments.is_empty() {
-            vec![]
-        } else {
-            segments.remove(0);
-            segments
-        }
+        segments
     }
 
     fn calculate_constraints(
@@ -170,32 +203,35 @@ impl FontSpec {
         let first_line_text_height: Pt = self.height_of_font_at_size(font_size);
         let first_line_height_in_mm: Mm = (first_line_text_height * line_height).into();
         let other_row_height_in_mm: Mm = (font_size * line_height).into();
-        let character_spacing = character_spacing;
         let splitted_paragraphs =
-            self.split_text_to_size(content, font_size, width.clone().into(), character_spacing)?;
+            self.split_text_to_size(content, font_size, width.into(), character_spacing)?;
+
+        let needs_width = dynamic.is_fit_vertical() || dynamic.is_fit_horizontal();
 
         for (line_index, line) in splitted_paragraphs.into_iter().enumerate() {
-            if dynamic.is_fit_vertical() {
-                let cleaned_line = line.replace("\n", "");
+            // Calculate width only once if needed
+            if needs_width {
+                // Remove trailing newline if present
+                let line_to_measure = if line.ends_with('\n') {
+                    &line[..line.len() - 1]
+                } else {
+                    &line
+                };
+
                 let text_width = self.width_of_text_at_size(
-                    &cleaned_line,
+                    line_to_measure,
                     font_size,
                     character_spacing,
                 )?;
 
                 total_width_in_mm = max(total_width_in_mm, text_width.into());
             }
+
+            // Calculate height
             if line_index == 0 {
                 total_height_in_mm += first_line_height_in_mm;
             } else {
                 total_height_in_mm += other_row_height_in_mm;
-            }
-
-            if dynamic.is_fit_horizontal() {
-                let text_width =
-                    self.width_of_text_at_size(&line, font_size, character_spacing)?;
-
-                total_width_in_mm = max(total_width_in_mm, text_width.into());
             }
         }
 
@@ -217,12 +253,12 @@ impl FontSpecTrait for FontSpec {
     ) -> Result<Vec<String>, Error> {
         let mut splitted_paragraphs: Vec<Vec<String>> = Vec::new();
 
-        for paragraph in content.lines().collect::<Vec<&str>>() {
+        for paragraph in content.lines() {
             let lines = self.get_splitted_lines_by_segmenter(
                 String::from(paragraph),
-                font_size.clone(),
+                font_size,
                 box_width.into(),
-                character_spacing.clone(),
+                character_spacing,
             )?;
             splitted_paragraphs.push(lines);
         }
@@ -301,28 +337,41 @@ impl FontSpecTrait for FontSpec {
         font_size: Pt,
         character_spacing: Pt,
     ) -> Result<Pt, Error> {
+        // Early return for empty text
+        if text.is_empty() {
+            return Ok(Pt(0.0));
+        }
+
         let percentage_font_scaling = 1000.0 / (self.font.font_metrics.units_per_em as f32);
 
         // TOFU (replacement character) width - use a reasonable default based on font size
         let tofu_width = 500.0; // Units in font metrics
 
-        let standard_sizes: Vec<f32> = text
-            .chars()
-            .map(|char| {
-                if char == ' ' {
-                    self.font.space_width.unwrap_or(0) as f32 * percentage_font_scaling
-                } else {
-                    self.font
-                        .lookup_glyph_index(char as u32)
-                        .map(|glyph_index| self.font.get_horizontal_advance(glyph_index))
-                        .map(|width| (width as f32) * percentage_font_scaling)
-                        .unwrap_or(tofu_width * percentage_font_scaling) // Use TOFU width if glyph not found
-                }
-            })
-            .collect();
+        let mut total_width = 0.0_f32;
+        let mut char_count = 0_usize;
 
-        let scaled = standard_sizes.into_iter().sum::<f32>() * (font_size.0 as f32) / 1000.0;
-        let additional_spacing = ((text.chars().count() - 1) as f32) * character_spacing.0;
+        for char in text.chars() {
+            let glyph_width = if char == ' ' {
+                self.font.space_width.unwrap_or(0) as f32 * percentage_font_scaling
+            } else {
+                self.font
+                    .lookup_glyph_index(char as u32)
+                    .map(|glyph_index| self.font.get_horizontal_advance(glyph_index))
+                    .map(|width| (width as f32) * percentage_font_scaling)
+                    .unwrap_or(tofu_width * percentage_font_scaling) // Use TOFU width if glyph not found
+            };
+
+            total_width += glyph_width;
+            char_count += 1;
+        }
+
+        let scaled = total_width * (font_size.0 as f32) / 1000.0;
+        let additional_spacing = if char_count > 1 {
+            ((char_count - 1) as f32) * character_spacing.0
+        } else {
+            0.0
+        };
+
         Ok(Pt(scaled + additional_spacing))
     }
 }
