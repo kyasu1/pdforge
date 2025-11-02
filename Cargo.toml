@@ -13,7 +13,7 @@ lopdf = "0.37.0"
 palette = "0.7.6"
 #printpdf = { version = "0.8", features = ["bmp", "png", "jpeg"]}
 #printpdf = { git = "https://github.com/kyasu1/printpdf", rev="86649854ea27ef47fc2ca432da28e7163a87d8e7", features = ["bmp", "png", "jpeg"]}
-printpdf = { git = "https://github.com/fschutt/printpdf" }
+printpdf = { git = "https://github.com/fschutt/printpdf", features = ["bmp", "png", "jpeg"] }
 qrcode = "0.14.1"
 serde = { version = "1.0.217", features = ["derive", "serde_derive"] }
 serde_json = "1.0.139"
