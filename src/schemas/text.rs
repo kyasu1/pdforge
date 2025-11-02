@@ -215,7 +215,7 @@ impl Text {
         for (index, line) in splitted_paragraphs.iter().enumerate() {
             let line_width: Mm = self
                 .font_spec
-                .width_of_text_at_size(line.clone(), font_size, self.character_spacing)
+                .width_of_text_at_size(line, font_size, self.character_spacing)
                 .context(FontSnafu)?
                 .into();
 
@@ -284,7 +284,7 @@ impl Text {
                     self.character_spacing
                 } else {
                     self.character_spacing
-                        + FontSpec::calculate_character_spacing(line.to_string(), residual).into()
+                        + FontSpec::calculate_character_spacing(line, residual).into()
                 }
             }
             _ => self.character_spacing,
@@ -522,7 +522,7 @@ mod tests {
 
         fn width_of_text_at_size(
             &self,
-            _text: String,
+            _text: &str,
             _font_size: Pt,
             _character_spacing: Pt,
         ) -> Result<Pt, crate::font::Error> {

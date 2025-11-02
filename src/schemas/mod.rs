@@ -169,6 +169,20 @@ impl Schema {
             Schema::Group(group) => group.get_base(),
         }
     }
+
+    pub fn get_base_copy(&self) -> BaseSchema {
+        match self {
+            Schema::Text(text) => text.clone().get_base(),
+            Schema::DynamicText(text) => text.clone().get_base(),
+            Schema::Table(_) => panic!("Table does not support get_base_copy"),
+            Schema::QrCode(qr_code) => qr_code.clone().get_base(),
+            Schema::Image(image) => image.clone().get_base(),
+            Schema::Svg(svg) => svg.clone().get_base(),
+            Schema::Rect(rect) => rect.clone().get_base(),
+            Schema::Line(line) => line.clone().get_base(),
+            Schema::Group(group) => group.clone().get_base(),
+        }
+    }
 }
 
 impl SchemaTrait for Schema {
@@ -692,15 +706,18 @@ impl Template {
         for (page_index, page) in schemas.iter().enumerate() {
             println!("Rendering page {}", page_index + 1);
             for schema in page {
-                match schema.clone() {
-                    Schema::Text(mut obj) => {
+                match schema {
+                    Schema::Text(obj) => {
+                        let mut obj = obj.clone();
                         obj.render(self.base_pdf.height, page_index, &mut buffer)?;
                     }
-                    Schema::DynamicText(mut obj) => {
+                    Schema::DynamicText(obj) => {
+                        let mut obj = obj.clone();
                         (current_page, y) =
                             obj.render(&self.base_pdf, current_page, y, &mut buffer)?;
                     }
-                    Schema::Table(mut obj) => {
+                    Schema::Table(obj) => {
+                        let mut obj = obj.clone();
                         (current_page, y) =
                             obj.render(&self.base_pdf, doc, page_index, y, &mut buffer)?;
                     }
@@ -719,7 +736,8 @@ impl Template {
                     Schema::Line(obj) => {
                         obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
                     }
-                    Schema::Group(mut obj) => {
+                    Schema::Group(obj) => {
+                        let mut obj = obj.clone();
                         obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?;
                     }
                 }
@@ -781,7 +799,7 @@ impl Template {
         let mut pages: Vec<PdfPage> = Vec::new();
 
         for ops in buffer.buffer {
-            let page = PdfPage::new(self.base_pdf.width, self.base_pdf.height, ops.to_vec());
+            let page = PdfPage::new(self.base_pdf.width, self.base_pdf.height, ops);
             pages.push(page)
         }
 

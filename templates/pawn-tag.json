@@ -1,0 +1,179 @@
+{
+    "schemas": [
+        [
+            {
+                "name": "box",
+                "type": "rectangle",
+                "position": {
+                    "x": 2.5,
+                    "y": 30.5
+                },
+                "width": 90,
+                "height": 29,
+                "rotate": 90,
+                "borderColor": "#FF3399",
+                "color": "#FFFFFF"
+            },
+            {
+                "name": "group1",
+                "type": "group",
+                "position": {
+                    "x": 2.5,
+                    "y": 30.5
+                },
+                "width": 90,
+                "height": 29,
+                "rotate": 90,
+                "schemas": [
+                    {
+                        "name": "name",
+                        "type": "text",
+                        "position": {
+                            "x": 14,
+                            "y": 0
+                        },
+                        "required": false,
+                        "content": "{{name}}",
+                        "width": 70,
+                        "height": 6.5,
+                        "alignment": "left",
+                        "verticalAlignment": "middle",
+                        "fontSize": {
+                            "min": 10,
+                            "max": 18,
+                            "fit": "vertical"
+                        },
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "amount",
+                        "type": "text",
+                        "position": {
+                            "x": 14,
+                            "y": 8
+                        },
+                        "required": false,
+                        "content": " {{amount}}円",
+                        "width": 40,
+                        "height": 10,
+                        "alignment": "left",
+                        "fontSize": 18,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "desc",
+                        "type": "text",
+                        "position": {
+                            "x": 14,
+                            "y": 18
+                        },
+                        "required": false,
+                        "content": " {{desc}}",
+                        "width": 75,
+                        "height": 8,
+                        "alignment": "left",
+                        "verticalAlignment": "top",
+                        "fontSize": {
+                            "min": 6,
+                            "max": 12,
+                            "fit": "horizontal"
+                        },
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "qrCode",
+                        "type": "qrCode",
+                        "position": {
+                            "x": 75,
+                            "y": 0
+                        },
+                        "required": false,
+                        "content": "{{qrCode}}",
+                        "width": 14,
+                        "height": 14,
+                        "rotate": 0,
+                        "alignment": "center",
+                        "verticalAlignment": "top",
+                        "fontSize": 24,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSans",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "pawnDate",
+                        "type": "text",
+                        "position": {
+                            "x": -5,
+                            "y": 12.5
+                        },
+                        "rotate": 270,
+                        "required": false,
+                        "content": " {{pawnDate}}",
+                        "width": 29,
+                        "height": 6,
+                        "alignment": "left",
+                        "fontSize": 14,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#FFFFFF",
+                        "fontName": "NotoSansJP",
+                        "backgroundColor": "#000000",
+                        "opacity": 1,
+                        "readOnly": false
+                    },
+                    {
+                        "name": "pawnSequence",
+                        "type": "text",
+                        "position": {
+                            "x": -10,
+                            "y": 12.5
+                        },
+                        "rotate": 270,
+                        "required": false,
+                        "content": "{{pawnSequence}}",
+                        "width": 29,
+                        "height": 4,
+                        "alignment": "center",
+                        "verticalAlignment": "middle",
+                        "fontSize": 14,
+                        "lineHeight": 1,
+                        "characterSpacing": 0,
+                        "fontColor": "#000000",
+                        "fontName": "NotoSansJP",
+                        "opacity": 1,
+                        "readOnly": false
+                    }
+                ]
+            }
+        ]
+    ],
+    "basePdf": {
+        "width": 62,
+        "height": 90,
+        "padding": [
+            0,
+            0,
+            0,
+            0
+        ]
+    },
+    "schemaVersion": "5.3.5"
+}
