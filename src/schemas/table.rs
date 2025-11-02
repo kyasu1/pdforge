@@ -11,7 +11,6 @@ use printpdf::{Color, Mm, PdfDocument, Pt, Rgb};
 use serde::Deserialize;
 use snafu::prelude::*;
 use std::cmp::max;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -306,6 +305,71 @@ impl Table {
         self.base
     }
 
+    /// Render a row immediately to the buffer (memory-efficient approach)
+    fn render_row_immediately(
+        &self,
+        schemas: Vec<Schema>,
+        visual_row_index: usize,
+        cell_widths: &[Mm],
+        base_pdf: &BasePdf,
+        page_index: usize,
+        doc: &mut PdfDocument,
+        buffer: &mut OpBuffer,
+    ) -> Result<(), Error> {
+        // Determine background color based on visual_row_index
+        let color = if visual_row_index % 2 == 1 {
+            // Odd rows use alternate_background_color if available
+            match &self.body_styles.alternate_background_color {
+                Some(alt_color) => Color::Rgb(Rgb {
+                    r: alt_color.r as f32,
+                    g: alt_color.g as f32,
+                    b: alt_color.b as f32,
+                    icc_profile: None,
+                }),
+                None => Color::Rgb(Rgb {
+                    r: self.body_styles.background_color.r as f32,
+                    g: self.body_styles.background_color.g as f32,
+                    b: self.body_styles.background_color.b as f32,
+                    icc_profile: None,
+                }),
+            }
+        } else {
+            // Even rows use background_color
+            Color::Rgb(Rgb {
+                r: self.body_styles.background_color.r as f32,
+                g: self.body_styles.background_color.g as f32,
+                b: self.body_styles.background_color.b as f32,
+                icc_profile: None,
+            })
+        };
+
+        // Render each cell in the row
+        for (col_index, schema) in schemas.iter().enumerate() {
+            let base = schema.get_base_copy();
+            let width = cell_widths[col_index];
+
+            // Draw background rectangle
+            let rect = DrawRectangle {
+                x: base.x,
+                y: base.y,
+                width,
+                height: base.height,
+                rotate: None,
+                page_height: base_pdf.height,
+                color: Some(color.clone()),
+                border_width: Some(self.table_styles.border_width),
+                border_color: None,
+            };
+            let ops = draw_rectangle(rect);
+            buffer.insert(page_index, ops);
+
+            // Render cell content
+            schema.render(base_pdf.height, doc, page_index, buffer)?;
+        }
+
+        Ok(())
+    }
+
     fn create_header_row(
         &self,
         y_line_mm: Mm,
@@ -437,7 +501,8 @@ impl Table {
         let mut y_line_mm: Mm = y_top_mm;
         let cell_widths = self.cell_widths(base_pdf);
 
-        let mut pages: HashMap<usize, Vec<Vec<Schema>>> = HashMap::new();
+        // Track row index for alternating background colors (0-indexed, header is not counted)
+        let mut visual_row_index: usize = 0;
 
         let (header_row, header_height) = if self.show_head {
             let header = self.create_header_row(top_margin_in_mm, &cell_widths, base_pdf)?;
@@ -489,20 +554,32 @@ impl Table {
 
                 y_line_mm += max_height;
 
-                let head_and_first = match updated_header_row {
-                    Some(header_row) => {
-                        vec![header_row, updated]
-                    }
-                    None => {
-                        vec![updated]
-                    }
-                };
-
-                if let Some(page) = pages.get_mut(&internal_page_counter) {
-                    page.extend_from_slice(&head_and_first);
-                } else {
-                    pages.insert(internal_page_counter, head_and_first);
+                // Render header row immediately if present
+                let actual_page_index = current_page + internal_page_counter;
+                if let Some(header_row) = updated_header_row {
+                    // Header row doesn't count for alternating colors, so use row_index = 0
+                    self.render_row_immediately(
+                        header_row,
+                        0, // Header always uses even row color
+                        &cell_widths,
+                        base_pdf,
+                        actual_page_index,
+                        doc,
+                        buffer,
+                    )?;
                 }
+
+                // Render first data row immediately
+                self.render_row_immediately(
+                    updated,
+                    visual_row_index,
+                    &cell_widths,
+                    base_pdf,
+                    actual_page_index,
+                    doc,
+                    buffer,
+                )?;
+                visual_row_index += 1;
 
                 for row in tail.iter() {
                     let (cols, max_height) =
@@ -542,20 +619,31 @@ impl Table {
                             })
                             .collect();
 
-                        let head_and_first = match updated_header_row {
-                            Some(u) => {
-                                vec![u, updated]
-                            }
-                            None => {
-                                vec![updated]
-                            }
-                        };
-
-                        if let Some(page) = pages.get_mut(&internal_page_counter) {
-                            page.extend_from_slice(&head_and_first);
-                        } else {
-                            pages.insert(internal_page_counter, head_and_first);
+                        // Render header row immediately on new page if present
+                        let actual_page_index = current_page + internal_page_counter;
+                        if let Some(header_row) = updated_header_row {
+                            self.render_row_immediately(
+                                header_row,
+                                0, // Header always uses even row color
+                                &cell_widths,
+                                base_pdf,
+                                actual_page_index,
+                                doc,
+                                buffer,
+                            )?;
                         }
+
+                        // Render data row immediately
+                        self.render_row_immediately(
+                            updated,
+                            visual_row_index,
+                            &cell_widths,
+                            base_pdf,
+                            actual_page_index,
+                            doc,
+                            buffer,
+                        )?;
+                        visual_row_index += 1;
                     } else {
                         let updated: Vec<Schema> = cols
                             .into_iter()
@@ -565,76 +653,25 @@ impl Table {
                             })
                             .collect();
 
-                        // Check if the page already exists
-                        // If it does, push the updated schema to that page
-                        // If it doesn't, create a new page and add the updated schema
-                        // to that page
-                        if let Some(page) = pages.get_mut(&internal_page_counter) {
-                            page.push(updated);
-                        } else {
-                            pages.insert(internal_page_counter, vec![updated]);
-                        }
+                        // Render row immediately on same page
+                        let actual_page_index = current_page + internal_page_counter;
+                        self.render_row_immediately(
+                            updated,
+                            visual_row_index,
+                            &cell_widths,
+                            base_pdf,
+                            actual_page_index,
+                            doc,
+                            buffer,
+                        )?;
+                        visual_row_index += 1;
                     }
                     y_line_mm = y_line_mm + max_height;
                 }
             }
         }
 
-        for (page_index, page) in pages.into_iter() {
-            for (row_index, rows) in page.into_iter().enumerate() {
-                // Determine background color based on row_index
-                let color = if row_index % 2 == 1 {
-                    // Odd rows use alternate_background_color if available, otherwise use background_color
-                    match &self.body_styles.alternate_background_color {
-                        Some(alt_color) => Color::Rgb(Rgb {
-                            r: alt_color.r as f32,
-                            g: alt_color.g as f32,
-                            b: alt_color.b as f32,
-                            icc_profile: None,
-                        }),
-                        None => Color::Rgb(Rgb {
-                            r: self.body_styles.background_color.r as f32,
-                            g: self.body_styles.background_color.g as f32,
-                            b: self.body_styles.background_color.b as f32,
-                            icc_profile: None,
-                        }),
-                    }
-                } else {
-                    // Even rows use background_color
-                    Color::Rgb(Rgb {
-                        r: self.body_styles.background_color.r as f32,
-                        g: self.body_styles.background_color.g as f32,
-                        b: self.body_styles.background_color.b as f32,
-                        icc_profile: None,
-                    })
-                };
-
-                for (col_index, schema) in rows.iter().enumerate() {
-                    let base = schema.get_base_copy();
-
-                    let width = cell_widths[col_index];
-                    let rect = DrawRectangle {
-                        x: base.x,
-                        y: base.y,
-                        width,
-                        height: base.height,
-                        rotate: None,
-                        page_height: base_pdf.height,
-                        color: Some(color.clone()),
-                        border_width: Some(self.table_styles.border_width),
-                        border_color: None,
-                    };
-                    let ops = draw_rectangle(rect);
-
-                    // Fix: Add current_page offset to page_index
-                    let actual_page_index = current_page + page_index;
-                    buffer.insert(actual_page_index, ops);
-
-                    schema.render(base_pdf.height, doc, actual_page_index, buffer)?;
-                }
-            }
-        }
-
+        // All rows have been rendered immediately, no need for post-processing
         Ok((current_page + internal_page_counter, Some(y_line_mm)))
     }
 }
