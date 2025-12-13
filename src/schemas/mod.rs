@@ -297,10 +297,10 @@ impl TryFrom<Vec<f32>> for Frame {
     type Error = Error;
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
         Ok(Frame {
-            top: Mm(value.get(0).context(InvalidBasePdfSnafu)?.clone()),
-            right: Mm(value.get(1).context(InvalidBasePdfSnafu)?.clone()),
-            bottom: Mm(value.get(2).context(InvalidBasePdfSnafu)?.clone()),
-            left: Mm(value.get(3).context(InvalidBasePdfSnafu)?.clone()),
+            top: Mm(*value.get(0).context(InvalidBasePdfSnafu)?),
+            right: Mm(*value.get(1).context(InvalidBasePdfSnafu)?),
+            bottom: Mm(*value.get(2).context(InvalidBasePdfSnafu)?),
+            left: Mm(*value.get(3).context(InvalidBasePdfSnafu)?),
         })
     }
 }
@@ -684,7 +684,7 @@ impl Template {
     fn render_schemas(
         &self,
         font_map: &FontMap,
-        mut doc: &mut PdfDocument,
+        doc: &mut PdfDocument,
         schemas: Vec<Vec<Schema>>,
     ) -> Result<Vec<u8>, Error> {
         self.render_schemas_with_static_inputs(font_map, doc, schemas, HashMap::new())
@@ -694,7 +694,7 @@ impl Template {
     fn render_schemas_with_static_inputs(
         &self,
         font_map: &FontMap,
-        mut doc: &mut PdfDocument,
+        doc: &mut PdfDocument,
         schemas: Vec<Vec<Schema>>,
         static_inputs: HashMap<&'static str, String>,
     ) -> Result<Vec<u8>, Error> {
@@ -722,23 +722,23 @@ impl Template {
                             obj.render(&self.base_pdf, doc, page_index, y, &mut buffer)?;
                     }
                     Schema::QrCode(obj) => {
-                        obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?;
+                        obj.render(self.base_pdf.height, doc, page_index, &mut buffer)?;
                     }
                     Schema::Image(obj) => {
                         obj.render(self.base_pdf.height, doc, page_index, &mut buffer)?
                     }
                     Schema::Svg(obj) => {
-                        obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
+                        obj.render(self.base_pdf.height, doc, page_index, &mut buffer)?
                     }
                     Schema::Rect(obj) => {
-                        obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
+                        obj.render(self.base_pdf.height, doc, page_index, &mut buffer)?
                     }
                     Schema::Line(obj) => {
-                        obj.render(self.base_pdf.height, &mut doc, page_index, &mut buffer)?
+                        obj.render(self.base_pdf.height, doc, page_index, &mut buffer)?
                     }
                     Schema::Group(obj) => {
                         let mut obj = obj.clone();
-                        obj.render(&self.base_pdf, &mut doc, page_index, &mut buffer)?;
+                        obj.render(&self.base_pdf, doc, page_index, &mut buffer)?;
                     }
                 }
             }
@@ -763,34 +763,34 @@ impl Template {
                     }
                     Schema::DynamicText(mut obj) => {
                         // For static schemas, we render directly to the specific page
-                        let mut temp_current_page = page_idx;
-                        let mut temp_y = None;
+                        let temp_current_page = page_idx;
+                        let temp_y = None;
                         let _ =
                             obj.render(&self.base_pdf, temp_current_page, temp_y, &mut buffer)?;
                     }
                     Schema::Table(mut obj) => {
                         // For static schemas, we render directly to the specific page
-                        let mut temp_current_page = page_idx;
-                        let mut temp_y = None;
+                        // let temp_current_page = page_idx;
+                        let temp_y = None;
                         let _ = obj.render(&self.base_pdf, doc, page_idx, temp_y, &mut buffer)?;
                     }
                     Schema::QrCode(obj) => {
-                        obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?;
+                        obj.render(self.base_pdf.height, doc, page_idx, &mut buffer)?;
                     }
                     Schema::Image(obj) => {
                         obj.render(self.base_pdf.height, doc, page_idx, &mut buffer)?
                     }
                     Schema::Svg(obj) => {
-                        obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?
+                        obj.render(self.base_pdf.height, doc, page_idx, &mut buffer)?
                     }
                     Schema::Rect(obj) => {
-                        obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?
+                        obj.render(self.base_pdf.height, doc, page_idx, &mut buffer)?
                     }
                     Schema::Line(obj) => {
-                        obj.render(self.base_pdf.height, &mut doc, page_idx, &mut buffer)?
+                        obj.render(self.base_pdf.height, doc, page_idx, &mut buffer)?
                     }
                     Schema::Group(mut obj) => {
-                        obj.render(&self.base_pdf, &mut doc, page_idx, &mut buffer)?;
+                        obj.render(&self.base_pdf, doc, page_idx, &mut buffer)?;
                     }
                 }
             }
