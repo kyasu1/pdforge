@@ -45,7 +45,7 @@ pub struct Text {
     font_size: FontSize,
     font_id: FontId,
     font_spec: Arc<dyn FontSpecTrait>,
-    font: Box<ParsedFont>,
+    font: Arc<ParsedFont>,
     font_color: csscolorparser::Color,
     background_color: Option<csscolorparser::Color>,
     padding: Option<Frame>,
@@ -118,7 +118,7 @@ impl Text {
             Mm(json.height),
         );
 
-        let character_spacing = json.character_spacing.map(|f| Pt(f)).unwrap_or(Pt(0.0));
+        let character_spacing = json.character_spacing.map(Pt).unwrap_or(Pt(0.0));
         let line_height = json.line_height;
         let font_size = match json.font_size {
             JsonFontSize::Dynamic { min, max, fit } => {
@@ -148,7 +148,7 @@ impl Text {
             line_height,
             font_size,
             font_id: font_id.clone(),
-            font_spec: Arc::new(font_spec.clone()),
+            font_spec: Arc::new(font_spec),
             font: font.clone(),
             font_color,
             background_color,
@@ -161,7 +161,7 @@ impl Text {
                 .as_ref()
                 .map(|c| csscolorparser::parse(c).context(InvalidColorSnafu))
                 .transpose()?,
-            border_width: json.border_width.map(|w| Pt(w)),
+            border_width: json.border_width.map(Pt),
         };
 
         Ok(text)
@@ -372,7 +372,7 @@ impl Text {
                 }),
             },
             Op::SetOutlineThickness {
-                pt: (*border_width).into(),
+                pt: (*border_width),
             },
             Op::DrawPolygon {
                 polygon: Polygon {
@@ -556,14 +556,14 @@ mod tests {
     }
 
     // Simplified tests that focus on testing individual methods without requiring full Text construction
-    
+
     #[test]
     fn test_effective_box_size_calculation_no_padding() {
         // Test the calculation logic directly
         let width = Mm(100.0);
         let height = Mm(50.0);
         let padding: Option<Frame> = None;
-        
+
         let effective_width = width - padding.as_ref().map_or(Mm(0.0), |p| p.left + p.right);
         let effective_height = height - padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
 
@@ -581,7 +581,7 @@ mod tests {
             bottom: Mm(5.0),
             left: Mm(10.0),
         });
-        
+
         let effective_width = width - padding.as_ref().map_or(Mm(0.0), |p| p.left + p.right);
         let effective_height = height - padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom);
 
@@ -594,7 +594,7 @@ mod tests {
         // Test vertical alignment calculations
         let box_height = Mm(50.0);
         let total_height = Mm(30.0);
-        
+
         // Top alignment
         let top_offset = match VerticalAlignment::Top {
             VerticalAlignment::Top => Mm(0.0),
@@ -602,7 +602,7 @@ mod tests {
             VerticalAlignment::Bottom => box_height - total_height,
         };
         assert_eq!(top_offset, Mm(0.0));
-        
+
         // Middle alignment
         let middle_offset = match VerticalAlignment::Middle {
             VerticalAlignment::Top => Mm(0.0),
@@ -610,7 +610,7 @@ mod tests {
             VerticalAlignment::Bottom => box_height - total_height,
         };
         assert_eq!(middle_offset, Mm(10.0)); // (50 - 30) / 2
-        
+
         // Bottom alignment
         let bottom_offset = match VerticalAlignment::Bottom {
             VerticalAlignment::Top => Mm(0.0),
@@ -626,7 +626,7 @@ mod tests {
         let line_width = Mm(70.0);
         let residual = box_width - line_width; // 30.0
         let padding_left = Mm(0.0);
-        
+
         // Left alignment
         let left_x = match Alignment::Left {
             Alignment::Left => padding_left,
@@ -635,7 +635,7 @@ mod tests {
             Alignment::Justify => padding_left,
         };
         assert_eq!(left_x, Mm(0.0));
-        
+
         // Center alignment
         let center_x = match Alignment::Center {
             Alignment::Left => padding_left,
@@ -644,7 +644,7 @@ mod tests {
             Alignment::Justify => padding_left,
         };
         assert_eq!(center_x, Mm(15.0)); // 30/2 + 0 = 15
-        
+
         // Right alignment
         let right_x = match Alignment::Right {
             Alignment::Left => padding_left,

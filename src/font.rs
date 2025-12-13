@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 // Thread-local WordSegmenter instance cached for performance
 thread_local! {
@@ -57,12 +58,12 @@ impl Debug for dyn FontSpecTrait {
 
 #[derive(Debug, Clone)]
 pub struct FontSpec {
-    font: Box<ParsedFont>,
+    font: Arc<ParsedFont>,
 }
 
 impl FontSpec {
-    pub fn new(font: Box<ParsedFont>) -> Self {
-        Self { font: font.clone() }
+    pub fn new(font: Arc<ParsedFont>) -> Self {
+        Self { font }
     }
 
     pub fn calculate_character_spacing(text: &str, residual: Mm) -> Mm {
@@ -79,9 +80,8 @@ impl FontSpec {
                 std::cell::RefCell::new(GraphemeClusterSegmenter::new());
         }
 
-        let char_count = GRAPHEME_SEGMENTER.with(|segmenter| {
-            segmenter.borrow().segment_str(text).count()
-        });
+        let char_count =
+            GRAPHEME_SEGMENTER.with(|segmenter| segmenter.borrow().segment_str(text).count());
 
         // For justify alignment, distribute space between characters
         // If we have N characters, we have N-1 gaps between them
@@ -118,7 +118,8 @@ impl FontSpec {
                 if !current_line.is_empty() {
                     // Calculate combined width
                     let combined = format!("{}{}", current_line, segment);
-                    let combined_width = self.width_of_text_at_size(&combined, font_size, character_spacing)?;
+                    let combined_width =
+                        self.width_of_text_at_size(&combined, font_size, character_spacing)?;
 
                     if combined_width <= box_width {
                         *current_line = combined;
@@ -147,7 +148,11 @@ impl FontSpec {
                         if !current_line.is_empty() {
                             let mut combined = current_line.clone();
                             combined.push(c);
-                            let combined_width = self.width_of_text_at_size(&combined, font_size, character_spacing)?;
+                            let combined_width = self.width_of_text_at_size(
+                                &combined,
+                                font_size,
+                                character_spacing,
+                            )?;
 
                             if combined_width <= box_width {
                                 *current_line = combined;
@@ -218,11 +223,8 @@ impl FontSpec {
                     &line
                 };
 
-                let text_width = self.width_of_text_at_size(
-                    line_to_measure,
-                    font_size,
-                    character_spacing,
-                )?;
+                let text_width =
+                    self.width_of_text_at_size(line_to_measure, font_size, character_spacing)?;
 
                 total_width_in_mm = max(total_width_in_mm, text_width.into());
             }
@@ -257,7 +259,7 @@ impl FontSpecTrait for FontSpec {
             let lines = self.get_splitted_lines_by_segmenter(
                 String::from(paragraph),
                 font_size,
-                box_width.into(),
+                box_width,
                 character_spacing,
             )?;
             splitted_paragraphs.push(lines);
@@ -280,13 +282,13 @@ impl FontSpecTrait for FontSpec {
             font_size,
             line_height,
             character_spacing,
-            width.clone(),
+            width,
             dynamic.clone(),
             content,
         )?;
 
         while dynamic.should_font_grow_to_fit(
-            font_size.clone(),
+            font_size,
             width,
             height,
             total_width_in_mm,
@@ -294,10 +296,10 @@ impl FontSpecTrait for FontSpec {
         ) {
             font_size += Pt(0.25);
             let (new_total_width_in_mm, new_total_height_in_mm) = self.calculate_constraints(
-                font_size.clone(),
+                font_size,
                 line_height,
                 character_spacing,
-                width.clone(),
+                width,
                 dynamic.clone(),
                 content,
             )?;
@@ -311,9 +313,9 @@ impl FontSpecTrait for FontSpec {
         }
 
         while dynamic.should_font_shrink_to_fit(
-            font_size.clone(),
-            width.clone(),
-            height.clone(),
+            font_size,
+            width,
+            height,
             total_width_in_mm,
             total_height_in_mm,
         ) {
@@ -322,7 +324,7 @@ impl FontSpecTrait for FontSpec {
                 font_size,
                 line_height,
                 character_spacing,
-                width.clone(),
+                width,
                 dynamic.clone(),
                 content,
             )?;
@@ -365,7 +367,7 @@ impl FontSpecTrait for FontSpec {
             char_count += 1;
         }
 
-        let scaled = total_width * (font_size.0 as f32) / 1000.0;
+        let scaled = total_width * (font_size.0) / 1000.0;
         let additional_spacing = if char_count > 1 {
             ((char_count - 1) as f32) * character_spacing.0
         } else {
@@ -469,7 +471,7 @@ impl DynamicFontSize {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct FontMap {
-    map: BTreeMap<String, (FontId, Box<ParsedFont>)>,
+    map: BTreeMap<String, (FontId, Arc<ParsedFont>)>,
 }
 
 impl FontMap {
@@ -478,12 +480,12 @@ impl FontMap {
         font_name: String,
         font_id: FontId,
         font: &ParsedFont,
-    ) -> Option<(FontId, Box<ParsedFont>)> {
+    ) -> Option<(FontId, Arc<ParsedFont>)> {
         self.map
-            .insert(font_name.clone(), (font_id.clone(), Box::new(font.clone())))
+            .insert(font_name.clone(), (font_id.clone(), Arc::new(font.clone())))
     }
 
-    pub fn find(&self, font_name: &str) -> Option<&(FontId, Box<ParsedFont>)> {
+    pub fn find(&self, font_name: &str) -> Option<&(FontId, Arc<ParsedFont>)> {
         self.map.get(font_name)
     }
 }
@@ -491,34 +493,26 @@ impl FontMap {
 // Line breaking constants for Japanese typography rules
 const LINE_START_FORBIDDEN_CHARS_JA: &[char] = &[
     // 句読点 (punctuation)
-    '、', '。', ',', '.',
-    // 閉じカッコ類 (closing brackets)
-    '」', '』', ')', '}', '】', '>', '≫', ']',
-    // 記号 (symbols)
-    '・', 'ー', '―', '-',
-    // 約物 (punctuation marks)
+    '、', '。', ',', '.', // 閉じカッコ類 (closing brackets)
+    '」', '』', ')', '}', '】', '>', '≫', ']', // 記号 (symbols)
+    '・', 'ー', '―', '-', // 約物 (punctuation marks)
     '!', '！', '?', '？', ':', '：', ';', '；', '/', '／',
     // 繰り返し記号 (iteration marks)
-    'ゝ', '々', '〃',
-    // 拗音・促音（小書きのかな） (small kana)
-    'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'っ', 'ゃ', 'ゅ', 'ょ',
-    'ァ', 'ィ', 'ゥ', 'ェ', 'ォ', 'ッ', 'ャ', 'ュ', 'ョ',
+    'ゝ', '々', '〃', // 拗音・促音（小書きのかな） (small kana)
+    'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'っ', 'ゃ', 'ゅ', 'ょ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ', 'ッ', 'ャ',
+    'ュ', 'ョ',
 ];
 
 const LINE_END_FORBIDDEN_CHARS_JA: &[char] = &[
     // 始め括弧類 (opening brackets)
-    '「', '『', '（', '｛', '【', '＜', '≪', '［',
-    '〘', '〖', '〝', '\'', '"', '｟', '«',
+    '「', '『', '（', '｛', '【', '＜', '≪', '［', '〘', '〖', '〝', '\'', '"', '｟', '«',
 ];
 
 // Line breaking constants for German typography rules
-const LINE_END_FORBIDDEN_CHARS_DE: &[char] = &[
-    '-', '–', '—', '(', '[', '{', '„', '"', '\'',
-];
+const LINE_END_FORBIDDEN_CHARS_DE: &[char] = &['-', '–', '—', '(', '[', '{', '„', '"', '\''];
 
 const LINE_START_FORBIDDEN_CHARS_DE: &[char] = &[
-    '.', ',', '!', '?', ':', ';', ')', ']', '}',
-    '"', '"', '"', '\'',
+    '.', ',', '!', '?', ':', ';', ')', ']', '}', '"', '"', '"', '\'',
 ];
 
 /// Generic function to filter lines to prevent forbidden characters at line start
@@ -536,9 +530,9 @@ pub fn filter_start_forbidden_chars(lines: Vec<String>, forbidden_chars: &[char]
             if chars.is_empty() {
                 continue;
             }
-            
+
             let char_at_start = chars[0];
-            
+
             if forbidden_chars.contains(&char_at_start) {
                 if line.trim().len() == 1 {
                     // Single character line - keep it as is
@@ -597,9 +591,9 @@ pub fn filter_end_forbidden_chars(lines: Vec<String>, forbidden_chars: &[char]) 
             if chars.is_empty() {
                 continue;
             }
-            
+
             let char_at_end = chars[chars.len() - 1];
-            
+
             if forbidden_chars.contains(&char_at_end) {
                 if line.trim().len() == 1 {
                     // Single character line - keep it as is
