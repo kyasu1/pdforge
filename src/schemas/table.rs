@@ -259,10 +259,7 @@ impl Table {
                     Mm(json.width * json_head.percent / 100.0),
                     Mm(0.0),
                     json_head.font_name.unwrap_or(head_styles.font_name.clone()),
-                    json_head
-                        .font_size
-                        .map(|size| Pt(size))
-                        .unwrap_or(head_styles.font_size),
+                    json_head.font_size.map(Pt).unwrap_or(head_styles.font_size),
                     json_head.content.clone(),
                     json_head.alignment.unwrap_or(head_styles.clone().alignment),
                     json_head
@@ -321,24 +318,24 @@ impl Table {
             // Odd rows use alternate_background_color if available
             match &self.body_styles.alternate_background_color {
                 Some(alt_color) => Color::Rgb(Rgb {
-                    r: alt_color.r as f32,
-                    g: alt_color.g as f32,
-                    b: alt_color.b as f32,
+                    r: alt_color.r,
+                    g: alt_color.g,
+                    b: alt_color.b,
                     icc_profile: None,
                 }),
                 None => Color::Rgb(Rgb {
-                    r: self.body_styles.background_color.r as f32,
-                    g: self.body_styles.background_color.g as f32,
-                    b: self.body_styles.background_color.b as f32,
+                    r: self.body_styles.background_color.r,
+                    g: self.body_styles.background_color.g,
+                    b: self.body_styles.background_color.b,
                     icc_profile: None,
                 }),
             }
         } else {
             // Even rows use background_color
             Color::Rgb(Rgb {
-                r: self.body_styles.background_color.r as f32,
-                g: self.body_styles.background_color.g as f32,
-                b: self.body_styles.background_color.b as f32,
+                r: self.body_styles.background_color.r,
+                g: self.body_styles.background_color.g,
+                b: self.body_styles.background_color.b,
                 icc_profile: None,
             })
         };
@@ -412,7 +409,7 @@ impl Table {
             .into_iter()
             .map(|mut schema| {
                 schema.set_height(max_height);
-                return schema;
+                schema
             })
             .collect();
 
@@ -532,7 +529,7 @@ impl Table {
                             .into_iter()
                             .map(|mut schema| {
                                 schema.set_y(y_line_mm);
-                                return schema;
+                                schema
                             })
                             .collect();
                         Some(updated)
@@ -548,7 +545,7 @@ impl Table {
                     .map(|mut schema| {
                         schema.set_y(y_line_mm);
                         schema.set_height(max_height);
-                        return schema;
+                        schema
                     })
                     .collect();
 
@@ -599,7 +596,7 @@ impl Table {
                                     .into_iter()
                                     .map(|mut schema| {
                                         schema.set_y(y_line_mm);
-                                        return schema;
+                                        schema
                                     })
                                     .collect();
                                 Some(updated)
@@ -615,7 +612,7 @@ impl Table {
                             .map(|mut schema| {
                                 schema.set_y(y_line_mm);
                                 schema.set_height(max_height);
-                                return schema;
+                                schema
                             })
                             .collect();
 
@@ -649,7 +646,7 @@ impl Table {
                             .into_iter()
                             .map(|mut schema| {
                                 schema.set_height(max_height);
-                                return schema;
+                                schema
                             })
                             .collect();
 
@@ -666,7 +663,7 @@ impl Table {
                         )?;
                         visual_row_index += 1;
                     }
-                    y_line_mm = y_line_mm + max_height;
+                    y_line_mm += max_height;
                 }
             }
         }

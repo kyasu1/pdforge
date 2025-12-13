@@ -126,7 +126,7 @@ impl DynamicText {
             .font_spec
             .split_text_to_size(
                 &self.content,
-                self.font_size.clone(),
+                self.font_size,
                 self.base.width.into(),
                 character_spacing,
             )
@@ -135,7 +135,7 @@ impl DynamicText {
         let mut pages: Vec<Vec<String>> = Vec::new();
 
         for line in lines.into_iter() {
-            y_line_mm = y_line_mm + line_height_in_mm;
+            y_line_mm += line_height_in_mm;
 
             if y_line_mm > y_bottom_mm {
                 page_counter += 1;
