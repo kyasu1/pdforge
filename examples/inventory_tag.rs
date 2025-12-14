@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut pdforge = pdforge::PDForgeBuilder::new("INVENTORY_TAG_EXAMPLE".to_string())
-        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("inventory_tag", "./templates/inventory_tag.json")?
         .build();
 

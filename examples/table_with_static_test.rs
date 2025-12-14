@@ -4,13 +4,13 @@ use std::collections::HashMap;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create PDForge instance with fonts
     let mut pdforge = PDForgeBuilder::new("table-with-static-test".to_string())
-        .add_font(
+        .add_font_from_file(
             "NotoSansJP-Regular",
             "./assets/fonts/NotoSansJP-Regular.otf",
         )?
-        .add_font("NotoSansJP-Bold", "./assets/fonts/NotoSansJP-Bold.otf")?
-        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.otf")?
-        .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP-Bold", "./assets/fonts/NotoSansJP-Bold.otf")?
+        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.otf")?
+        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
         .load_template(
             "table-with-static-simple",
             "./templates/table-with-static-simple.json",

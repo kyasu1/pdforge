@@ -9,7 +9,7 @@ fn main() {
     let font_slice = include_bytes!("../assets/fonts/NotoSansJP-Regular.otf");
 
     let parsed_font = ParsedFont::from_bytes(font_slice, 0, &mut vec![]).expect("Failed to parse font");
-    let font_id = doc.add_font(&parsed_font);
+    let font_id = doc.add_font_from_file(&parsed_font);
 
     let texts = [
         "日本語 中国語 韓国語",
