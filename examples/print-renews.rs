@@ -3,7 +3,7 @@ use std::collections::HashMap;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut pdforge =
         pdforge::PDForgeBuilder::new("利上台帳 株式会社オフイスイコー 2025".to_string())
-            .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+            .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
             .load_template("print-renews", "./templates/print-renews.json")?
             .build();
 

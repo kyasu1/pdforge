@@ -62,15 +62,11 @@ impl PDForgeBuilder {
         }
     }
 
-    pub fn add_font(mut self, font_name: &str, file_name: &str) -> Result<Self, Error> {
-        let font_slice = std::fs::read(file_name).map_err(|e| Error::FontFileIo {
-            source: e,
-            message: format!("Failed to read font file: {}", file_name),
-        })?;
+    pub fn add_font(mut self, font_name: &str, font_bytes: &[u8]) -> Result<Self, Error> {
         let parsed_font =
-            ParsedFont::from_bytes(&font_slice, 0, &mut Vec::new()).ok_or_else(|| {
+            ParsedFont::from_bytes(font_bytes, 0, &mut Vec::new()).ok_or_else(|| {
                 Error::FontParsing {
-                    message: format!("Failed to parse font file: {}", file_name),
+                    message: format!("Failed to parse font bytes for: {}", font_name),
                 }
             })?;
         let font_id = self.doc.add_font(&parsed_font);
@@ -78,6 +74,14 @@ impl PDForgeBuilder {
             .add_font(String::from(font_name), font_id.clone(), &parsed_font);
 
         Ok(self)
+    }
+
+    pub fn add_font_from_file(self, font_name: &str, file_path: &str) -> Result<Self, Error> {
+        let font_bytes = std::fs::read(file_path).map_err(|e| Error::FontFileIo {
+            source: e,
+            message: format!("Failed to read font file: {}", file_path),
+        })?;
+        self.add_font(font_name, &font_bytes)
     }
 
     pub fn load_template(mut self, template_name: &str, template: &str) -> Result<Self, Error> {

@@ -31,9 +31,11 @@ cargo run --bin pdforge ./templates/table.json
 # Run example files
 cargo run --example simple
 cargo run --example test-printpdf
+cargo run --example font_from_bytes
 
 # Run example with custom template
 cargo run --example simple ./templates/tiger-svg.json
+cargo run --example font_from_bytes ./templates/tiger-svg.json
 ```
 
 ### Testing Individual Files
@@ -96,10 +98,25 @@ The library supports these PDF elements:
 
 ### Font Management
 
-- Fonts loaded via `PDForgeBuilder.add_font(name, path)`
+PDForge provides two methods for loading fonts:
+
+1. **From byte slice** - `PDForgeBuilder.add_font(name, bytes)` **(Primary API)**
+   - Accepts font data as `&[u8]`
+   - Most flexible and efficient approach
+   - Useful for embedded fonts, network-loaded fonts, or cached font data
+   - Eliminates redundant disk I/O
+   - See `examples/font_from_bytes.rs` for usage
+
+2. **From file path** - `PDForgeBuilder.add_font_from_file(name, path)` **(Convenience wrapper)**
+   - Convenient for loading fonts directly from disk
+   - Internally reads the file and calls `add_font()`
+   - See `examples/simple.rs` for usage
+
 - `FontMap` manages font references and metadata
 - Default fonts include comprehensive Japanese typography support
 - Font files stored in `assets/fonts/`
+
+**Design rationale**: `add_font()` accepts byte slices as the primary API because fonts are ultimately parsed from bytes. This eliminates redundant disk I/O and provides maximum flexibility for different font sources (embedded, network, cache, etc.).
 
 ## Development Notes
 

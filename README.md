@@ -35,7 +35,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.9.1"
+pdforge = "0.10.0"
 ```
 
 ## Quick Start
@@ -48,8 +48,8 @@ use pdforge::PDForgeBuilder;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a new PDF generator using the builder pattern
     let mut pdforge = PDForgeBuilder::new("My Document".to_string())
-        .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
-        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("table-test", "./templates/table-test.json")?
         .build();
 
@@ -86,8 +86,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or("output");
     
     let mut pdforge = pdforge::PDForgeBuilder::new("CLI Example".to_string())
-        .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
-        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("template", template_file)?
         .build();
 
@@ -110,8 +110,8 @@ use pdforge::PDForgeBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut pdforge = PDForgeBuilder::new("Dynamic Document".to_string())
-        .add_font("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
-        .add_font("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("pawn-ticket", "./templates/pawn-ticket.json")?
         .build();
 
@@ -592,11 +592,34 @@ PDForge includes comprehensive font support with a focus on Japanese typography:
 
 ### Adding Custom Fonts
 
+PDForge provides two methods for loading fonts:
+
+#### 1. From byte slices (Primary API)
+
 ```rust
+// Most flexible - load fonts from any source
+let font_bytes = std::fs::read("./path/to/font.ttf")?;
 let pdforge = PDForgeBuilder::new("Document".to_string())
-    .add_font("CustomFont", "./path/to/custom-font.ttf")?
+    .add_font("CustomFont", &font_bytes)?
+    .build();
+
+// Example: Embedded fonts (using include_bytes!)
+let embedded_font = include_bytes!("../assets/fonts/NotoSansJP-Regular.ttf");
+let pdforge = PDForgeBuilder::new("Document".to_string())
+    .add_font("NotoSansJP", embedded_font)?
     .build();
 ```
+
+#### 2. From file paths (Convenience wrapper)
+
+```rust
+// Simple and convenient for file-based fonts
+let pdforge = PDForgeBuilder::new("Document".to_string())
+    .add_font_from_file("CustomFont", "./path/to/custom-font.ttf")?
+    .build();
+```
+
+**Why two methods?** The `add_font()` method accepts byte slices as the primary API because fonts are ultimately parsed from bytes. This eliminates redundant disk I/O and provides maximum flexibility for different font sources (embedded, network, cache, etc.). The `add_font_from_file()` method is a convenient wrapper for the common case of loading from disk.
 
 ## Template Engine
 
@@ -700,6 +723,20 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Version 0.10.0
+- **Breaking Change**: Font API redesigned for better flexibility and performance
+- **New Primary API**: `add_font(name, bytes)` now accepts byte slices (`&[u8]`) as the primary interface
+  - Eliminates redundant disk I/O
+  - Supports embedded fonts via `include_bytes!`
+  - Enables network-loaded and cached fonts
+  - Maximum flexibility for different font sources
+- **New Convenience Method**: `add_font_from_file(name, path)` for simple file-based font loading
+  - Internally reads the file and calls `add_font()`
+  - Migration: Replace `.add_font(name, path)` with `.add_font_from_file(name, path)`
+- **All Examples Updated**: All 22 example files updated to use the new API
+- **Comprehensive Documentation**: Updated README and CLAUDE.md with detailed usage examples
+- **Design Rationale**: Byte slices are the fundamental interface since fonts are ultimately parsed from bytes
 
 ### Version 0.9.1
 - **Breaking Change**: HashMap keys changed to `&'static str` for improved performance and memory efficiency
