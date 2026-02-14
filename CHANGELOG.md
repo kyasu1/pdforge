@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-02-14
+
+### Fixed
+- `bodyStyles.lineHeight` not being applied to table body cells; column schema's `lineHeight` takes priority, with `bodyStyles.lineHeight` as fallback
+- `Text::get_height()` not accounting for `lineHeight`, causing cell height to be smaller than rendered content
+- Text vertical positioning now uses CSS half-leading model, distributing leading space equally above and below each line
+
+### Changed
+- Removed 12 temporary test/debug example files
+
 ## [0.7.0] - 2025-01-15
 
 ### Added
