@@ -188,6 +188,8 @@ impl Text {
 
         let line_height = font_size * self.line_height.unwrap_or(1.0);
         let line_height_in_mm: Mm = line_height.into();
+        let font_size_in_mm: Mm = font_size.into();
+        let half_leading_in_mm = (line_height_in_mm - font_size_in_mm) / 2.0;
         let total_height: Mm = line_height_in_mm * (splitted_paragraphs.len() as f32);
 
         let y_offset = self.calculate_vertical_offset(box_height, total_height);
@@ -224,7 +226,9 @@ impl Text {
 
             let y = self.base.height
                 - (y_offset
-                    + line_height_in_mm * (index as i32 + 1) as f32
+                    + font_size_in_mm
+                    + half_leading_in_mm
+                    + line_height_in_mm * index as f32
                     + self.padding.as_ref().map_or(Mm(0.0), |p| p.top));
 
             let line_ops = self.create_text_ops(
@@ -453,6 +457,12 @@ impl Text {
     pub fn set_content(&mut self, content: String) {
         self.content = content;
     }
+    pub fn has_line_height(&self) -> bool {
+        self.line_height.is_some()
+    }
+    pub fn set_line_height(&mut self, line_height: Option<f32>) {
+        self.line_height = line_height;
+    }
     pub fn get_height(&self) -> Result<Mm, Error> {
         let font_size = self.get_font_size()?;
 
@@ -466,7 +476,8 @@ impl Text {
             )
             .context(FontSnafu)?;
 
-        let height_in_mm: Mm = Pt(lines.len() as f32 * font_size.0).into();
+        let line_height = self.line_height.unwrap_or(1.0);
+        let height_in_mm: Mm = Pt(lines.len() as f32 * font_size.0 * line_height).into();
 
         Ok(height_in_mm + self.padding.as_ref().map_or(Mm(0.0), |p| p.top + p.bottom))
     }
