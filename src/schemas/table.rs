@@ -450,6 +450,9 @@ impl Table {
                     text.set_y(y_line_mm);
                     text.set_width(cell_width);
                     text.set_content(col.to_string());
+                    if !text.has_line_height() {
+                        text.set_line_height(Some(self.body_styles.line_height));
+                    }
 
                     let height = text.get_height()?;
                     max_height = max(max_height, height);
