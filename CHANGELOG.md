@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Upgraded `printpdf` dependency from pinned git rev (`a88db12`) to published version `0.9.1`
+- Added `svg` feature for `printpdf`, maintaining full SVG support via `svg2pdf 0.13.0`
+- Upgraded `lopdf` from `0.37.0` to `0.39.0` to align with `printpdf 0.9.1`
+
+### Internal
+- `Op::SetFontSize` replaced with `Op::SetFont { font: PdfFontHandle::External(...), size }` (`src/schemas/pdf_utils.rs`)
+- `Op::WriteText` replaced with `Op::ShowText` — font reference removed from text op per new printpdf API
+
 ## [0.10.1] - 2026-02-14
 
 ### Fixed
