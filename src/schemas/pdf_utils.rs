@@ -164,17 +164,16 @@ pub fn create_text_ops_with_font(
                 icc_profile: None,
             }),
         },
-        Op::SetFontSize {
+        Op::SetFont {
+            font: PdfFontHandle::External(font_id.clone()),
             size: font_size,
-            font: font_id.clone(),
         },
         Op::SetTextMatrix { matrix },
         Op::SetCharacterSpacing {
             multiplier: character_spacing.0,
         },
-        Op::WriteText {
+        Op::ShowText {
             items: vec![TextItem::Text(sanitized_line)],
-            font: font_id.clone(),
         },
         Op::EndTextSection,
         Op::RestoreGraphicsState,
