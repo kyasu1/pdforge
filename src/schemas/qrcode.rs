@@ -1,5 +1,5 @@
 use super::{Alignment, BoundingBox, Frame, VerticalAlignment};
-use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
+use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder, Luma};
@@ -70,16 +70,16 @@ impl QrCode {
         }
     }
 
-    pub fn get_base(self) -> BaseSchema {
+    pub fn get_base(&self) -> BaseSchema {
         match self.bounding_box {
             Some(ref bounding_box) => BaseSchema {
-                name: self.base.name,
+                name: self.base.name.clone(),
                 x: bounding_box.x,
                 y: bounding_box.y,
                 width: bounding_box.width,
                 height: bounding_box.height,
             },
-            None => self.base,
+            None => self.base.clone(),
         }
     }
 
@@ -236,7 +236,7 @@ impl QrCode {
                 bounding_box.height = height;
             }
             None => {
-                self.base.y = height;
+                self.base.height = height;
             }
         }
     }
@@ -247,5 +247,14 @@ impl QrCode {
 
     pub fn get_height(&self) -> Mm {
         self.base.height
+    }
+}
+
+impl HasBaseSchema for QrCode {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
     }
 }

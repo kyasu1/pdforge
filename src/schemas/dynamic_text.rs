@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::font::{FontMap, FontSpec, FontSpecTrait};
 use crate::schemas::base::BaseSchema;
-use crate::schemas::{Error, FontSnafu, JsonPosition};
+use crate::schemas::{Error, FontSnafu, HasBaseSchema, JsonPosition};
 use crate::utils::OpBuffer;
 use printpdf::*;
 use serde::Deserialize;
@@ -81,9 +81,7 @@ impl DynamicText {
         let line_height = json.line_height;
         let font_size = match json.font_size {
             Some(f) => Pt(f),
-            None => {
-                unimplemented!()
-            }
+            None => Pt(12.0),
         };
         let text = Self {
             base,
@@ -98,8 +96,8 @@ impl DynamicText {
         Ok(text)
     }
 
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     pub fn render(
@@ -201,5 +199,14 @@ impl DynamicText {
 
     pub fn set_height(&mut self, height: Mm) {
         self.base.height = height;
+    }
+}
+
+impl HasBaseSchema for DynamicText {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
     }
 }

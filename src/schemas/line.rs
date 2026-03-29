@@ -1,6 +1,6 @@
 use super::InvalidColorSnafu;
 use crate::schemas::pdf_utils::{calculate_transform_matrix_with_center_pivot};
-use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
+use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use printpdf::{Color, CurTransMat, Mm, Op, PdfDocument, Point, Pt, Rgb, LinePoint, Polygon, PolygonRing, PaintMode, WindingOrder};
 use serde::Deserialize;
@@ -70,8 +70,8 @@ impl TryFrom<JsonLineSchema> for Schema {
 }
 
 impl Line {
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     pub fn render(
@@ -118,6 +118,15 @@ impl Line {
 
     pub fn get_height(&self) -> Mm {
         self.base.height
+    }
+}
+
+impl HasBaseSchema for Line {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
     }
 }
 

@@ -1,5 +1,6 @@
 use super::{
-    Alignment, Error, FontSnafu, Frame, InvalidColorSnafu, JsonPosition, VerticalAlignment,
+    Alignment, Error, FontSnafu, Frame, HasBaseSchema, InvalidColorSnafu, JsonPosition,
+    VerticalAlignment,
 };
 use crate::font::{DynamicFontSize, FontMap, FontSize, FontSpec, FontSpecTrait, JsonFontSize};
 use crate::schemas::base::BaseSchema;
@@ -100,8 +101,8 @@ impl Text {
         })
     }
 
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     pub fn from_json(json: JsonTextSchema, font_map: &FontMap) -> Result<Text, Error> {
@@ -497,6 +498,15 @@ impl Text {
                 )
                 .context(FontSnafu),
         }
+    }
+}
+
+impl HasBaseSchema for Text {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
     }
 }
 

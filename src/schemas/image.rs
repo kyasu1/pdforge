@@ -1,4 +1,4 @@
-use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
+use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
@@ -98,8 +98,8 @@ impl Image {
         self
     }
 
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     pub fn render(
@@ -274,6 +274,15 @@ impl Image {
     }
     pub fn get_height(&self) -> Mm {
         self.base.height
+    }
+}
+
+impl HasBaseSchema for Image {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
     }
 }
 

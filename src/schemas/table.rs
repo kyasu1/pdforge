@@ -1,4 +1,4 @@
-use super::{base::BaseSchema, BasePdf, InvalidColorSnafu, Schema};
+use super::{base::BaseSchema, BasePdf, HasBaseSchema, InvalidColorSnafu, Schema};
 use super::{qrcode, BoundingBox, Frame, JsonFrame, SchemaTrait, VerticalAlignment};
 use crate::font::FontMap;
 use crate::schemas::pdf_utils::{draw_rectangle, DrawRectangle};
@@ -298,8 +298,8 @@ impl Table {
         Ok(table)
     }
 
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     /// Render a row immediately to the buffer (memory-efficient approach)
@@ -673,6 +673,15 @@ impl Table {
 
         // All rows have been rendered immediately, no need for post-processing
         Ok((current_page + internal_page_counter, Some(y_line_mm)))
+    }
+}
+
+impl HasBaseSchema for Table {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
     }
 }
 
