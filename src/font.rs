@@ -66,6 +66,10 @@ impl FontSpec {
         Self { font }
     }
 
+    fn apply_japanese_kinsoku(lines: Vec<String>) -> Vec<String> {
+        filter_end_jp(filter_start_jp(lines))
+    }
+
     pub fn calculate_character_spacing(text: &str, residual: Mm) -> Mm {
         use icu_segmenter::GraphemeClusterSegmenter;
 
@@ -262,7 +266,7 @@ impl FontSpecTrait for FontSpec {
                 box_width,
                 character_spacing,
             )?;
-            splitted_paragraphs.push(lines);
+            splitted_paragraphs.push(Self::apply_japanese_kinsoku(lines));
         }
 
         Ok(splitted_paragraphs.concat())
@@ -492,20 +496,23 @@ impl FontMap {
 
 // Line breaking constants for Japanese typography rules
 const LINE_START_FORBIDDEN_CHARS_JA: &[char] = &[
-    // 句読点 (punctuation)
-    '、', '。', ',', '.', // 閉じカッコ類 (closing brackets)
-    '」', '』', ')', '}', '】', '>', '≫', ']', // 記号 (symbols)
-    '・', 'ー', '―', '-', // 約物 (punctuation marks)
-    '!', '！', '?', '？', ':', '：', ';', '；', '/', '／',
-    // 繰り返し記号 (iteration marks)
-    'ゝ', '々', '〃', // 拗音・促音（小書きのかな） (small kana)
-    'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'っ', 'ゃ', 'ゅ', 'ょ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ', 'ッ', 'ャ',
-    'ュ', 'ョ',
+    // Closing brackets / quotes
+    ')', '）', ']', '］', '}', '｝', '>', '＞', '≫', '｣', '」', '』', '】', '〕', '〗', '〙', '〛',
+    '〉', '》', '〞', '〟', '’', '”', '»', '｠', // Hyphens / prolonged sound marks
+    '-', '‐', '‑', '‒', '–', '—', '―', '〜', '～', 'ー', 'ｰ',
+    // Dividing punctuation / middle dots / separators
+    '!', '！', '?', '？', '‼', '⁇', '⁈', '⁉', '・', '･', ':', '：', ';', '；', '/', '／',
+    // Full stops / commas
+    '.', '．', '。', ',', '，', '、', '､', // Iteration marks
+    'ヽ', 'ヾ', 'ゝ', 'ゞ', '々', '〻', '〃', // Small kana
+    'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'っ', 'ゃ', 'ゅ', 'ょ', 'ゎ', 'ゕ', 'ゖ', 'ァ', 'ィ', 'ゥ', 'ェ',
+    'ォ', 'ッ', 'ャ', 'ュ', 'ョ', 'ヮ', 'ヵ', 'ヶ', 'ｧ', 'ｨ', 'ｩ', 'ｪ', 'ｫ', 'ｯ', 'ｬ', 'ｭ', 'ｮ',
 ];
 
 const LINE_END_FORBIDDEN_CHARS_JA: &[char] = &[
-    // 始め括弧類 (opening brackets)
-    '「', '『', '（', '｛', '【', '＜', '≪', '［', '〘', '〖', '〝', '\'', '"', '｟', '«',
+    // Opening brackets / quotes
+    '(', '（', '[', '［', '{', '｛', '<', '＜', '≪', '｢', '「', '『', '【', '〔', '〖', '〘', '〚',
+    '〈', '《', '〝', '‘', '“', '\'', '"', '｟', '«',
 ];
 
 // Line breaking constants for German typography rules
@@ -658,4 +665,66 @@ pub fn filter_start_de(lines: Vec<String>) -> Vec<String> {
 /// Prevents certain characters from appearing at the end of lines
 pub fn filter_end_de(lines: Vec<String>) -> Vec<String> {
     filter_end_forbidden_chars(lines, LINE_END_FORBIDDEN_CHARS_DE)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{filter_end_jp, filter_start_jp, FontSpec};
+
+    #[test]
+    fn filter_start_jp_moves_halfwidth_closing_paren() {
+        let lines = vec!["abc".to_string(), ")def".to_string()];
+
+        assert_eq!(
+            filter_start_jp(lines),
+            vec!["abc)".to_string(), "def".to_string()]
+        );
+    }
+
+    #[test]
+    fn filter_start_jp_moves_fullwidth_closing_paren() {
+        let lines = vec!["abc".to_string(), "）def".to_string()];
+
+        assert_eq!(
+            filter_start_jp(lines),
+            vec!["abc）".to_string(), "def".to_string()]
+        );
+    }
+
+    #[test]
+    fn filter_end_jp_moves_halfwidth_opening_paren() {
+        let lines = vec!["abc(".to_string(), "def".to_string()];
+
+        assert_eq!(
+            filter_end_jp(lines),
+            vec!["abc".to_string(), "(def".to_string()]
+        );
+    }
+
+    #[test]
+    fn filter_end_jp_moves_fullwidth_opening_paren() {
+        let lines = vec!["abc（".to_string(), "def".to_string()];
+
+        assert_eq!(
+            filter_end_jp(lines),
+            vec!["abc".to_string(), "（def".to_string()]
+        );
+    }
+
+    #[test]
+    fn apply_japanese_kinsoku_handles_mixed_width_characters_in_order() {
+        let lines = vec!["abc(".to_string(), "）def".to_string()];
+
+        assert_eq!(
+            FontSpec::apply_japanese_kinsoku(lines),
+            vec!["abc(）".to_string(), "def".to_string()]
+        );
+    }
+
+    #[test]
+    fn apply_japanese_kinsoku_keeps_non_forbidden_lines_unchanged() {
+        let lines = vec!["abc".to_string(), "def".to_string()];
+
+        assert_eq!(FontSpec::apply_japanese_kinsoku(lines.clone()), lines);
+    }
 }
