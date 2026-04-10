@@ -6,7 +6,7 @@ use pdforge::schemas::Error;
 fn error_is_send_sync() {
     fn assert_send<T: Send>() {}
     fn assert_sync<T: Sync>() {}
-    
+
     assert_send::<Error>();
     assert_sync::<Error>();
 }
@@ -18,8 +18,10 @@ fn error_can_be_sent_across_threads() {
         message: "Test error".to_string(),
         source: None,
     };
-    
+
     std::thread::spawn(move || {
         println!("Error in thread: {:?}", error);
-    }).join().unwrap();
+    })
+    .join()
+    .unwrap();
 }

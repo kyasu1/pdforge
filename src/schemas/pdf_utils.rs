@@ -6,14 +6,14 @@ pub fn sanitize_text_for_font(text: &str, font: &ParsedFont) -> String {
     // We can't directly access .notdef glyph (index 0) through normal text rendering
     // in printpdf library, so we use a fallback hierarchy of replacement characters
     const FALLBACK_CHARS: &[char] = &[
-        '□',    // U+25A1 White Square (classic TOFU character)
+        '□',        // U+25A1 White Square (classic TOFU character)
         '\u{FFFD}', // U+FFFD Replacement Character (Unicode standard replacement)
-        '?',    // Question mark (widely supported)
-        '.',    // Period (basic punctuation)
-        'X',    // Letter X (ASCII fallback)
-        ' ',    // Space (should exist in any font)
+        '?',        // Question mark (widely supported)
+        '.',        // Period (basic punctuation)
+        'X',        // Letter X (ASCII fallback)
+        ' ',        // Space (should exist in any font)
     ];
-    
+
     text.chars()
         .map(|ch| {
             // Check if the character has a glyph in the font

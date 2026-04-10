@@ -37,7 +37,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total_rows = 1600;
     let mut rows = Vec::with_capacity(total_rows);
 
-    println!("Generating {} rows of data (target: ~50 pages)...", total_rows);
+    println!(
+        "Generating {} rows of data (target: ~50 pages)...",
+        total_rows
+    );
     for i in 0..total_rows {
         let mut row_data = row.clone();
         // Vary some data to make it more realistic
@@ -49,8 +52,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let data_prep_time = data_start.elapsed();
     println!("Data preparation completed: {:?}", data_prep_time);
-    println!("Total data size: {} rows x {} columns = {} cells",
-             rows.len(), row.len(), rows.len() * row.len());
+    println!(
+        "Total data size: {} rows x {} columns = {} cells",
+        rows.len(),
+        row.len(),
+        rows.len() * row.len()
+    );
 
     // Render PDF
     let render_start = Instant::now();
@@ -66,12 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut table_data = HashMap::new();
     table_data.insert("renewsTable", rows);
 
-    let bytes = pdforge.render(
-        "print-renews",
-        vec![inputs],
-        Some(table_data),
-        None,
-    )?;
+    let bytes = pdforge.render("print-renews", vec![inputs], Some(table_data), None)?;
 
     let render_time = render_start.elapsed();
     println!("Rendering completed: {:?}", render_time);
@@ -96,9 +98,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("PDF rendering:        {:?}", render_time);
     println!("File write:           {:?}", write_time);
     println!("Total time:           {:?}", total_time);
-    println!("PDF size:             {:.2} MB", bytes.len() as f64 / 1_048_576.0);
+    println!(
+        "PDF size:             {:.2} MB",
+        bytes.len() as f64 / 1_048_576.0
+    );
     println!("Total pages:          {}", page_count);
-    println!("Rows per page (avg):  {:.1}", total_rows as f64 / page_count as f64);
+    println!(
+        "Rows per page (avg):  {:.1}",
+        total_rows as f64 / page_count as f64
+    );
     println!("Output file:          {}", output_path);
     println!("============================\n");
     println!("Memory-efficient rendering: Constant memory usage regardless of row count");

@@ -37,6 +37,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output_file = format!("./examples/pdf/{}_from_bytes.pdf", file_stem);
     std::fs::write(&output_file, bytes)?;
 
-    println!("PDF generated using byte-based font loading: {}", output_file);
+    println!(
+        "PDF generated using byte-based font loading: {}",
+        output_file
+    );
     Ok(())
 }

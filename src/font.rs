@@ -66,46 +66,8 @@ impl FontSpec {
         Self { font }
     }
 
-    fn is_wrap_boundary_space(ch: char) -> bool {
-        matches!(ch, ' ' | '　')
-    }
-
-    fn trim_wrap_boundary_spaces(lines: Vec<String>) -> Vec<String> {
-        let last_index = lines.len().saturating_sub(1);
-
-        lines
-            .into_iter()
-            .enumerate()
-            .filter_map(|(index, line)| {
-                let trimmed_start = if index > 0 {
-                    line.trim_start_matches(Self::is_wrap_boundary_space)
-                } else {
-                    line.as_str()
-                };
-
-                let trimmed = if index < last_index {
-                    trimmed_start.trim_end_matches(Self::is_wrap_boundary_space)
-                } else {
-                    trimmed_start
-                };
-
-                if !trimmed.is_empty() || last_index == 0 {
-                    Some(trimmed.to_string())
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
     fn apply_japanese_kinsoku(lines: Vec<String>) -> Vec<String> {
         filter_end_jp(filter_start_jp(lines))
-    }
-
-    fn postprocess_wrapped_lines(lines: Vec<String>) -> Vec<String> {
-        let lines = Self::trim_wrap_boundary_spaces(lines);
-        let lines = Self::apply_japanese_kinsoku(lines);
-        Self::trim_wrap_boundary_spaces(lines)
     }
 
     pub fn calculate_character_spacing(text: &str, residual: Mm) -> Mm {
@@ -304,7 +266,7 @@ impl FontSpecTrait for FontSpec {
                 box_width,
                 character_spacing,
             )?;
-            splitted_paragraphs.push(Self::postprocess_wrapped_lines(lines));
+            splitted_paragraphs.push(Self::apply_japanese_kinsoku(lines));
         }
 
         Ok(splitted_paragraphs.concat())
@@ -764,52 +726,5 @@ mod tests {
         let lines = vec!["abc".to_string(), "def".to_string()];
 
         assert_eq!(FontSpec::apply_japanese_kinsoku(lines.clone()), lines);
-    }
-
-    #[test]
-    fn trim_wrap_boundary_spaces_removes_internal_trailing_ascii_space() {
-        let lines = vec!["abc ".to_string(), "def".to_string()];
-
-        assert_eq!(
-            FontSpec::trim_wrap_boundary_spaces(lines),
-            vec!["abc".to_string(), "def".to_string()]
-        );
-    }
-
-    #[test]
-    fn trim_wrap_boundary_spaces_removes_internal_leading_fullwidth_space() {
-        let lines = vec!["abc".to_string(), "　def".to_string()];
-
-        assert_eq!(
-            FontSpec::trim_wrap_boundary_spaces(lines),
-            vec!["abc".to_string(), "def".to_string()]
-        );
-    }
-
-    #[test]
-    fn postprocess_wrapped_lines_trims_space_before_start_kinsoku() {
-        let lines = vec!["abc ".to_string(), ")def".to_string()];
-
-        assert_eq!(
-            FontSpec::postprocess_wrapped_lines(lines),
-            vec!["abc)".to_string(), "def".to_string()]
-        );
-    }
-
-    #[test]
-    fn postprocess_wrapped_lines_trims_space_after_end_kinsoku() {
-        let lines = vec!["abc（".to_string(), " def".to_string()];
-
-        assert_eq!(
-            FontSpec::postprocess_wrapped_lines(lines),
-            vec!["abc".to_string(), "（def".to_string()]
-        );
-    }
-
-    #[test]
-    fn trim_wrap_boundary_spaces_preserves_paragraph_outer_spaces() {
-        let lines = vec![" abc".to_string(), "def ".to_string()];
-
-        assert_eq!(FontSpec::trim_wrap_boundary_spaces(lines.clone()), lines);
     }
 }

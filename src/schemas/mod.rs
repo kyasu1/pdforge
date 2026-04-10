@@ -154,7 +154,12 @@ pub trait SchemaTrait: HasBaseSchema {
         (self.base().width, self.base().height)
     }
     fn bounds(&self) -> BoundingBox {
-        BoundingBox::new(self.base().x, self.base().y, self.base().width, self.base().height)
+        BoundingBox::new(
+            self.base().x,
+            self.base().y,
+            self.base().width,
+            self.base().height,
+        )
     }
 
     // fn get_width(&self) -> Mm;
@@ -270,7 +275,12 @@ impl SchemaTrait for Schema {
                 let base_pdf = BasePdf {
                     width: Mm(210.0),
                     height: parent_height,
-                    padding: Frame { top: Mm(0.0), right: Mm(0.0), bottom: Mm(0.0), left: Mm(0.0) },
+                    padding: Frame {
+                        top: Mm(0.0),
+                        right: Mm(0.0),
+                        bottom: Mm(0.0),
+                        left: Mm(0.0),
+                    },
                     static_schema: vec![],
                 };
                 obj.render(&base_pdf, page, None, buffer)?;
@@ -280,7 +290,12 @@ impl SchemaTrait for Schema {
                 let base_pdf = BasePdf {
                     width: Mm(210.0),
                     height: parent_height,
-                    padding: Frame { top: Mm(0.0), right: Mm(0.0), bottom: Mm(0.0), left: Mm(0.0) },
+                    padding: Frame {
+                        top: Mm(0.0),
+                        right: Mm(0.0),
+                        bottom: Mm(0.0),
+                        left: Mm(0.0),
+                    },
                     static_schema: vec![],
                 };
                 obj.render(&base_pdf, doc, page, None, buffer)?;
@@ -290,7 +305,12 @@ impl SchemaTrait for Schema {
                 let base_pdf = BasePdf {
                     width: Mm(210.0),
                     height: parent_height,
-                    padding: Frame { top: Mm(0.0), right: Mm(0.0), bottom: Mm(0.0), left: Mm(0.0) },
+                    padding: Frame {
+                        top: Mm(0.0),
+                        right: Mm(0.0),
+                        bottom: Mm(0.0),
+                        left: Mm(0.0),
+                    },
                     static_schema: vec![],
                 };
                 obj.render(&base_pdf, doc, page, buffer)?;
@@ -338,7 +358,6 @@ impl SchemaTrait for Schema {
             Schema::Table(s) => s.base_mut().height = height,
         }
     }
-
 }
 
 #[derive(Debug, Clone)]

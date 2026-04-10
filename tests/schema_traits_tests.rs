@@ -6,11 +6,11 @@
 //! 3. Refactor while keeping tests green
 
 use pdforge::schemas::base::BaseSchema;
-use pdforge::schemas::{SchemaTrait, HasBaseSchema, BoundingBox, Schema};
 use pdforge::schemas::qrcode::QrCode;
 use pdforge::schemas::rect::Rect;
-use printpdf::{Mm, PdfDocument};
+use pdforge::schemas::{BoundingBox, HasBaseSchema, Schema, SchemaTrait};
 use pdforge::utils::OpBuffer;
+use printpdf::{Mm, PdfDocument};
 
 // Mock schema for testing the traits
 #[derive(Debug, Clone)]
@@ -179,7 +179,12 @@ fn test_generic_function_with_schema_trait() {
     // Test that we can write generic code using SchemaTrait
     fn render_all(schemas: &[&dyn SchemaTrait]) -> Result<(), pdforge::schemas::Error> {
         for schema in schemas {
-            schema.render(Mm(297.0), &mut PdfDocument::new("test"), 0, &mut OpBuffer::default())?;
+            schema.render(
+                Mm(297.0),
+                &mut PdfDocument::new("test"),
+                0,
+                &mut OpBuffer::default(),
+            )?;
         }
         Ok(())
     }
@@ -272,7 +277,10 @@ fn test_schema_qrcode_set_y_and_set_height() {
     // QrCode variant must support set_y and set_height without panicking
     let qr = QrCode::new(
         "qr_test".to_string(),
-        Mm(10.0), Mm(20.0), Mm(50.0), Mm(50.0),
+        Mm(10.0),
+        Mm(20.0),
+        Mm(50.0),
+        Mm(50.0),
         "test_content".to_string(),
     );
     let mut schema = Schema::QrCode(qr);
@@ -297,7 +305,8 @@ fn test_schema_rect_set_y_and_set_height() {
         "borderColor": "#000000",
         "color": "#ffffff"
     });
-    let json_rect: pdforge::schemas::rect::JsonRectSchema = serde_json::from_value(json_val).unwrap();
+    let json_rect: pdforge::schemas::rect::JsonRectSchema =
+        serde_json::from_value(json_val).unwrap();
     let mut schema: Schema = json_rect.try_into().unwrap();
 
     schema.set_y(Mm(77.0));

@@ -2,7 +2,10 @@ use super::InvalidColorSnafu;
 use crate::schemas::pdf_utils::{draw_rectangle, DrawRectangle};
 use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
-use printpdf::{Color, Mm, Op, PaintMode, PdfDocument, LinePoint, Point, Polygon, PolygonRing, Pt, Rgb, WindingOrder};
+use printpdf::{
+    Color, LinePoint, Mm, Op, PaintMode, PdfDocument, Point, Polygon, PolygonRing, Pt, Rgb,
+    WindingOrder,
+};
 use serde::Deserialize;
 use snafu::prelude::*;
 
@@ -200,73 +203,121 @@ pub fn draw_rounded_rectangle(props: DrawRoundedRectangle) -> Vec<Op> {
 
     // start drawing from lower left corner of the box counter clockwise direction
     let p10 = LinePoint {
-        p: Point { x: (props.x).into(), y: (bottom_y + props.radius).into() },
+        p: Point {
+            x: (props.x).into(),
+            y: (bottom_y + props.radius).into(),
+        },
         bezier: false,
     };
     let p11 = LinePoint {
-        p: Point { x: (props.x).into(), y: (bottom_y + props.radius - kappa).into() },
+        p: Point {
+            x: (props.x).into(),
+            y: (bottom_y + props.radius - kappa).into(),
+        },
         bezier: false,
     };
     let p12 = LinePoint {
-        p: Point { x: (props.x + props.radius - kappa).into(), y: (bottom_y).into() },
+        p: Point {
+            x: (props.x + props.radius - kappa).into(),
+            y: (bottom_y).into(),
+        },
         bezier: false,
     };
     let p13 = LinePoint {
-        p: Point { x: (props.x + props.radius).into(), y: (bottom_y).into() },
+        p: Point {
+            x: (props.x + props.radius).into(),
+            y: (bottom_y).into(),
+        },
         bezier: false,
     };
 
     // bottom right corner
     let p20 = LinePoint {
-        p: Point { x: (right_x - props.radius).into(), y: (bottom_y).into() },
+        p: Point {
+            x: (right_x - props.radius).into(),
+            y: (bottom_y).into(),
+        },
         bezier: false,
     };
     let p21 = LinePoint {
-        p: Point { x: (right_x - props.radius + kappa).into(), y: (bottom_y).into() },
+        p: Point {
+            x: (right_x - props.radius + kappa).into(),
+            y: (bottom_y).into(),
+        },
         bezier: false,
     };
     let p22 = LinePoint {
-        p: Point { x: (right_x).into(), y: (bottom_y + props.radius - kappa).into() },
+        p: Point {
+            x: (right_x).into(),
+            y: (bottom_y + props.radius - kappa).into(),
+        },
         bezier: false,
     };
     let p23 = LinePoint {
-        p: Point { x: (right_x).into(), y: (bottom_y + props.radius).into() },
+        p: Point {
+            x: (right_x).into(),
+            y: (bottom_y + props.radius).into(),
+        },
         bezier: false,
     };
 
     // top right corner
     let p30 = LinePoint {
-        p: Point { x: (right_x).into(), y: (top_y - props.radius).into() },
+        p: Point {
+            x: (right_x).into(),
+            y: (top_y - props.radius).into(),
+        },
         bezier: false,
     };
     let p31 = LinePoint {
-        p: Point { x: (right_x).into(), y: (top_y - props.radius + kappa).into() },
+        p: Point {
+            x: (right_x).into(),
+            y: (top_y - props.radius + kappa).into(),
+        },
         bezier: false,
     };
     let p32 = LinePoint {
-        p: Point { x: (right_x - props.radius + kappa).into(), y: (top_y).into() },
+        p: Point {
+            x: (right_x - props.radius + kappa).into(),
+            y: (top_y).into(),
+        },
         bezier: false,
     };
     let p33 = LinePoint {
-        p: Point { x: (right_x - props.radius).into(), y: (top_y).into() },
+        p: Point {
+            x: (right_x - props.radius).into(),
+            y: (top_y).into(),
+        },
         bezier: false,
     };
 
     // top left corner
     let p40 = LinePoint {
-        p: Point { x: (props.x + props.radius).into(), y: (top_y).into() },
+        p: Point {
+            x: (props.x + props.radius).into(),
+            y: (top_y).into(),
+        },
         bezier: false,
     };
     let p41 = LinePoint {
-        p: Point { x: (props.x + props.radius - kappa).into(), y: (top_y).into() },
+        p: Point {
+            x: (props.x + props.radius - kappa).into(),
+            y: (top_y).into(),
+        },
         bezier: false,
     };
     let p42 = LinePoint {
-        p: Point { x: (props.x).into(), y: (top_y - props.radius + kappa).into() },
+        p: Point {
+            x: (props.x).into(),
+            y: (top_y - props.radius + kappa).into(),
+        },
         bezier: false,
     };
     let p43 = LinePoint {
-        p: Point { x: (props.x).into(), y: (top_y - props.radius).into() },
+        p: Point {
+            x: (props.x).into(),
+            y: (top_y - props.radius).into(),
+        },
         bezier: false,
     };
 
@@ -288,7 +339,9 @@ pub fn draw_rounded_rectangle(props: DrawRoundedRectangle) -> Vec<Op> {
             col: border_color.clone(),
         },
         Op::SetFillColor { col: color },
-        Op::SetOutlineThickness { pt: Pt(border_width.0) },
+        Op::SetOutlineThickness {
+            pt: Pt(border_width.0),
+        },
         Op::DrawPolygon {
             polygon: polygon.clone(),
         },

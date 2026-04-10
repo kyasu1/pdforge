@@ -1,8 +1,11 @@
 use super::InvalidColorSnafu;
-use crate::schemas::pdf_utils::{calculate_transform_matrix_with_center_pivot};
+use crate::schemas::pdf_utils::calculate_transform_matrix_with_center_pivot;
 use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
-use printpdf::{Color, CurTransMat, Mm, Op, PdfDocument, Point, Pt, Rgb, LinePoint, Polygon, PolygonRing, PaintMode, WindingOrder};
+use printpdf::{
+    Color, CurTransMat, LinePoint, Mm, Op, PaintMode, PdfDocument, Point, Polygon, PolygonRing, Pt,
+    Rgb, WindingOrder,
+};
 use serde::Deserialize;
 use snafu::prelude::*;
 
