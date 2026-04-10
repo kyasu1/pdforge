@@ -1,5 +1,5 @@
 use derive_new::new;
-use icu_segmenter::WordSegmenter;
+use icu_segmenter::{GraphemeClusterSegmenter, WordSegmenter};
 use printpdf::*;
 use serde::Deserialize;
 use snafu::prelude::*;
@@ -12,6 +12,8 @@ use std::sync::Arc;
 // Thread-local WordSegmenter instance cached for performance
 thread_local! {
     static WORD_SEGMENTER: RefCell<WordSegmenter> = RefCell::new(WordSegmenter::new_auto());
+    static GRAPHEME_SEGMENTER: RefCell<GraphemeClusterSegmenter> =
+        RefCell::new(GraphemeClusterSegmenter::new());
 }
 
 #[derive(Debug, Snafu)]
@@ -56,14 +58,32 @@ impl Debug for dyn FontSpecTrait {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum LineBreakMode {
+    #[default]
+    Word,
+    // `char` is user-facing naming; the implementation uses grapheme clusters.
+    Char,
+}
+
 #[derive(Debug, Clone)]
 pub struct FontSpec {
     font: Arc<ParsedFont>,
+    line_break_mode: LineBreakMode,
 }
 
 impl FontSpec {
     pub fn new(font: Arc<ParsedFont>) -> Self {
-        Self { font }
+        Self {
+            font,
+            line_break_mode: LineBreakMode::Word,
+        }
+    }
+
+    pub fn with_line_break_mode(mut self, line_break_mode: LineBreakMode) -> Self {
+        self.line_break_mode = line_break_mode;
+        self
     }
 
     fn apply_japanese_kinsoku(lines: Vec<String>) -> Vec<String> {
@@ -71,21 +91,12 @@ impl FontSpec {
     }
 
     pub fn calculate_character_spacing(text: &str, residual: Mm) -> Mm {
-        use icu_segmenter::GraphemeClusterSegmenter;
-
         // Early return for empty text
         if text.is_empty() {
             return Mm(0.0);
         }
 
-        // Use thread-local segmenter to avoid repeated initialization
-        thread_local! {
-            static GRAPHEME_SEGMENTER: std::cell::RefCell<GraphemeClusterSegmenter> =
-                std::cell::RefCell::new(GraphemeClusterSegmenter::new());
-        }
-
-        let char_count =
-            GRAPHEME_SEGMENTER.with(|segmenter| segmenter.borrow().segment_str(text).count());
+        let char_count = Self::split_text_by_grapheme_cluster(text).len();
 
         // For justify alignment, distribute space between characters
         // If we have N characters, we have N-1 gaps between them
@@ -96,97 +107,115 @@ impl FontSpec {
         residual / (char_count - 1) as f32
     }
 
-    fn get_splitted_lines_by_segmenter(
+    fn get_splitted_lines(
         &self,
-        paragraph: String,
+        paragraph: &str,
         font_size: Pt,
         box_width: Pt,
         character_spacing: Pt,
     ) -> Result<Vec<String>, Error> {
-        let segments = Self::split_text_by_segmenter(paragraph);
+        let segments = match self.line_break_mode {
+            LineBreakMode::Word => Self::split_text_by_word_segmenter(paragraph),
+            LineBreakMode::Char => Self::split_text_by_grapheme_cluster(paragraph),
+        };
 
-        let mut lines: Vec<String> = vec![];
-        let mut line_count: usize = 0;
+        let mut lines = Vec::new();
+        let mut current_line = String::new();
 
-        for segment in segments.iter() {
-            // Skip empty segments
+        for segment in segments {
             if segment.is_empty() {
                 continue;
             }
 
-            let text_width: Pt =
-                self.width_of_text_at_size(segment, font_size, character_spacing)?;
+            if current_line.is_empty() {
+                let text_width =
+                    self.width_of_text_at_size(&segment, font_size, character_spacing)?;
 
-            // Try to add to current line
-            if let Some(current_line) = lines.get_mut(line_count) {
-                if !current_line.is_empty() {
-                    // Calculate combined width
-                    let combined = format!("{}{}", current_line, segment);
-                    let combined_width =
-                        self.width_of_text_at_size(&combined, font_size, character_spacing)?;
-
-                    if combined_width <= box_width {
-                        *current_line = combined;
-                        continue;
-                    }
-                }
-            }
-
-            // Start new line if segment fits
-            if text_width <= box_width {
-                if lines.get(line_count).map_or(false, |l| !l.is_empty()) {
-                    line_count += 1;
-                }
-                if lines.len() <= line_count {
-                    lines.push(segment.to_string());
+                if text_width <= box_width {
+                    current_line = segment;
                 } else {
-                    lines[line_count] = segment.to_string();
+                    current_line = self.push_grapheme_wrapped_lines(
+                        &mut lines,
+                        segment,
+                        font_size,
+                        box_width,
+                        character_spacing,
+                    )?;
                 }
-            } else {
-                // Segment is too wide, split character by character
-                for c in segment.chars() {
-                    let char_str = c.to_string();
-
-                    // Try to add to current line
-                    if let Some(current_line) = lines.get_mut(line_count) {
-                        if !current_line.is_empty() {
-                            let mut combined = current_line.clone();
-                            combined.push(c);
-                            let combined_width = self.width_of_text_at_size(
-                                &combined,
-                                font_size,
-                                character_spacing,
-                            )?;
-
-                            if combined_width <= box_width {
-                                *current_line = combined;
-                                continue;
-                            }
-                        }
-                    }
-
-                    // Start new line
-                    if lines.get(line_count).map_or(false, |l| !l.is_empty()) {
-                        line_count += 1;
-                    }
-                    if lines.len() <= line_count {
-                        lines.push(char_str);
-                    } else {
-                        lines[line_count] = char_str;
-                    }
-                }
+                continue;
             }
+
+            let combined = format!("{}{}", current_line, segment);
+            let combined_width =
+                self.width_of_text_at_size(&combined, font_size, character_spacing)?;
+
+            if combined_width <= box_width {
+                current_line = combined;
+                continue;
+            }
+
+            let segment_width =
+                self.width_of_text_at_size(&segment, font_size, character_spacing)?;
+
+            if segment_width <= box_width {
+                lines.push(std::mem::take(&mut current_line));
+                current_line = segment;
+            } else {
+                lines.push(std::mem::take(&mut current_line));
+                current_line = self.push_grapheme_wrapped_lines(
+                    &mut lines,
+                    segment,
+                    font_size,
+                    box_width,
+                    character_spacing,
+                )?;
+            }
+        }
+
+        if !current_line.is_empty() {
+            lines.push(current_line);
         }
 
         Ok(lines)
     }
 
-    fn split_text_by_segmenter(paragraph: String) -> Vec<String> {
+    fn push_grapheme_wrapped_lines(
+        &self,
+        lines: &mut Vec<String>,
+        segment: String,
+        font_size: Pt,
+        box_width: Pt,
+        character_spacing: Pt,
+    ) -> Result<String, Error> {
+        let mut current_line = String::new();
+
+        for cluster in Self::split_text_by_grapheme_cluster(&segment) {
+            if current_line.is_empty() {
+                current_line = cluster;
+                continue;
+            }
+
+            let combined = format!("{}{}", current_line, cluster);
+            let combined_width =
+                self.width_of_text_at_size(&combined, font_size, character_spacing)?;
+
+            if combined_width <= box_width {
+                current_line = combined;
+            } else {
+                lines.push(std::mem::take(&mut current_line));
+                current_line = cluster;
+            }
+        }
+
+        Ok(current_line)
+    }
+
+    fn split_text_by_word_segmenter(paragraph: &str) -> Vec<String> {
         let mut segments: Vec<String> = Vec::new();
         let mut last_breakpoint = 0;
 
         WORD_SEGMENTER.with(|segmenter| {
-            for breakpoint in segmenter.borrow().segment_str(&paragraph) {
+            for breakpoint in segmenter.borrow().segment_str(paragraph) {
                 if last_breakpoint > 0 || breakpoint > 0 {
                     segments.push(paragraph[last_breakpoint..breakpoint].to_string());
                 }
@@ -195,6 +224,38 @@ impl FontSpec {
         });
 
         segments
+    }
+
+    fn split_text_by_grapheme_cluster(paragraph: &str) -> Vec<String> {
+        let mut segments: Vec<String> = Vec::new();
+        let mut last_breakpoint = 0;
+
+        GRAPHEME_SEGMENTER.with(|segmenter| {
+            for breakpoint in segmenter.borrow().segment_str(paragraph) {
+                if last_breakpoint > 0 || breakpoint > 0 {
+                    segments.push(paragraph[last_breakpoint..breakpoint].to_string());
+                }
+                last_breakpoint = breakpoint;
+            }
+        });
+
+        segments
+    }
+
+    fn glyph_width_for_char(&self, ch: char, percentage_font_scaling: f32, tofu_width: f32) -> f32 {
+        if is_non_rendering_cluster_char(ch) {
+            return 0.0;
+        }
+
+        if ch == ' ' {
+            return self.font.space_width.unwrap_or(0) as f32 * percentage_font_scaling;
+        }
+
+        self.font
+            .lookup_glyph_index(ch as u32)
+            .map(|glyph_index| self.font.get_horizontal_advance(glyph_index))
+            .map(|width| width as f32 * percentage_font_scaling)
+            .unwrap_or(tofu_width * percentage_font_scaling)
     }
 
     fn calculate_constraints(
@@ -260,12 +321,8 @@ impl FontSpecTrait for FontSpec {
         let mut splitted_paragraphs: Vec<Vec<String>> = Vec::new();
 
         for paragraph in content.lines() {
-            let lines = self.get_splitted_lines_by_segmenter(
-                String::from(paragraph),
-                font_size,
-                box_width,
-                character_spacing,
-            )?;
+            let lines =
+                self.get_splitted_lines(paragraph, font_size, box_width, character_spacing)?;
             splitted_paragraphs.push(Self::apply_japanese_kinsoku(lines));
         }
 
@@ -354,26 +411,25 @@ impl FontSpecTrait for FontSpec {
         let tofu_width = 500.0; // Units in font metrics
 
         let mut total_width = 0.0_f32;
-        let mut char_count = 0_usize;
+        let mut cluster_count = 0_usize;
 
-        for char in text.chars() {
-            let glyph_width = if char == ' ' {
-                self.font.space_width.unwrap_or(0) as f32 * percentage_font_scaling
+        for cluster in Self::split_text_by_grapheme_cluster(text) {
+            let sanitized_cluster = sanitize_cluster_for_font(&cluster, &self.font);
+            let cluster_width = sanitized_cluster.chars().fold(0.0_f32, |acc, ch| {
+                acc + self.glyph_width_for_char(ch, percentage_font_scaling, tofu_width)
+            });
+
+            total_width += if cluster_width > 0.0 {
+                cluster_width
             } else {
-                self.font
-                    .lookup_glyph_index(char as u32)
-                    .map(|glyph_index| self.font.get_horizontal_advance(glyph_index))
-                    .map(|width| (width as f32) * percentage_font_scaling)
-                    .unwrap_or(tofu_width * percentage_font_scaling) // Use TOFU width if glyph not found
+                tofu_width * percentage_font_scaling
             };
-
-            total_width += glyph_width;
-            char_count += 1;
+            cluster_count += 1;
         }
 
         let scaled = total_width * (font_size.0) / 1000.0;
-        let additional_spacing = if char_count > 1 {
-            ((char_count - 1) as f32) * character_spacing.0
+        let additional_spacing = if cluster_count > 1 {
+            ((cluster_count - 1) as f32) * character_spacing.0
         } else {
             0.0
         };
@@ -522,6 +578,68 @@ const LINE_START_FORBIDDEN_CHARS_DE: &[char] = &[
     '.', ',', '!', '?', ':', ';', ')', ']', '}', '"', '"', '"', '\'',
 ];
 
+const FALLBACK_CHARS: &[char] = &[
+    '□',        // U+25A1 White Square (classic TOFU character)
+    '\u{FFFD}', // U+FFFD Replacement Character (Unicode standard replacement)
+    '?',        // Question mark (widely supported)
+    '.',        // Period (basic punctuation)
+    'X',        // Letter X (ASCII fallback)
+    ' ',        // Space (should exist in any font)
+];
+
+fn is_non_rendering_cluster_char(ch: char) -> bool {
+    matches!(ch, '\u{200C}' | '\u{200D}')
+        || ('\u{FE00}'..='\u{FE0F}').contains(&ch)
+        || ('\u{E0100}'..='\u{E01EF}').contains(&ch)
+}
+
+fn fallback_char_for_font(font: &ParsedFont) -> Option<char> {
+    FALLBACK_CHARS
+        .iter()
+        .copied()
+        .find(|fallback| font.lookup_glyph_index(*fallback as u32).is_some())
+}
+
+fn cluster_is_supported_by_font(cluster: &str, font: &ParsedFont) -> bool {
+    if cluster == " " {
+        return true;
+    }
+
+    let mut has_visible_glyph = false;
+
+    for ch in cluster.chars() {
+        if font.lookup_glyph_index(ch as u32).is_some() {
+            has_visible_glyph = true;
+            continue;
+        }
+
+        if is_non_rendering_cluster_char(ch) {
+            continue;
+        }
+
+        return false;
+    }
+
+    has_visible_glyph
+}
+
+fn sanitize_cluster_for_font(cluster: &str, font: &ParsedFont) -> String {
+    if cluster_is_supported_by_font(cluster, font) {
+        cluster.to_string()
+    } else {
+        fallback_char_for_font(font)
+            .map(|fallback| fallback.to_string())
+            .unwrap_or_else(|| cluster.to_string())
+    }
+}
+
+pub(crate) fn sanitize_text_for_font(text: &str, font: &ParsedFont) -> String {
+    FontSpec::split_text_by_grapheme_cluster(text)
+        .into_iter()
+        .map(|cluster| sanitize_cluster_for_font(&cluster, font))
+        .collect()
+}
+
 /// Generic function to filter lines to prevent forbidden characters at line start
 /// Processes lines in reverse order to handle character movement properly
 pub fn filter_start_forbidden_chars(lines: Vec<String>, forbidden_chars: &[char]) -> Vec<String> {
@@ -669,7 +787,33 @@ pub fn filter_end_de(lines: Vec<String>) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{filter_end_jp, filter_start_jp, FontSpec};
+    use super::{
+        filter_end_jp, filter_start_jp, sanitize_text_for_font, FontSpec, FontSpecTrait,
+        LineBreakMode,
+    };
+    use printpdf::{ParsedFont, Pt};
+    use std::path::PathBuf;
+    use std::sync::{Arc, OnceLock};
+
+    fn test_font() -> Arc<ParsedFont> {
+        static FONT: OnceLock<Arc<ParsedFont>> = OnceLock::new();
+
+        FONT.get_or_init(|| {
+            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("assets")
+                .join("fonts")
+                .join("NotoSansJP-Regular.ttf");
+            let font_bytes = std::fs::read(path).expect("test font should be readable");
+            let parsed_font = ParsedFont::from_bytes(&font_bytes, 0, &mut Vec::new())
+                .expect("test font should parse");
+            Arc::new(parsed_font)
+        })
+        .clone()
+    }
+
+    fn test_font_spec(line_break_mode: LineBreakMode) -> FontSpec {
+        FontSpec::new(test_font()).with_line_break_mode(line_break_mode)
+    }
 
     #[test]
     fn filter_start_jp_moves_halfwidth_closing_paren() {
@@ -726,5 +870,72 @@ mod tests {
         let lines = vec!["abc".to_string(), "def".to_string()];
 
         assert_eq!(FontSpec::apply_japanese_kinsoku(lines.clone()), lines);
+    }
+
+    #[test]
+    fn line_break_mode_char_can_split_inside_word() {
+        let text = "abc def";
+        let font_size = Pt(12.0);
+        let word_spec = test_font_spec(LineBreakMode::Word);
+        let char_spec = test_font_spec(LineBreakMode::Char);
+        let box_width = char_spec
+            .width_of_text_at_size("abc d", font_size, Pt(0.0))
+            .unwrap();
+
+        assert_eq!(
+            word_spec
+                .split_text_to_size(text, font_size, box_width, Pt(0.0))
+                .unwrap(),
+            vec!["abc ".to_string(), "def".to_string()]
+        );
+        assert_eq!(
+            char_spec
+                .split_text_to_size(text, font_size, box_width, Pt(0.0))
+                .unwrap(),
+            vec!["abc d".to_string(), "ef".to_string()]
+        );
+    }
+
+    #[test]
+    fn line_break_mode_char_keeps_family_emoji_as_single_cluster() {
+        let text = "x👨‍👩‍👧‍👦y";
+        let font_size = Pt(12.0);
+        let spec = test_font_spec(LineBreakMode::Char);
+        let box_width = spec
+            .width_of_text_at_size("x👨‍👩‍👧‍👦", font_size, Pt(0.0))
+            .unwrap();
+
+        assert_eq!(
+            spec.split_text_to_size(text, font_size, box_width, Pt(0.0))
+                .unwrap(),
+            vec!["x👨‍👩‍👧‍👦".to_string(), "y".to_string()]
+        );
+    }
+
+    #[test]
+    fn word_mode_fallback_keeps_family_emoji_as_single_cluster() {
+        let text = "x👨‍👩‍👧‍👦y";
+        let font_size = Pt(12.0);
+        let spec = test_font_spec(LineBreakMode::Word);
+        let box_width = spec
+            .width_of_text_at_size("x👨‍👩‍👧‍👦", font_size, Pt(0.0))
+            .unwrap();
+
+        assert_eq!(
+            spec.split_text_to_size(text, font_size, box_width, Pt(0.0))
+                .unwrap(),
+            vec!["x👨‍👩‍👧‍👦".to_string(), "y".to_string()]
+        );
+    }
+
+    #[test]
+    fn sanitize_text_for_font_replaces_unsupported_emoji_cluster_once() {
+        let sanitized = sanitize_text_for_font("a👍🏽b", &test_font());
+
+        assert_eq!(sanitized.chars().count(), 3);
+        assert!(sanitized.starts_with('a'));
+        assert!(sanitized.ends_with('b'));
+        assert!(!sanitized.contains('👍'));
+        assert!(!sanitized.contains('🏽'));
     }
 }

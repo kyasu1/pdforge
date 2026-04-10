@@ -1,6 +1,6 @@
 use super::{base::BaseSchema, BasePdf, HasBaseSchema, InvalidColorSnafu, Schema};
 use super::{qrcode, BoundingBox, Frame, JsonFrame, SchemaTrait, VerticalAlignment};
-use crate::font::FontMap;
+use crate::font::{FontMap, LineBreakMode};
 use crate::schemas::pdf_utils::{draw_rectangle, DrawRectangle};
 use crate::schemas::text;
 use crate::{
@@ -47,6 +47,7 @@ pub struct JsonHeadStyles {
     background_color: String,
     border_width: JsonFrame,
     padding: JsonFrame,
+    line_break_mode: Option<LineBreakMode>,
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +63,7 @@ pub struct HeadStyles {
     background_color: String,
     border_width: Frame,
     padding: Frame,
+    line_break_mode: Option<LineBreakMode>,
 }
 
 impl HeadStyles {
@@ -79,6 +81,7 @@ impl HeadStyles {
             background_color: json.background_color,
             border_width,
             padding: Frame::from_json(json.padding)?,
+            line_break_mode: json.line_break_mode,
         })
     }
 }
@@ -93,6 +96,7 @@ pub struct JsonHead {
     character_spacing: Option<f32>,
     alignment: Option<Alignment>,
     vertical_alignment: Option<VerticalAlignment>,
+    line_break_mode: Option<LineBreakMode>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -110,6 +114,7 @@ pub struct JsonBodyStyles {
     alternate_background_color: Option<String>,
     border_width: JsonFrame,
     padding: JsonFrame,
+    line_break_mode: Option<LineBreakMode>,
 }
 
 #[derive(Debug, Clone)]
@@ -126,6 +131,7 @@ pub struct BodyStyles {
     alternate_background_color: Option<csscolorparser::Color>,
     border_width: Frame,
     padding: Frame,
+    line_break_mode: LineBreakMode,
 }
 
 impl BodyStyles {
@@ -152,6 +158,7 @@ impl BodyStyles {
             alternate_background_color,
             border_width,
             padding: Frame::from_json(json.padding)?,
+            line_break_mode: json.line_break_mode.unwrap_or(LineBreakMode::Char),
         })
     }
 }
@@ -253,7 +260,7 @@ impl Table {
             .head_width_percentages
             .into_iter()
             .map(|json_head| {
-                let text = text::Text::new(
+                let mut text = text::Text::new(
                     Mm(0.0),
                     Mm(0.0),
                     Mm(json.width * json_head.percent / 100.0),
@@ -268,6 +275,7 @@ impl Table {
                     font_map,
                     Some(head_styles.padding.clone()),
                 )?;
+                text.set_line_break_mode(json_head.line_break_mode.or(head_styles.line_break_mode));
 
                 Ok(Head {
                     percent: json_head.percent,
@@ -452,6 +460,9 @@ impl Table {
                     text.set_content(col.to_string());
                     if !text.has_line_height() {
                         text.set_line_height(Some(self.body_styles.line_height));
+                    }
+                    if !text.has_line_break_mode() {
+                        text.set_line_break_mode(Some(self.body_styles.line_break_mode));
                     }
 
                     let height = text.get_height()?;
@@ -689,10 +700,37 @@ impl HasBaseSchema for Table {
 mod tests {
     use super::*;
     use crate::font::FontMap;
+    use printpdf::{ParsedFont, PdfDocument};
+    use serde_json::json;
+    use std::path::PathBuf;
+    use std::sync::{Arc, OnceLock};
 
     fn create_test_font_map() -> FontMap {
         // Create an empty FontMap for testing purposes
         FontMap::default()
+    }
+
+    fn create_real_test_font_map() -> FontMap {
+        static FONT: OnceLock<Arc<ParsedFont>> = OnceLock::new();
+
+        let parsed_font = FONT
+            .get_or_init(|| {
+                let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("assets")
+                    .join("fonts")
+                    .join("NotoSansJP-Regular.ttf");
+                let font_bytes = std::fs::read(path).expect("test font should be readable");
+                let parsed_font = ParsedFont::from_bytes(&font_bytes, 0, &mut Vec::new())
+                    .expect("test font should parse");
+                Arc::new(parsed_font)
+            })
+            .clone();
+
+        let mut doc = PdfDocument::new("test");
+        let font_id = doc.add_font(parsed_font.as_ref());
+        let mut font_map = FontMap::default();
+        font_map.add_font("TestFont".to_string(), font_id, parsed_font.as_ref());
+        font_map
     }
 
     fn create_test_json_frame() -> JsonFrame {
@@ -717,6 +755,7 @@ mod tests {
             background_color: "#2980ba".to_string(),
             border_width: create_test_json_frame(),
             padding: create_test_json_frame(),
+            line_break_mode: None,
         }
     }
 
@@ -734,6 +773,7 @@ mod tests {
             alternate_background_color: Some("#f8f8f8".to_string()),
             border_width: create_test_json_frame(),
             padding: create_test_json_frame(),
+            line_break_mode: None,
         }
     }
 
@@ -761,6 +801,7 @@ mod tests {
                     character_spacing: Some(0.0),
                     alignment: Some(Alignment::Center),
                     vertical_alignment: Some(VerticalAlignment::Middle),
+                    line_break_mode: None,
                 },
                 JsonHead {
                     percent: 50.0,
@@ -770,6 +811,7 @@ mod tests {
                     character_spacing: Some(0.0),
                     alignment: Some(Alignment::Center),
                     vertical_alignment: Some(VerticalAlignment::Middle),
+                    line_break_mode: None,
                 },
             ],
             body_styles: create_test_body_styles(),
@@ -870,5 +912,171 @@ mod tests {
         assert_eq!(frame.right, Mm(15.0));
         assert_eq!(frame.bottom, Mm(20.0));
         assert_eq!(frame.left, Mm(25.0));
+    }
+
+    fn create_base_pdf() -> BasePdf {
+        BasePdf {
+            width: Mm(200.0),
+            height: Mm(300.0),
+            padding: Frame {
+                top: Mm(0.0),
+                right: Mm(0.0),
+                bottom: Mm(0.0),
+                left: Mm(0.0),
+            },
+            static_schema: vec![],
+        }
+    }
+
+    fn create_text_table_schema(
+        head_styles_line_break_mode: Option<&str>,
+        head_line_break_mode: Option<&str>,
+        body_styles_line_break_mode: Option<&str>,
+        column_line_break_mode: Option<&str>,
+    ) -> JsonTableSchema {
+        serde_json::from_value(json!({
+            "name": "test_table",
+            "position": { "x": 10.0, "y": 50.0 },
+            "width": 100.0,
+            "height": 100.0,
+            "showHead": true,
+            "headStyles": {
+                "fontSize": 12.0,
+                "fontName": "TestFont",
+                "characterSpacing": 0.0,
+                "alignment": "center",
+                "verticalAlignment": "middle",
+                "lineHeight": 1.0,
+                "fontColor": "#ffffff",
+                "borderColor": "#000000",
+                "backgroundColor": "#2980ba",
+                "borderWidth": { "top": 1.0, "right": 1.0, "bottom": 1.0, "left": 1.0 },
+                "padding": { "top": 1.0, "right": 1.0, "bottom": 1.0, "left": 1.0 },
+                "lineBreakMode": head_styles_line_break_mode
+            },
+            "headWidthPercentages": [{
+                "percent": 100.0,
+                "content": "Header Value",
+                "fontSize": 12.0,
+                "fontName": "TestFont",
+                "characterSpacing": 0.0,
+                "alignment": "center",
+                "verticalAlignment": "middle",
+                "lineBreakMode": head_line_break_mode
+            }],
+            "bodyStyles": {
+                "alignment": "left",
+                "verticalAlignment": "middle",
+                "characterSpacing": 0.0,
+                "fontSize": 10.0,
+                "fontName": "TestFont",
+                "fontColor": "#000000",
+                "lineHeight": 1.5,
+                "borderColor": "#888888",
+                "backgroundColor": "#ffffff",
+                "alternateBackgroundColor": "#f8f8f8",
+                "borderWidth": { "top": 1.0, "right": 1.0, "bottom": 1.0, "left": 1.0 },
+                "padding": { "top": 1.0, "right": 1.0, "bottom": 1.0, "left": 1.0 },
+                "lineBreakMode": body_styles_line_break_mode
+            },
+            "tableStyles": {
+                "borderWidth": 0.3,
+                "borderColor": "#000000"
+            },
+            "columns": [{
+                "schema": {
+                    "type": "text",
+                    "name": "body_column",
+                    "position": { "x": 0.0, "y": 0.0 },
+                    "width": 0.0,
+                    "height": 0.0,
+                    "content": "",
+                    "fontName": "TestFont",
+                    "fontSize": 10.0,
+                    "lineBreakMode": column_line_break_mode
+                }
+            }],
+            "fields": [["Body Value"]]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn body_styles_default_line_break_mode_is_char() {
+        let body_styles = BodyStyles::from_json(create_test_body_styles()).unwrap();
+
+        assert_eq!(body_styles.line_break_mode, LineBreakMode::Char);
+    }
+
+    #[test]
+    fn table_header_uses_head_styles_line_break_mode_by_default() {
+        let font_map = create_real_test_font_map();
+        let json = create_text_table_schema(Some("char"), None, None, None);
+        let table = Table::from_json(json, &font_map).unwrap();
+
+        assert_eq!(
+            table.head_width_percentages[0]
+                .text
+                .resolved_line_break_mode(),
+            LineBreakMode::Char
+        );
+    }
+
+    #[test]
+    fn table_header_item_line_break_mode_overrides_head_styles_default() {
+        let font_map = create_real_test_font_map();
+        let json = create_text_table_schema(Some("word"), Some("char"), None, None);
+        let table = Table::from_json(json, &font_map).unwrap();
+
+        assert_eq!(
+            table.head_width_percentages[0]
+                .text
+                .resolved_line_break_mode(),
+            LineBreakMode::Char
+        );
+    }
+
+    #[test]
+    fn table_body_uses_body_styles_line_break_mode_when_column_is_unspecified() {
+        let font_map = create_real_test_font_map();
+        let json = create_text_table_schema(None, None, None, None);
+        let table = Table::from_json(json, &font_map).unwrap();
+        let cell_widths = vec![Mm(100.0)];
+        let base_pdf = create_base_pdf();
+        let (schemas, _) = table
+            .process_row(
+                vec!["Body Value".to_string()],
+                Mm(0.0),
+                &cell_widths,
+                &base_pdf,
+            )
+            .unwrap();
+
+        match &schemas[0] {
+            Schema::Text(text) => assert_eq!(text.resolved_line_break_mode(), LineBreakMode::Char),
+            _ => panic!("expected text schema"),
+        }
+    }
+
+    #[test]
+    fn table_body_column_line_break_mode_overrides_body_styles_default() {
+        let font_map = create_real_test_font_map();
+        let json = create_text_table_schema(None, None, Some("char"), Some("word"));
+        let table = Table::from_json(json, &font_map).unwrap();
+        let cell_widths = vec![Mm(100.0)];
+        let base_pdf = create_base_pdf();
+        let (schemas, _) = table
+            .process_row(
+                vec!["Body Value".to_string()],
+                Mm(0.0),
+                &cell_widths,
+                &base_pdf,
+            )
+            .unwrap();
+
+        match &schemas[0] {
+            Schema::Text(text) => assert_eq!(text.resolved_line_break_mode(), LineBreakMode::Word),
+            _ => panic!("expected text schema"),
+        }
     }
 }

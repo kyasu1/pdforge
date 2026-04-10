@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::font::{FontMap, FontSpec, FontSpecTrait};
+use crate::font::{FontMap, FontSpec, FontSpecTrait, LineBreakMode};
 use crate::schemas::base::BaseSchema;
 use crate::schemas::{Error, FontSnafu, HasBaseSchema, JsonPosition};
 use crate::utils::OpBuffer;
@@ -22,6 +22,7 @@ pub struct JsonDynamicTextSchema {
     character_spacing: Option<f32>,
     line_height: Option<f32>,
     font_size: Option<f32>,
+    line_break_mode: Option<LineBreakMode>,
 }
 
 #[derive(Debug, Clone)]
@@ -33,6 +34,8 @@ pub struct DynamicText {
     font_size: Pt,
     font_id: FontId,
     font_spec: Arc<dyn FontSpecTrait>,
+    font: Arc<ParsedFont>,
+    line_break_mode: Option<LineBreakMode>,
 }
 
 impl DynamicText {
@@ -60,6 +63,8 @@ impl DynamicText {
             font_size,
             font_id: font_id.clone(),
             font_spec: Arc::new(font_spec.clone()),
+            font: font.clone(),
+            line_break_mode: None,
         })
     }
 
@@ -83,6 +88,7 @@ impl DynamicText {
             Some(f) => Pt(f),
             None => Pt(12.0),
         };
+        let line_break_mode = json.line_break_mode;
         let text = Self {
             base,
             content: json.content,
@@ -90,7 +96,11 @@ impl DynamicText {
             line_height,
             font_size,
             font_id: font_id.clone(),
-            font_spec: Arc::new(font_spec.clone()),
+            font_spec: Arc::new(
+                font_spec.with_line_break_mode(line_break_mode.unwrap_or_default()),
+            ),
+            font: font.clone(),
+            line_break_mode,
         };
 
         Ok(text)
@@ -168,7 +178,7 @@ impl DynamicText {
                     None,
                 );
 
-                let line_ops = super::pdf_utils::create_text_ops(
+                let line_ops = super::pdf_utils::create_text_ops_with_font(
                     matrix,
                     &self.font_id,
                     self.font_size,
@@ -183,6 +193,7 @@ impl DynamicText {
                         source: e,
                         message: "Failed to parse default black color".to_string(),
                     })?, // デフォルトの黒色
+                    Some(&self.font),
                 );
 
                 ops.extend_from_slice(&line_ops);
@@ -200,6 +211,25 @@ impl DynamicText {
     pub fn set_height(&mut self, height: Mm) {
         self.base.height = height;
     }
+
+    pub fn has_line_break_mode(&self) -> bool {
+        self.line_break_mode.is_some()
+    }
+
+    pub fn line_break_mode(&self) -> Option<LineBreakMode> {
+        self.line_break_mode
+    }
+
+    pub fn resolved_line_break_mode(&self) -> LineBreakMode {
+        self.line_break_mode.unwrap_or_default()
+    }
+
+    pub fn set_line_break_mode(&mut self, line_break_mode: Option<LineBreakMode>) {
+        self.line_break_mode = line_break_mode;
+        self.font_spec = Arc::new(
+            FontSpec::new(self.font.clone()).with_line_break_mode(self.resolved_line_break_mode()),
+        );
+    }
 }
 
 impl HasBaseSchema for DynamicText {
@@ -208,5 +238,136 @@ impl HasBaseSchema for DynamicText {
     }
     fn base_mut(&mut self) -> &mut BaseSchema {
         &mut self.base
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::font::FontMap;
+    use crate::schemas::Frame;
+    use printpdf::{Op, ParsedFont, PdfDocument, TextItem};
+    use serde_json::json;
+    use std::path::PathBuf;
+    use std::sync::{Arc, OnceLock};
+
+    fn test_font() -> Arc<ParsedFont> {
+        static FONT: OnceLock<Arc<ParsedFont>> = OnceLock::new();
+
+        FONT.get_or_init(|| {
+            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("assets")
+                .join("fonts")
+                .join("NotoSansJP-Regular.ttf");
+            let font_bytes = std::fs::read(path).expect("test font should be readable");
+            let parsed_font = ParsedFont::from_bytes(&font_bytes, 0, &mut Vec::new())
+                .expect("test font should parse");
+            Arc::new(parsed_font)
+        })
+        .clone()
+    }
+
+    fn test_font_map() -> FontMap {
+        let mut doc = PdfDocument::new("test");
+        let parsed_font = test_font();
+        let font_id = doc.add_font(parsed_font.as_ref());
+        let mut font_map = FontMap::default();
+        font_map.add_font("TestFont".to_string(), font_id, parsed_font.as_ref());
+        font_map
+    }
+
+    #[test]
+    fn dynamic_text_from_json_defaults_line_break_mode_to_word() {
+        let font_map = test_font_map();
+        let json: JsonDynamicTextSchema = serde_json::from_value(json!({
+            "name": "dynamicText",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 80.0,
+            "height": 20.0,
+            "content": "abc def",
+            "fontName": "TestFont",
+            "fontSize": 12.0
+        }))
+        .unwrap();
+
+        let text = DynamicText::from_json(json, &font_map).unwrap();
+
+        assert!(!text.has_line_break_mode());
+        assert_eq!(text.line_break_mode(), None);
+        assert_eq!(text.resolved_line_break_mode(), LineBreakMode::Word);
+    }
+
+    #[test]
+    fn dynamic_text_from_json_accepts_char_line_break_mode() {
+        let font_map = test_font_map();
+        let json: JsonDynamicTextSchema = serde_json::from_value(json!({
+            "name": "dynamicText",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 80.0,
+            "height": 20.0,
+            "content": "abc def",
+            "fontName": "TestFont",
+            "fontSize": 12.0,
+            "lineBreakMode": "char"
+        }))
+        .unwrap();
+
+        let text = DynamicText::from_json(json, &font_map).unwrap();
+
+        assert!(text.has_line_break_mode());
+        assert_eq!(text.line_break_mode(), Some(LineBreakMode::Char));
+        assert_eq!(text.resolved_line_break_mode(), LineBreakMode::Char);
+    }
+
+    #[test]
+    fn dynamic_text_render_sanitizes_unsupported_emoji_cluster() {
+        let font_map = test_font_map();
+        let json: JsonDynamicTextSchema = serde_json::from_value(json!({
+            "name": "dynamicText",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 80.0,
+            "height": 20.0,
+            "content": "a👍🏽b",
+            "fontName": "TestFont",
+            "fontSize": 12.0
+        }))
+        .unwrap();
+        let mut text = DynamicText::from_json(json, &font_map).unwrap();
+        let base_pdf = BasePdf {
+            width: Mm(100.0),
+            height: Mm(100.0),
+            padding: Frame {
+                top: Mm(0.0),
+                right: Mm(0.0),
+                bottom: Mm(0.0),
+                left: Mm(0.0),
+            },
+            static_schema: vec![],
+        };
+        let mut buffer = OpBuffer::default();
+
+        text.render(&base_pdf, 0, None, &mut buffer).unwrap();
+
+        let rendered = buffer.buffer[0]
+            .iter()
+            .find_map(|op| match op {
+                Op::ShowText { items } => Some(
+                    items
+                        .iter()
+                        .filter_map(|item| match item {
+                            TextItem::Text(text) => Some(text.clone()),
+                            _ => None,
+                        })
+                        .collect::<String>(),
+                ),
+                _ => None,
+            })
+            .expect("render should emit ShowText");
+
+        assert_eq!(rendered.chars().count(), 3);
+        assert!(rendered.starts_with('a'));
+        assert!(rendered.ends_with('b'));
+        assert!(!rendered.contains('👍'));
+        assert!(!rendered.contains('🏽'));
     }
 }

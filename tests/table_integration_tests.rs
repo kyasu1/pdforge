@@ -1,10 +1,30 @@
 use pdforge::font::FontMap;
 use pdforge::schemas::table::{JsonTableSchema, Table};
-use std::collections::HashMap;
+use printpdf::{ParsedFont, PdfDocument};
+use std::path::PathBuf;
+use std::sync::{Arc, OnceLock};
 
 fn create_test_font_map() -> FontMap {
-    // Create an empty FontMap for testing purposes
-    FontMap::default()
+    static FONT: OnceLock<Arc<ParsedFont>> = OnceLock::new();
+
+    let parsed_font = FONT
+        .get_or_init(|| {
+            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("assets")
+                .join("fonts")
+                .join("NotoSansJP-Regular.ttf");
+            let font_bytes = std::fs::read(path).expect("test font should be readable");
+            let parsed_font = ParsedFont::from_bytes(&font_bytes, 0, &mut Vec::new())
+                .expect("test font should parse");
+            Arc::new(parsed_font)
+        })
+        .clone();
+
+    let mut doc = PdfDocument::new("test");
+    let font_id = doc.add_font(parsed_font.as_ref());
+    let mut font_map = FontMap::default();
+    font_map.add_font("TestFont".to_string(), font_id, parsed_font.as_ref());
+    font_map
 }
 
 fn create_simple_table_json() -> serde_json::Value {
