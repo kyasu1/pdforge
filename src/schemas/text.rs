@@ -1,7 +1,10 @@
 use super::{
-    Alignment, Error, FontSnafu, Frame, InvalidColorSnafu, JsonPosition, VerticalAlignment,
+    Alignment, Error, FontSnafu, Frame, HasBaseSchema, InvalidColorSnafu, JsonPosition,
+    VerticalAlignment,
 };
-use crate::font::{DynamicFontSize, FontMap, FontSize, FontSpec, FontSpecTrait, JsonFontSize};
+use crate::font::{
+    DynamicFontSize, FontMap, FontSize, FontSpec, FontSpecTrait, JsonFontSize, LineBreakMode,
+};
 use crate::schemas::base::BaseSchema;
 
 use crate::utils::OpBuffer;
@@ -32,6 +35,7 @@ pub struct JsonTextSchema {
     scale_y: Option<f32>,
     border_color: Option<String>,
     border_width: Option<f32>,
+    line_break_mode: Option<LineBreakMode>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +58,7 @@ pub struct Text {
     scale_y: Option<f32>,
     border_color: Option<csscolorparser::Color>,
     border_width: Option<Pt>,
+    line_break_mode: Option<LineBreakMode>,
 }
 
 impl Text {
@@ -97,11 +102,12 @@ impl Text {
             scale_y: None,
             border_color: None,
             border_width: None,
+            line_break_mode: None,
         })
     }
 
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     pub fn from_json(json: JsonTextSchema, font_map: &FontMap) -> Result<Text, Error> {
@@ -120,6 +126,7 @@ impl Text {
 
         let character_spacing = json.character_spacing.map(Pt).unwrap_or(Pt(0.0));
         let line_height = json.line_height;
+        let line_break_mode = json.line_break_mode;
         let font_size = match json.font_size {
             JsonFontSize::Dynamic { min, max, fit } => {
                 FontSize::Dynamic(DynamicFontSize::new(Pt(min), Pt(max), fit))
@@ -148,7 +155,9 @@ impl Text {
             line_height,
             font_size,
             font_id: font_id.clone(),
-            font_spec: Arc::new(font_spec),
+            font_spec: Arc::new(
+                font_spec.with_line_break_mode(line_break_mode.unwrap_or_default()),
+            ),
             font: font.clone(),
             font_color,
             background_color,
@@ -162,6 +171,7 @@ impl Text {
                 .map(|c| csscolorparser::parse(c).context(InvalidColorSnafu))
                 .transpose()?,
             border_width: json.border_width.map(Pt),
+            line_break_mode,
         };
 
         Ok(text)
@@ -463,6 +473,21 @@ impl Text {
     pub fn set_line_height(&mut self, line_height: Option<f32>) {
         self.line_height = line_height;
     }
+    pub fn has_line_break_mode(&self) -> bool {
+        self.line_break_mode.is_some()
+    }
+    pub fn line_break_mode(&self) -> Option<LineBreakMode> {
+        self.line_break_mode
+    }
+    pub fn resolved_line_break_mode(&self) -> LineBreakMode {
+        self.line_break_mode.unwrap_or_default()
+    }
+    pub fn set_line_break_mode(&mut self, line_break_mode: Option<LineBreakMode>) {
+        self.line_break_mode = line_break_mode;
+        self.font_spec = Arc::new(
+            FontSpec::new(self.font.clone()).with_line_break_mode(self.resolved_line_break_mode()),
+        );
+    }
     pub fn get_height(&self) -> Result<Mm, Error> {
         let font_size = self.get_font_size()?;
 
@@ -500,10 +525,22 @@ impl Text {
     }
 }
 
+impl HasBaseSchema for Text {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use printpdf::{FontId, Mm, Pt};
+    use printpdf::{FontId, Mm, ParsedFont, PdfDocument, Pt};
+    use serde_json::json;
+    use std::path::PathBuf;
+    use std::sync::{Arc, OnceLock};
 
     pub struct MockFontSpec {
         pub width_result: Pt,
@@ -564,6 +601,31 @@ mod tests {
             height: Pt(12.0),
         });
         (base, font_id, font_spec)
+    }
+
+    fn test_font() -> Arc<ParsedFont> {
+        static FONT: OnceLock<Arc<ParsedFont>> = OnceLock::new();
+
+        FONT.get_or_init(|| {
+            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("assets")
+                .join("fonts")
+                .join("NotoSansJP-Regular.ttf");
+            let font_bytes = std::fs::read(path).expect("test font should be readable");
+            let parsed_font = ParsedFont::from_bytes(&font_bytes, 0, &mut Vec::new())
+                .expect("test font should parse");
+            Arc::new(parsed_font)
+        })
+        .clone()
+    }
+
+    fn test_font_map() -> FontMap {
+        let mut doc = PdfDocument::new("test");
+        let parsed_font = test_font();
+        let font_id = doc.add_font(parsed_font.as_ref());
+        let mut font_map = FontMap::default();
+        font_map.add_font("TestFont".to_string(), font_id, parsed_font.as_ref());
+        font_map
     }
 
     // Simplified tests that focus on testing individual methods without requiring full Text construction
@@ -664,5 +726,48 @@ mod tests {
             Alignment::Justify => padding_left,
         };
         assert_eq!(right_x, Mm(30.0)); // 30 + 0 = 30
+    }
+
+    #[test]
+    fn text_from_json_defaults_line_break_mode_to_word() {
+        let font_map = test_font_map();
+        let json: JsonTextSchema = serde_json::from_value(json!({
+            "name": "text",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 80.0,
+            "height": 20.0,
+            "content": "abc def",
+            "fontName": "TestFont",
+            "fontSize": 12.0
+        }))
+        .unwrap();
+
+        let text = Text::from_json(json, &font_map).unwrap();
+
+        assert!(!text.has_line_break_mode());
+        assert_eq!(text.line_break_mode(), None);
+        assert_eq!(text.resolved_line_break_mode(), LineBreakMode::Word);
+    }
+
+    #[test]
+    fn text_from_json_accepts_char_line_break_mode() {
+        let font_map = test_font_map();
+        let json: JsonTextSchema = serde_json::from_value(json!({
+            "name": "text",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 80.0,
+            "height": 20.0,
+            "content": "abc def",
+            "fontName": "TestFont",
+            "fontSize": 12.0,
+            "lineBreakMode": "char"
+        }))
+        .unwrap();
+
+        let text = Text::from_json(json, &font_map).unwrap();
+
+        assert!(text.has_line_break_mode());
+        assert_eq!(text.line_break_mode(), Some(LineBreakMode::Char));
+        assert_eq!(text.resolved_line_break_mode(), LineBreakMode::Char);
     }
 }

@@ -13,6 +13,7 @@ A powerful and flexible PDF generation library written in Rust, inspired by [pdf
 - **Dynamic content** - Template rendering with variable substitution using Tera templating engine
 - **Multi-page support** - Generate PDFs with multiple pages from single templates
 - **Advanced table rendering** - Tables can span multiple pages automatically with proper pagination
+- **Japanese-friendly wrapping** - Always applies Japanese kinsoku processing with selectable `word` / `char` line breaking
 - **Text styling with borders** - Text elements support borders, backgrounds, and comprehensive styling options
 - **Flexible styling** - Comprehensive styling options for colors, borders, alignment, and spacing
 - **Schema versioning** - Templates now use `schemaVersion` field for better version management
@@ -35,7 +36,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.10.0"
+pdforge = "0.11.0"
 ```
 
 ## Quick Start
@@ -188,7 +189,8 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
   "backgroundColor": "#f0f0f0",
   "borderColor": "#ff0000",
   "borderWidth": 1,
-  "alignment": "left"
+  "alignment": "left",
+  "lineBreakMode": "word"
 }
 ```
 
@@ -200,6 +202,29 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
 
 Both border and background features are optional and work together seamlessly.
 
+**Line Break Mode**: `text` and `dynamicText` support an optional `lineBreakMode` field:
+
+- **`word`** - Default for `text` and `dynamicText`. Wrap by word boundaries first, then fall back to grapheme clusters if a segment is still too wide.
+- **`char`** - Wrap by grapheme cluster boundaries from the start. This is useful for narrow layouts such as labels and tags. Splitting ASCII text character-by-character in this mode is intentional.
+- **Japanese kinsoku is always applied** - Full-width and half-width punctuation such as `)` / `）` and `(` / `（` are adjusted after wrapping so they do not end up in invalid line positions.
+- **Emoji and combined characters are grapheme-safe** - Complex clusters such as `👨‍👩‍👧‍👦`, `👍🏽`, and `❤️` are kept as one wrapping unit. Actual rendering still depends on the selected font containing suitable glyphs.
+
+Example:
+
+```json
+{
+  "type": "text",
+  "name": "label",
+  "content": "時計 / セイコー / SBEC019 (374/600)",
+  "position": { "x": 10, "y": 10 },
+  "width": 60,
+  "height": 20,
+  "fontSize": 12,
+  "fontName": "NotoSansJP",
+  "lineBreakMode": "char"
+}
+```
+
 #### Table Schema
 
 ```json
@@ -209,7 +234,6 @@ Both border and background features are optional and work together seamlessly.
   "position": { "x": 10, "y": 50 },
   "width": 190,
   "height": 100,
-  "content": "[[\"Name\",\"City\",\"Description\"],[\"Alice\",\"New York\",\"Web designer\"]]",
   "showHead": true,
   "headWidthPercentages": [
     { "content": "Name", "percent": 30, "fontSize": 12, "alignment": "center" },
@@ -229,12 +253,150 @@ Both border and background features are optional and work together seamlessly.
     "fontSize": 12,
     "fontName": "NotoSansJP",
     "fontColor": "#ffffff",
-    "backgroundColor": "#2980ba"
-  }
+    "backgroundColor": "#2980ba",
+    "borderColor": "#000000",
+    "borderWidth": { "top": 0, "right": 0, "bottom": 0, "left": 0 },
+    "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 }
+  },
+  "bodyStyles": {
+    "fontSize": 11,
+    "fontName": "NotoSansJP",
+    "fontColor": "#000000",
+    "backgroundColor": "#ffffff",
+    "alternateBackgroundColor": "#f8f8f8",
+    "borderColor": "#cccccc",
+    "borderWidth": { "top": 0.1, "right": 0.1, "bottom": 0.1, "left": 0.1 },
+    "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 },
+    "alignment": "left",
+    "verticalAlignment": "middle",
+    "lineHeight": 1.4
+  },
+  "columns": [
+    {
+      "schema": {
+        "type": "text",
+        "name": "name",
+        "content": "",
+        "position": { "x": 0, "y": 0 },
+        "width": 0,
+        "height": 0,
+        "fontSize": 11,
+        "fontName": "NotoSansJP"
+      }
+    },
+    {
+      "schema": {
+        "type": "text",
+        "name": "city",
+        "content": "",
+        "position": { "x": 0, "y": 0 },
+        "width": 0,
+        "height": 0,
+        "fontSize": 11,
+        "fontName": "NotoSansJP"
+      }
+    },
+    {
+      "schema": {
+        "type": "text",
+        "name": "description",
+        "content": "",
+        "position": { "x": 0, "y": 0 },
+        "width": 0,
+        "height": 0,
+        "fontSize": 11,
+        "fontName": "NotoSansJP"
+      }
+    }
+  ],
+  "fields": [
+    ["Alice", "New York", "Web designer"]
+  ]
 }
 ```
 
 **Multi-Page Tables**: Tables automatically span multiple pages when content exceeds the available space. The library handles pagination, headers, and proper content flow across pages automatically.
+
+**Table Line Break Defaults**:
+
+- Table header cells default to `word`, and can be overridden with `headStyles.lineBreakMode` or per-column header entries in `headWidthPercentages[].lineBreakMode`.
+- Table body text cells default to `char`, which is better for narrow columns and label-like layouts.
+- A table body default can be set with `bodyStyles.lineBreakMode`.
+- Individual body text columns can override that default with `columns[].schema.lineBreakMode`.
+
+Example:
+
+```json
+{
+  "type": "table",
+  "name": "inventory_table",
+  "position": { "x": 10, "y": 40 },
+  "width": 100,
+  "height": 120,
+  "showHead": true,
+  "headWidthPercentages": [
+    { "content": "商品名", "percent": 70, "lineBreakMode": "word" },
+    { "content": "型番", "percent": 30 }
+  ],
+  "headStyles": {
+    "fontSize": 12,
+    "fontName": "NotoSansJP",
+    "fontColor": "#ffffff",
+    "backgroundColor": "#2980ba",
+    "borderColor": "#000000",
+    "borderWidth": { "top": 0, "right": 0, "bottom": 0, "left": 0 },
+    "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 },
+    "lineBreakMode": "word"
+  },
+  "bodyStyles": {
+    "fontSize": 10,
+    "fontName": "NotoSansJP",
+    "fontColor": "#000000",
+    "backgroundColor": "#ffffff",
+    "alternateBackgroundColor": "#f8f8f8",
+    "borderColor": "#cccccc",
+    "borderWidth": { "top": 0.1, "right": 0.1, "bottom": 0.1, "left": 0.1 },
+    "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 },
+    "alignment": "left",
+    "verticalAlignment": "middle",
+    "lineHeight": 1.4,
+    "lineBreakMode": "char"
+  },
+  "tableStyles": {
+    "borderWidth": 0.3,
+    "borderColor": "#000000"
+  },
+  "columns": [
+    {
+      "schema": {
+        "type": "text",
+        "name": "item_name",
+        "content": "",
+        "position": { "x": 0, "y": 0 },
+        "width": 0,
+        "height": 0,
+        "fontSize": 10,
+        "fontName": "NotoSansJP",
+        "lineBreakMode": "char"
+      }
+    },
+    {
+      "schema": {
+        "type": "text",
+        "name": "model_number",
+        "content": "",
+        "position": { "x": 0, "y": 0 },
+        "width": 0,
+        "height": 0,
+        "fontSize": 10,
+        "fontName": "NotoSansJP",
+        "lineBreakMode": "word"
+      }
+    }
+  ],
+  "fields": []
+}
+```
 
 #### Image Schema
 
@@ -723,6 +885,13 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Version 0.11.0
+- **New Text Wrapping Control**: Added `lineBreakMode` with `word` and `char` options for `text`, `dynamicText`, and table text cells
+- **Japanese Typography**: Japanese kinsoku processing is now always applied during wrapping
+- **Better Narrow-Width Layouts**: Table body text defaults to `char`, which improves wrapping in narrow columns and label-style documents
+- **Grapheme-Safe Wrapping**: Emoji and combined characters are kept as a single wrapping unit
+- **DynamicText Rendering Alignment**: `DynamicText` now uses the same font-aware text sanitization path as `Text`
 
 ### Version 0.10.0
 - **Breaking Change**: Font API redesigned for better flexibility and performance

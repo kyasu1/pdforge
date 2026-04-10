@@ -1,4 +1,4 @@
-use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
+use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
@@ -54,10 +54,10 @@ impl TryFrom<JsonImageSchema> for Schema {
             Mm(json.width),
             Mm(json.height),
         );
-        Ok(Schema::Image(Image { 
-            base, 
-            content, 
-            object_fit: json.object_fit 
+        Ok(Schema::Image(Image {
+            base,
+            content,
+            object_fit: json.object_fit,
         }))
     }
 }
@@ -86,10 +86,10 @@ impl Image {
         let content: DynamicImage = Self::decode_base64_to_image_buffer(&content)?;
         let base = BaseSchema::new(name, x, y, width, height);
 
-        Ok(Self { 
-            base, 
-            content, 
-            object_fit: ObjectFit::default() 
+        Ok(Self {
+            base,
+            content,
+            object_fit: ObjectFit::default(),
         })
     }
 
@@ -98,8 +98,8 @@ impl Image {
         self
     }
 
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     pub fn render(
@@ -145,17 +145,17 @@ impl Image {
         image: &RawImage,
     ) -> XObjectTransform {
         let dpi: f32 = 300.0;
-        
+
         match self.object_fit {
             ObjectFit::Fill => {
                 // Use the original scaling logic for Fill mode
                 self.base.get_matrix(parent_height, Some(Px(image.width)))
-            },
+            }
             ObjectFit::Contain => {
                 // Scale to fit within container while preserving aspect ratio
                 let container_aspect = self.base.width.0 / self.base.height.0;
                 let image_aspect = image.width as f32 / image.height as f32;
-                
+
                 let (scale_factor, offset_x, offset_y) = if image_aspect > container_aspect {
                     // Image is wider - fit to width
                     let scale = self.base.width.0 / (image.width as f32 / (dpi / 25.4));
@@ -169,21 +169,23 @@ impl Image {
                     let offset_x = (self.base.width.0 - scaled_width) / 2.0;
                     (scale, offset_x, 0.0)
                 };
-                
+
                 XObjectTransform {
                     translate_x: Some(Mm(self.base.x.0 + offset_x).into()),
-                    translate_y: Some((parent_height - self.base.y - self.base.height + Mm(offset_y)).into()),
+                    translate_y: Some(
+                        (parent_height - self.base.y - self.base.height + Mm(offset_y)).into(),
+                    ),
                     rotate: None,
                     scale_x: Some(scale_factor),
                     scale_y: Some(scale_factor),
                     dpi: Some(dpi),
                 }
-            },
+            }
             ObjectFit::Cover => {
                 // Scale to cover entire container while preserving aspect ratio
                 let container_aspect = self.base.width.0 / self.base.height.0;
                 let image_aspect = image.width as f32 / image.height as f32;
-                
+
                 let scale_factor = if image_aspect > container_aspect {
                     // Image is wider - fit to height (will crop width)
                     self.base.height.0 / (image.height as f32 / (dpi / 25.4))
@@ -191,7 +193,7 @@ impl Image {
                     // Image is taller - fit to width (will crop height)
                     self.base.width.0 / (image.width as f32 / (dpi / 25.4))
                 };
-                
+
                 XObjectTransform {
                     translate_x: Some(self.base.x.into()),
                     translate_y: Some((parent_height - self.base.y - self.base.height).into()),
@@ -200,7 +202,7 @@ impl Image {
                     scale_y: Some(scale_factor),
                     dpi: Some(dpi),
                 }
-            },
+            }
             ObjectFit::None => {
                 // Display at natural size (1:1 pixel mapping)
                 let ratio = dpi / 25.4;
@@ -212,21 +214,23 @@ impl Image {
                     scale_y: Some(1.0 / ratio),
                     dpi: Some(dpi),
                 }
-            },
+            }
             ObjectFit::ScaleDown => {
                 // Use contain behavior, but only if image is larger than container
                 let image_mm_width = image.width as f32 / (dpi / 25.4);
                 let image_mm_height = image.height as f32 / (dpi / 25.4);
-                
+
                 if image_mm_width <= self.base.width.0 && image_mm_height <= self.base.height.0 {
                     // Image fits naturally - use None behavior
                     let ratio = dpi / 25.4;
                     let offset_x = (self.base.width.0 - image_mm_width) / 2.0;
                     let offset_y = (self.base.height.0 - image_mm_height) / 2.0;
-                    
+
                     XObjectTransform {
                         translate_x: Some(Mm(self.base.x.0 + offset_x).into()),
-                        translate_y: Some((parent_height - self.base.y - self.base.height + Mm(offset_y)).into()),
+                        translate_y: Some(
+                            (parent_height - self.base.y - self.base.height + Mm(offset_y)).into(),
+                        ),
                         rotate: None,
                         scale_x: Some(1.0 / ratio),
                         scale_y: Some(1.0 / ratio),
@@ -236,7 +240,7 @@ impl Image {
                     // Image is too large - use Contain behavior
                     let container_aspect = self.base.width.0 / self.base.height.0;
                     let image_aspect = image.width as f32 / image.height as f32;
-                    
+
                     let (scale_factor, offset_x, offset_y) = if image_aspect > container_aspect {
                         let scale = self.base.width.0 / image_mm_width;
                         let scaled_height = image_mm_height * scale;
@@ -248,10 +252,12 @@ impl Image {
                         let offset_x = (self.base.width.0 - scaled_width) / 2.0;
                         (scale, offset_x, 0.0)
                     };
-                    
+
                     XObjectTransform {
                         translate_x: Some(Mm(self.base.x.0 + offset_x).into()),
-                        translate_y: Some((parent_height - self.base.y - self.base.height + Mm(offset_y)).into()),
+                        translate_y: Some(
+                            (parent_height - self.base.y - self.base.height + Mm(offset_y)).into(),
+                        ),
                         rotate: None,
                         scale_x: Some(scale_factor / (dpi / 25.4)),
                         scale_y: Some(scale_factor / (dpi / 25.4)),
@@ -277,6 +283,15 @@ impl Image {
     }
 }
 
+impl HasBaseSchema for Image {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,9 +299,8 @@ mod tests {
 
     fn create_mock_raw_image(width: u32, height: u32) -> RawImage {
         let rgb_data = vec![255u8; (width * height * 3) as usize];
-        let dyn_image = DynamicImage::ImageRgb8(
-            image::RgbImage::from_raw(width, height, rgb_data).unwrap()
-        );
+        let dyn_image =
+            DynamicImage::ImageRgb8(image::RgbImage::from_raw(width, height, rgb_data).unwrap());
         let rgb_image = dyn_image.to_rgb8();
         let mut buf = Cursor::new(Vec::new());
         rgb_image.write_to(&mut buf, ImageFormat::Jpeg).unwrap();
@@ -344,7 +358,7 @@ mod tests {
             "content": "data:image/jpeg;base64,test",
             "objectFit": "contain"
         }"#;
-        
+
         let schema: JsonImageSchema = serde_json::from_str(json).unwrap();
         assert!(matches!(schema.object_fit, ObjectFit::Contain));
         assert_eq!(schema.name, "test-image");
@@ -361,7 +375,7 @@ mod tests {
             "height": 80.0,
             "content": "data:image/jpeg;base64,test"
         }"#;
-        
+
         let schema: JsonImageSchema = serde_json::from_str(json).unwrap();
         assert!(matches!(schema.object_fit, ObjectFit::Fill));
     }
@@ -376,7 +390,7 @@ mod tests {
             Mm(80.0),
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==".to_string(),
         );
-        
+
         assert!(image.is_ok());
         let image = image.unwrap().with_object_fit(ObjectFit::Cover);
         assert!(matches!(image.object_fit, ObjectFit::Cover));
@@ -388,7 +402,7 @@ mod tests {
         let mock_raw_image = create_mock_raw_image(50, 40);
 
         let transform = image.calculate_object_fit_transform(Mm(200.0), &mock_raw_image);
-        
+
         // For Fill mode, should use base transform calculation
         assert!(transform.scale_x.is_some());
         assert!(transform.scale_y.is_some());
@@ -411,7 +425,7 @@ mod tests {
         let mock_raw_image = create_mock_raw_image(200, 100);
 
         let transform = image.calculate_object_fit_transform(Mm(200.0), &mock_raw_image);
-        
+
         assert!(transform.scale_x.is_some());
         assert!(transform.scale_y.is_some());
         assert!(transform.translate_x.is_some());
@@ -426,7 +440,7 @@ mod tests {
         let mock_raw_image = create_mock_raw_image(50, 100);
 
         let transform = image.calculate_object_fit_transform(Mm(200.0), &mock_raw_image);
-        
+
         assert!(transform.scale_x.is_some());
         assert!(transform.scale_y.is_some());
         assert!(transform.translate_x.is_some());
@@ -441,7 +455,7 @@ mod tests {
         let mock_raw_image = create_mock_raw_image(50, 40);
 
         let transform = image.calculate_object_fit_transform(Mm(200.0), &mock_raw_image);
-        
+
         assert!(transform.scale_x.is_some());
         assert!(transform.scale_y.is_some());
         assert!(transform.translate_x.is_some());
@@ -455,7 +469,7 @@ mod tests {
         let mock_raw_image = create_mock_raw_image(20, 15);
 
         let transform = image.calculate_object_fit_transform(Mm(200.0), &mock_raw_image);
-        
+
         assert!(transform.scale_x.is_some());
         assert!(transform.scale_y.is_some());
         assert!(transform.translate_x.is_some());
@@ -473,7 +487,7 @@ mod tests {
         let mock_raw_image = create_mock_raw_image(200, 100);
 
         let transform = image.calculate_object_fit_transform(Mm(200.0), &mock_raw_image);
-        
+
         assert!(transform.scale_x.is_some());
         assert!(transform.scale_y.is_some());
         assert!(transform.translate_x.is_some());

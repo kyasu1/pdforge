@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut input: HashMap<&'static str, String> = HashMap::new();
 
-    input.insert("content", "時計 / セイコー / SBEC019 374/600 プロスペックス ステンレス スピードダイマー クロノグラフ 黒文字盤 自動巻 箱付 保付".to_string());
+    input.insert("content", "時計 / セイコー / SBEC019 (374/600) プロスペックス ステンレス スピードダイマー クロノグラフ (黒文字盤) 自動巻 箱付 保付".to_string());
     input.insert("inventoryId", "3100-0000-011".to_string());
     input.insert("qrCode", "31000000011".to_string());
 

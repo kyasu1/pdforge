@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-04-10
+
+### Added
+- Added `lineBreakMode` with `word` and `char` options for `text`, `dynamicText`, and table text cells
+- Added grapheme-safe wrapping tests for emoji and combined characters
+
+### Changed
+- Japanese kinsoku processing is now always applied during text wrapping
+- Table body text now defaults to `char` line breaking, while plain `text` and `dynamicText` keep `word` as the default
+- `word` mode now falls back to grapheme clusters when a segment is too wide for the available width
+- `DynamicText` now uses the same font-aware sanitization path as `Text`
+
+### Fixed
+- Prevented complex grapheme clusters such as family emoji, emoji modifiers, and variation selector sequences from being split mid-wrap
+- Replaced unsupported grapheme clusters as a single fallback unit instead of partially degrading individual code points
+- Fixed `tests/table_integration_tests.rs` to use a loaded test font instead of an empty `FontMap`
+
 ## [0.10.2] - 2026-03-13
 
 ### Changed

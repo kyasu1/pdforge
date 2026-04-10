@@ -1,4 +1,4 @@
-use super::{base::BaseSchema, BasePdf, Schema, SchemaTrait};
+use super::{base::BaseSchema, BasePdf, HasBaseSchema, Schema, SchemaTrait};
 use crate::schemas::{Error, JsonPosition};
 use crate::utils::OpBuffer;
 use printpdf::{CurTransMat, Mm, Op, PdfDocument};
@@ -70,8 +70,8 @@ impl Group {
         })
     }
 
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     pub fn render(
@@ -122,6 +122,15 @@ impl Group {
 
     pub fn get_height(&self) -> Mm {
         self.base.height
+    }
+}
+
+impl HasBaseSchema for Group {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
     }
 }
 

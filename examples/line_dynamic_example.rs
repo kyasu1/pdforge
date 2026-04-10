@@ -33,12 +33,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let output_file = "./examples/pdf/line_dynamic_example.pdf";
     std::fs::write(output_file, bytes)?;
 
-    println!("✅ Dynamic line example PDF generated successfully: {}", output_file);
+    println!(
+        "✅ Dynamic line example PDF generated successfully: {}",
+        output_file
+    );
     println!("📄 The PDF demonstrates:");
     println!("   • Template-driven line colors and properties");
     println!("   • Dynamic line positioning and styling");
     println!("   • Configurable highlight lines");
     println!("   • Variable-based content positioning");
-    
+
     Ok(())
 }

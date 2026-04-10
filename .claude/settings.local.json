@@ -12,7 +12,10 @@
       "Bash(curl:*)",
       "WebFetch(domain:github.com)",
       "Bash(git push:*)",
-      "Bash(git branch:*)"
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo build:*)"
     ],
     "deny": []
   }

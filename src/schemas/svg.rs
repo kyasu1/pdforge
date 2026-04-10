@@ -1,4 +1,4 @@
-use crate::schemas::{base::BaseSchema, Error, JsonPosition, Schema};
+use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use printpdf::{ExternalXObject, Mm, Op, PdfDocument};
 use serde::Deserialize;
@@ -50,8 +50,8 @@ impl Svg {
         Ok(Self { base, content })
     }
 
-    pub fn get_base(self) -> BaseSchema {
-        self.base
+    pub fn get_base(&self) -> BaseSchema {
+        self.base.clone()
     }
 
     fn parse(content: &str) -> Result<ExternalXObject, Error> {
@@ -99,5 +99,14 @@ impl Svg {
 
     pub fn get_height(&self) -> Mm {
         self.base.height
+    }
+}
+
+impl HasBaseSchema for Svg {
+    fn base(&self) -> &BaseSchema {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        &mut self.base
     }
 }

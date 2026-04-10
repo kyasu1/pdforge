@@ -127,7 +127,13 @@ struct JsonTemplate {
 //
 //
 //
-pub trait SchemaTrait {
+/// Trait for types that have a BaseSchema
+pub trait HasBaseSchema {
+    fn base(&self) -> &BaseSchema;
+    fn base_mut(&mut self) -> &mut BaseSchema;
+}
+
+pub trait SchemaTrait: HasBaseSchema {
     fn render(
         &self,
         parent_height: Mm,
@@ -138,6 +144,23 @@ pub trait SchemaTrait {
     // fn set_x(&mut self, x: Mm);
     fn set_y(&mut self, y: Mm);
     fn set_height(&mut self, height: Mm);
+    fn name(&self) -> &str {
+        &self.base().name
+    }
+    fn position(&self) -> (Mm, Mm) {
+        (self.base().x, self.base().y)
+    }
+    fn size(&self) -> (Mm, Mm) {
+        (self.base().width, self.base().height)
+    }
+    fn bounds(&self) -> BoundingBox {
+        BoundingBox::new(
+            self.base().x,
+            self.base().y,
+            self.base().width,
+            self.base().height,
+        )
+    }
 
     // fn get_width(&self) -> Mm;
 }
@@ -172,15 +195,45 @@ impl Schema {
 
     pub fn get_base_copy(&self) -> BaseSchema {
         match self {
-            Schema::Text(text) => text.clone().get_base(),
-            Schema::DynamicText(text) => text.clone().get_base(),
-            Schema::Table(_) => panic!("Table does not support get_base_copy"),
-            Schema::QrCode(qr_code) => qr_code.clone().get_base(),
-            Schema::Image(image) => image.clone().get_base(),
-            Schema::Svg(svg) => svg.clone().get_base(),
-            Schema::Rect(rect) => rect.clone().get_base(),
-            Schema::Line(line) => line.clone().get_base(),
-            Schema::Group(group) => group.clone().get_base(),
+            Schema::Text(text) => text.get_base(),
+            Schema::DynamicText(text) => text.get_base(),
+            Schema::Table(table) => table.get_base(),
+            Schema::QrCode(qr_code) => qr_code.get_base(),
+            Schema::Image(image) => image.get_base(),
+            Schema::Svg(svg) => svg.get_base(),
+            Schema::Rect(rect) => rect.get_base(),
+            Schema::Line(line) => line.get_base(),
+            Schema::Group(group) => group.get_base(),
+        }
+    }
+}
+
+impl HasBaseSchema for Schema {
+    fn base(&self) -> &BaseSchema {
+        match self {
+            Schema::Text(s) => s.base(),
+            Schema::DynamicText(s) => s.base(),
+            Schema::Table(s) => s.base(),
+            Schema::QrCode(s) => s.base(),
+            Schema::Image(s) => s.base(),
+            Schema::Svg(s) => s.base(),
+            Schema::Rect(s) => s.base(),
+            Schema::Line(s) => s.base(),
+            Schema::Group(s) => s.base(),
+        }
+    }
+
+    fn base_mut(&mut self) -> &mut BaseSchema {
+        match self {
+            Schema::Text(s) => s.base_mut(),
+            Schema::DynamicText(s) => s.base_mut(),
+            Schema::Table(s) => s.base_mut(),
+            Schema::QrCode(s) => s.base_mut(),
+            Schema::Image(s) => s.base_mut(),
+            Schema::Svg(s) => s.base_mut(),
+            Schema::Rect(s) => s.base_mut(),
+            Schema::Line(s) => s.base_mut(),
+            Schema::Group(s) => s.base_mut(),
         }
     }
 }
@@ -218,7 +271,51 @@ impl SchemaTrait for Schema {
                 line.render(parent_height, doc, page, buffer)?;
                 Ok(())
             }
-            _ => unimplemented!(),
+            Schema::DynamicText(mut obj) => {
+                let base_pdf = BasePdf {
+                    width: Mm(210.0),
+                    height: parent_height,
+                    padding: Frame {
+                        top: Mm(0.0),
+                        right: Mm(0.0),
+                        bottom: Mm(0.0),
+                        left: Mm(0.0),
+                    },
+                    static_schema: vec![],
+                };
+                obj.render(&base_pdf, page, None, buffer)?;
+                Ok(())
+            }
+            Schema::Table(mut obj) => {
+                let base_pdf = BasePdf {
+                    width: Mm(210.0),
+                    height: parent_height,
+                    padding: Frame {
+                        top: Mm(0.0),
+                        right: Mm(0.0),
+                        bottom: Mm(0.0),
+                        left: Mm(0.0),
+                    },
+                    static_schema: vec![],
+                };
+                obj.render(&base_pdf, doc, page, None, buffer)?;
+                Ok(())
+            }
+            Schema::Group(mut obj) => {
+                let base_pdf = BasePdf {
+                    width: Mm(210.0),
+                    height: parent_height,
+                    padding: Frame {
+                        top: Mm(0.0),
+                        right: Mm(0.0),
+                        bottom: Mm(0.0),
+                        left: Mm(0.0),
+                    },
+                    static_schema: vec![],
+                };
+                obj.render(&base_pdf, doc, page, buffer)?;
+                Ok(())
+            }
         }
     }
 
@@ -235,7 +332,10 @@ impl SchemaTrait for Schema {
             Schema::Line(line) => {
                 line.set_y(y);
             }
-            _ => unimplemented!(),
+            Schema::Image(s) => s.base_mut().y = y,
+            Schema::Svg(s) => s.set_y(y),
+            Schema::Rect(s) => s.set_y(y),
+            Schema::Table(s) => s.base_mut().y = y,
         }
     }
 
@@ -252,7 +352,10 @@ impl SchemaTrait for Schema {
             Schema::Line(line) => {
                 line.set_height(height);
             }
-            _ => unimplemented!(),
+            Schema::Image(s) => s.base_mut().height = height,
+            Schema::Svg(s) => s.set_height(height),
+            Schema::Rect(s) => s.set_height(height),
+            Schema::Table(s) => s.base_mut().height = height,
         }
     }
 }
@@ -844,10 +947,10 @@ pub enum VerticalAlignment {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonBoundingBox {
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
 }
 
 #[derive(Debug, Clone)]

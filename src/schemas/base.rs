@@ -2,11 +2,11 @@ use printpdf::{Mm, Px, XObjectTransform};
 
 #[derive(Debug, Clone)]
 pub struct BaseSchema {
-    pub(crate) name: String,
-    pub(crate) x: Mm,
-    pub(crate) y: Mm,
-    pub(crate) width: Mm,
-    pub(crate) height: Mm,
+    pub name: String,
+    pub x: Mm,
+    pub y: Mm,
+    pub width: Mm,
+    pub height: Mm,
 }
 
 impl BaseSchema {

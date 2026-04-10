@@ -1,39 +1,10 @@
+use crate::font;
 use printpdf::*;
 
 /// Replace characters that don't have glyphs in the font with a replacement character
 /// Uses .notdef glyph approach by falling back to basic ASCII characters that should exist in most fonts
 pub fn sanitize_text_for_font(text: &str, font: &ParsedFont) -> String {
-    // We can't directly access .notdef glyph (index 0) through normal text rendering
-    // in printpdf library, so we use a fallback hierarchy of replacement characters
-    const FALLBACK_CHARS: &[char] = &[
-        '□',    // U+25A1 White Square (classic TOFU character)
-        '\u{FFFD}', // U+FFFD Replacement Character (Unicode standard replacement)
-        '?',    // Question mark (widely supported)
-        '.',    // Period (basic punctuation)
-        'X',    // Letter X (ASCII fallback)
-        ' ',    // Space (should exist in any font)
-    ];
-    
-    text.chars()
-        .map(|ch| {
-            // Check if the character has a glyph in the font
-            match font.lookup_glyph_index(ch as u32) {
-                Some(_) => ch, // Character exists in font
-                None => {
-                    // Try each fallback character in order of preference
-                    // This simulates .notdef behavior by using the best available replacement
-                    for &fallback in FALLBACK_CHARS {
-                        if font.lookup_glyph_index(fallback as u32).is_some() {
-                            return fallback;
-                        }
-                    }
-                    // Ultimate fallback - return the original character
-                    // This may cause the font's actual .notdef glyph to be used at PDF level
-                    ch
-                }
-            }
-        })
-        .collect()
+    font::sanitize_text_for_font(text, font)
 }
 
 // 2D変換行列を計算する独立した関数

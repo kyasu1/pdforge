@@ -47,8 +47,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let data_prep_time = data_start.elapsed();
     println!("Data preparation completed: {:?}", data_prep_time);
-    println!("Total data size: {} rows x {} columns = {} cells",
-             rows.len(), row.len(), rows.len() * row.len());
+    println!(
+        "Total data size: {} rows x {} columns = {} cells",
+        rows.len(),
+        row.len(),
+        rows.len() * row.len()
+    );
 
     // Render PDF
     let render_start = Instant::now();
@@ -64,12 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut table_data = HashMap::new();
     table_data.insert("renewsTable", rows);
 
-    let bytes = pdforge.render(
-        "print-renews",
-        vec![inputs],
-        Some(table_data),
-        None,
-    )?;
+    let bytes = pdforge.render("print-renews", vec![inputs], Some(table_data), None)?;
 
     let render_time = render_start.elapsed();
     println!("Rendering completed: {:?}", render_time);
@@ -94,11 +93,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("PDF rendering:        {:?}", render_time);
     println!("File write:           {:?}", write_time);
     println!("Total time:           {:?}", total_time);
-    println!("PDF size:             {:.2} MB", bytes.len() as f64 / 1_048_576.0);
+    println!(
+        "PDF size:             {:.2} MB",
+        bytes.len() as f64 / 1_048_576.0
+    );
     println!("Total pages:          {}", page_count);
     println!("Output file:          {}", output_path);
     println!("============================\n");
-    println!("Memory-efficient rendering: Rows rendered directly to buffer without intermediate storage");
+    println!(
+        "Memory-efficient rendering: Rows rendered directly to buffer without intermediate storage"
+    );
 
     Ok(())
 }
