@@ -54,6 +54,12 @@ pub enum Error {
         source: Box<dyn std::error::Error + Send + Sync>,
     },
 
+    #[snafu(display("Unsupported schema type in {context}: {schema_type}"))]
+    UnsupportedSchema {
+        context: String,
+        schema_type: String,
+    },
+
     #[snafu(display("Font file I/O error: {message}"))]
     FontFileIo {
         source: std::io::Error,
@@ -136,6 +142,7 @@ pub trait HasBaseSchema {
 pub trait SchemaTrait: HasBaseSchema {
     fn render(
         &self,
+        parent_width: Mm,
         parent_height: Mm,
         doc: &mut PdfDocument,
         page: usize,
@@ -179,6 +186,20 @@ pub enum Schema {
 }
 
 impl Schema {
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            Schema::Text(_) => "Text",
+            Schema::DynamicText(_) => "DynamicText",
+            Schema::Table(_) => "Table",
+            Schema::QrCode(_) => "QrCode",
+            Schema::Image(_) => "Image",
+            Schema::Svg(_) => "Svg",
+            Schema::Rect(_) => "Rectangle",
+            Schema::Line(_) => "Line",
+            Schema::Group(_) => "Group",
+        }
+    }
+
     pub fn get_base(self) -> BaseSchema {
         match self {
             Schema::Text(text) => text.get_base(),
@@ -241,6 +262,7 @@ impl HasBaseSchema for Schema {
 impl SchemaTrait for Schema {
     fn render(
         &self,
+        parent_width: Mm,
         parent_height: Mm,
         doc: &mut PdfDocument,
         page: usize,
@@ -273,7 +295,7 @@ impl SchemaTrait for Schema {
             }
             Schema::DynamicText(mut obj) => {
                 let base_pdf = BasePdf {
-                    width: Mm(210.0),
+                    width: parent_width,
                     height: parent_height,
                     padding: Frame {
                         top: Mm(0.0),
@@ -288,7 +310,7 @@ impl SchemaTrait for Schema {
             }
             Schema::Table(mut obj) => {
                 let base_pdf = BasePdf {
-                    width: Mm(210.0),
+                    width: parent_width,
                     height: parent_height,
                     padding: Frame {
                         top: Mm(0.0),
@@ -303,7 +325,7 @@ impl SchemaTrait for Schema {
             }
             Schema::Group(mut obj) => {
                 let base_pdf = BasePdf {
-                    width: Mm(210.0),
+                    width: parent_width,
                     height: parent_height,
                     padding: Frame {
                         top: Mm(0.0),
@@ -499,34 +521,7 @@ impl Template {
         // Create context with special variables and custom inputs
         let context = Self::create_special_context(current_page, total_pages, static_inputs);
 
-        // Serialize the static schema JSON for template processing
-        let json_string =
-            serde_json::to_string(&self.static_schema_json).map_err(|e| Error::Whatever {
-                message: "Failed to serialize static schema JSON".to_string(),
-                source: Some(Box::new(e)),
-            })?;
-
-        // Use Tera to process templates with special variables
-        let mut tera = tera::Tera::default();
-        tera.add_raw_template("static_schema_template", &json_string)
-            .map_err(|e| Error::Whatever {
-                message: "Failed to add static schema template to Tera".to_string(),
-                source: Some(Box::new(e)),
-            })?;
-
-        let rendered = tera
-            .render("static_schema_template", &context)
-            .map_err(|e| Error::Whatever {
-                message: "Failed to render static schema template".to_string(),
-                source: Some(Box::new(e)),
-            })?;
-
-        // Parse the rendered JSON back to schemas
-        let json_schemas: Vec<JsonSchema> =
-            serde_json::from_str(&rendered).map_err(|e| Error::TemplateDeserialize {
-                source: e,
-                message: "Failed to parse rendered static schemas".to_string(),
-            })?;
+        let json_schemas = Self::render_schema_json_values(&self.static_schema_json, &context)?;
 
         // Convert JSON schemas to Schema objects
         let schemas: Result<Vec<Schema>, Error> = json_schemas
@@ -571,6 +566,60 @@ impl Template {
             .collect();
 
         schemas
+    }
+
+    fn render_json_value_strings(
+        value: &serde_json::Value,
+        context: &tera::Context,
+    ) -> Result<serde_json::Value, Error> {
+        match value {
+            serde_json::Value::String(raw) => {
+                if !raw.contains("{{") && !raw.contains("{%") && !raw.contains("{#") {
+                    return Ok(value.clone());
+                }
+
+                let rendered =
+                    tera::Tera::one_off(raw, context, false).map_err(|e| Error::Whatever {
+                        message: "Failed to render template string".to_string(),
+                        source: Some(Box::new(e)),
+                    })?;
+                Ok(serde_json::Value::String(rendered))
+            }
+            serde_json::Value::Array(items) => items
+                .iter()
+                .map(|item| Self::render_json_value_strings(item, context))
+                .collect::<Result<Vec<_>, _>>()
+                .map(serde_json::Value::Array),
+            serde_json::Value::Object(map) => {
+                let rendered = map
+                    .iter()
+                    .map(|(key, value)| {
+                        Ok((
+                            key.clone(),
+                            Self::render_json_value_strings(value, context)?,
+                        ))
+                    })
+                    .collect::<Result<serde_json::Map<String, serde_json::Value>, Error>>()?;
+                Ok(serde_json::Value::Object(rendered))
+            }
+            _ => Ok(value.clone()),
+        }
+    }
+
+    fn render_schema_json_values(
+        values: &[serde_json::Value],
+        context: &tera::Context,
+    ) -> Result<Vec<JsonSchema>, Error> {
+        values
+            .iter()
+            .map(|value| {
+                let rendered = Self::render_json_value_strings(value, context)?;
+                serde_json::from_value(rendered).map_err(|e| Error::TemplateDeserialize {
+                    source: e,
+                    message: "Failed to parse rendered template".to_string(),
+                })
+            })
+            .collect()
     }
 
     /*
@@ -675,20 +724,6 @@ impl Template {
         let mut schemas: Vec<Vec<Schema>> = Vec::new();
 
         for (index, group) in inputs.iter().enumerate() {
-            let json_schema =
-                serde_json::to_string(&self.schemas[index]).map_err(|e| Error::Whatever {
-                    message: "Failed to serialize schema to JSON".to_string(),
-                    source: Some(Box::new(e)),
-                })?;
-
-            // Teraを使ってテンプレートをレンダリングする
-            let mut tera = tera::Tera::default();
-            tera.add_raw_template("schema_template", &json_schema)
-                .map_err(|e| Error::Whatever {
-                    message: "Failed to add template to Tera".to_string(),
-                    source: Some(Box::new(e)),
-                })?;
-
             let mut json_schemas: Vec<Vec<JsonSchema>> = Vec::new();
 
             // groupが空の場合も、1つのページとして処理する
@@ -703,14 +738,9 @@ impl Template {
                 for (key, value) in input.iter() {
                     context.insert(*key, value);
                 }
-                let rendered =
-                    tera.render("schema_template", &context)
-                        .map_err(|e| Error::Whatever {
-                            message: "Failed to render template".to_string(),
-                            source: Some(Box::new(e)),
-                        })?;
+                let rendered = Self::render_json_value_strings(&self.schemas[index], &context)?;
                 let mut parsed: Vec<JsonSchema> =
-                    serde_json::from_str(&rendered).map_err(|e| Error::TemplateDeserialize {
+                    serde_json::from_value(rendered).map_err(|e| Error::TemplateDeserialize {
                         source: e,
                         message: "Failed to parse rendered template".to_string(),
                     })?;
@@ -807,7 +837,6 @@ impl Template {
 
         // First render all page content to determine actual page count
         for (page_index, page) in schemas.iter().enumerate() {
-            println!("Rendering page {}", page_index + 1);
             for schema in page {
                 match schema {
                     Schema::Text(obj) => {
@@ -849,7 +878,6 @@ impl Template {
 
         // Now we know the actual number of pages, add static schemas to each page
         let actual_page_count = buffer.buffer.len();
-        println!("Total pages generated: {}", actual_page_count);
 
         // Add static schemas to each page
         for page_idx in 0..actual_page_count {

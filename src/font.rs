@@ -364,7 +364,7 @@ impl FontSpecTrait for FontSpec {
                 dynamic.clone(),
                 content,
             )?;
-            if new_total_height_in_mm < width {
+            if new_total_height_in_mm < height {
                 total_width_in_mm = new_total_width_in_mm;
                 total_height_in_mm = new_total_height_in_mm
             } else {
@@ -545,8 +545,26 @@ impl FontMap {
             .insert(font_name.clone(), (font_id.clone(), Arc::new(font.clone())))
     }
 
+    pub fn add_font_arc(
+        &mut self,
+        font_name: String,
+        font_id: FontId,
+        font: Arc<ParsedFont>,
+    ) -> Option<(FontId, Arc<ParsedFont>)> {
+        self.map.insert(font_name, (font_id, font))
+    }
+
     pub fn find(&self, font_name: &str) -> Option<&(FontId, Arc<ParsedFont>)> {
         self.map.get(font_name)
+    }
+
+    pub fn register_fonts_for_document(&self, doc: &mut PdfDocument) -> FontMap {
+        let mut registered = FontMap::default();
+        for (font_name, (_, parsed_font)) in &self.map {
+            let font_id = doc.add_font(parsed_font.as_ref());
+            registered.add_font_arc(font_name.clone(), font_id, Arc::clone(parsed_font));
+        }
+        registered
     }
 }
 
@@ -788,8 +806,8 @@ pub fn filter_end_de(lines: Vec<String>) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        filter_end_jp, filter_start_jp, sanitize_text_for_font, FontSpec, FontSpecTrait,
-        LineBreakMode,
+        filter_end_jp, filter_start_jp, sanitize_text_for_font, DynamicFontSize,
+        DynamicFontSizeFit, FontSpec, FontSpecTrait, LineBreakMode,
     };
     use printpdf::{ParsedFont, Pt};
     use std::path::PathBuf;
@@ -937,5 +955,28 @@ mod tests {
         assert!(sanitized.ends_with('b'));
         assert!(!sanitized.contains('👍'));
         assert!(!sanitized.contains('🏽'));
+    }
+
+    #[test]
+    fn dynamic_font_growth_respects_height_limit() {
+        let spec = test_font_spec(LineBreakMode::Word);
+        let dynamic = DynamicFontSize::new(Pt(8.0), Pt(40.0), DynamicFontSizeFit::Vertical);
+
+        let size = spec
+            .calculate_dynamic_font_size(
+                dynamic,
+                Some(1.0),
+                Pt(0.0),
+                printpdf::Mm(180.0),
+                printpdf::Mm(3.0),
+                "short",
+            )
+            .expect("dynamic font calculation should succeed");
+
+        assert!(
+            size.0 <= 8.55,
+            "size should not grow beyond the 3mm height, got {}pt",
+            size.0
+        );
     }
 }

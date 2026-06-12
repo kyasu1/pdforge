@@ -48,14 +48,14 @@ use pdforge::PDForgeBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a new PDF generator using the builder pattern
-    let mut pdforge = PDForgeBuilder::new("My Document".to_string())
+    let pdforge = PDForgeBuilder::new("My Document".to_string())
         .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
         .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
-        .load_template("table-test", "./templates/table-test.json")?
+        .load_template("table", "./templates/table.json")?
         .build();
 
     // Generate PDF (empty inputs required for static templates)
-    let bytes: Vec<u8> = pdforge.render("table-test", vec![vec![]], None, None)?;
+    let bytes: Vec<u8> = pdforge.render("table", vec![vec![]], None, None)?;
 
     // Save to file
     std::fs::write("./output.pdf", bytes)?;
@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|s| s.to_str())
         .unwrap_or("output");
     
-    let mut pdforge = pdforge::PDForgeBuilder::new("CLI Example".to_string())
+    let pdforge = pdforge::PDForgeBuilder::new("CLI Example".to_string())
         .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
         .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("template", template_file)?
@@ -110,10 +110,10 @@ use std::collections::HashMap;
 use pdforge::PDForgeBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut pdforge = PDForgeBuilder::new("Dynamic Document".to_string())
+    let pdforge = PDForgeBuilder::new("Dynamic Document".to_string())
         .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
         .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
-        .load_template("pawn-ticket", "./templates/pawn-ticket.json")?
+        .load_template("pawn-tag", "./templates/pawn-tag.json")?
         .build();
 
     // Prepare input data
@@ -123,7 +123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     input.insert("amount", "100,000".to_string());
 
     let inputs = vec![vec![input]];
-    let bytes: Vec<u8> = pdforge.render("pawn-ticket", inputs, None, None)?;
+    let bytes: Vec<u8> = pdforge.render("pawn-tag", inputs, None, None)?;
 
     std::fs::write("./dynamic_output.pdf", bytes)?;
     Ok(())
@@ -701,13 +701,13 @@ cargo run --example simple templates/multipage.json
 cargo run --example simple templates/tiger-svg.json
 ```
 
-### Using the CLI Binary
+### Using the Example CLI
 
-You can also use the main binary to generate PDFs from templates:
+Use the `simple` example as a template-to-PDF command line tool:
 
 ```bash
-# Generate PDF using main binary
-cargo run --bin pdforge templates/static-schema-test.json
+# Generate PDF using the simple example
+cargo run --example simple templates/static-schema-test.json
 
 # This will create: examples/pdf/static-schema-test.pdf
 ```
@@ -792,6 +792,8 @@ PDForge uses the [Tera](https://tera.netlify.app/) templating engine for dynamic
 - Apply filters: `{{ name | upper }}`
 - Loop through data: `{% for item in items %}`
 
+Template expressions are rendered inside JSON string values. User input is preserved as string content, so quotes, backslashes, and newlines cannot break or inject JSON structure. Templates should not rely on Tera expanding outside a string value to generate JSON arrays or objects.
+
 ### Built-in Template Variables
 
 For static schemas, PDForge provides these special variables:
@@ -849,7 +851,6 @@ cargo run --example pdfium
 pdforge/
 ├── src/
 │   ├── lib.rs              # Main library interface
-│   ├── main.rs             # CLI binary for template processing
 │   ├── font.rs             # Font management
 │   ├── common.rs           # Common utilities
 │   ├── utils.rs            # Helper functions

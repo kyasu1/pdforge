@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         base64::encode(&back_image_data)
     );
 
-    let mut pdforge = pdforge::PDForgeBuilder::new("IMAGE_TEST".to_string())
+    let pdforge = pdforge::PDForgeBuilder::new("IMAGE_TEST".to_string())
         .load_template("image-test", "./templates/image-test.json")?
         .build();
 

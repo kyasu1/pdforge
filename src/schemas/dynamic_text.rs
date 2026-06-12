@@ -117,8 +117,6 @@ impl DynamicText {
         current_top_mm: Option<Mm>,
         buffer: &mut OpBuffer,
     ) -> Result<(usize, Option<Mm>), Error> {
-        println!("current_top_mm {:?}", current_top_mm);
-
         let top_margin_in_mm = base_pdf.padding.top;
         let bottom_margin_in_mm = base_pdf.padding.bottom;
         let page_height_in_mm = base_pdf.height;
@@ -139,6 +137,10 @@ impl DynamicText {
                 character_spacing,
             )
             .context(FontSnafu)?;
+
+        if lines.is_empty() {
+            return Ok((current_page, Some(y_top_mm)));
+        }
 
         let mut pages: Vec<Vec<String>> = Vec::new();
 
@@ -369,5 +371,39 @@ mod tests {
         assert!(rendered.ends_with('b'));
         assert!(!rendered.contains('👍'));
         assert!(!rendered.contains('🏽'));
+    }
+
+    #[test]
+    fn render_empty_dynamic_text_does_not_panic() {
+        let font_map = test_font_map();
+        let json: JsonDynamicTextSchema = serde_json::from_value(json!({
+            "name": "dynamicText",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 80.0,
+            "height": 20.0,
+            "content": "",
+            "fontName": "TestFont",
+            "fontSize": 12.0
+        }))
+        .unwrap();
+        let mut text = DynamicText::from_json(json, &font_map).unwrap();
+        let base_pdf = BasePdf {
+            width: Mm(100.0),
+            height: Mm(100.0),
+            padding: Frame {
+                top: Mm(0.0),
+                right: Mm(0.0),
+                bottom: Mm(0.0),
+                left: Mm(0.0),
+            },
+            static_schema: vec![],
+        };
+        let mut buffer = OpBuffer::default();
+
+        let result = text.render(&base_pdf, 0, None, &mut buffer);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), (0, Some(Mm(0.0))));
+        assert!(buffer.buffer.is_empty());
     }
 }

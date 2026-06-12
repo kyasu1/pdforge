@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_start = Instant::now();
 
     // Create PDForge instance
-    let mut pdforge = pdforge::PDForgeBuilder::new("50ページテーブルテスト".to_string())
+    let pdforge = pdforge::PDForgeBuilder::new("50ページテーブルテスト".to_string())
         .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("print-renews", "./templates/print-renews.json")?
         .build();

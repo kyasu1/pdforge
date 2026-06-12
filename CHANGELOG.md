@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Template variables are now rendered only inside JSON string values. This prevents user input from breaking or injecting JSON structure, but templates that relied on Tera expanding outside string values to generate JSON arrays or objects must be rewritten.
+
+### Fixed
+- Prevented repeated `PDForge::render()` calls from accumulating pages from previous renders.
+- Escaped quotes, backslashes, and newlines in template input values safely.
+- Fixed dynamic font-size growth to compare rendered height with the height constraint.
+- Prevented empty `DynamicText` content from panicking.
+- Replaced reachable unsupported-schema panics with structured errors.
+- Removed the A4-width assumption from nested schema rendering.
+
 ## [0.11.0] - 2026-04-10
 
 ### Added

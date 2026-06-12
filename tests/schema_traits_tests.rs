@@ -49,6 +49,7 @@ impl HasBaseSchema for MockSchema {
 impl SchemaTrait for MockSchema {
     fn render(
         &self,
+        _parent_width: Mm,
         _parent_height: Mm,
         _doc: &mut PdfDocument,
         _page: usize,
@@ -180,6 +181,7 @@ fn test_generic_function_with_schema_trait() {
     fn render_all(schemas: &[&dyn SchemaTrait]) -> Result<(), pdforge::schemas::Error> {
         for schema in schemas {
             schema.render(
+                Mm(210.0),
                 Mm(297.0),
                 &mut PdfDocument::new("test"),
                 0,

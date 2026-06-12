@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Build PDForge using byte slices instead of file paths
     // add_font() is the primary API that accepts byte slices, eliminating redundant disk I/O
-    let mut pdforge = pdforge::PDForgeBuilder::new("Example".to_string())
+    let pdforge = pdforge::PDForgeBuilder::new("Example".to_string())
         .add_font("NotoSerifJP", &noto_serif_bytes)?
         .add_font("NotoSansJP", &noto_sans_bytes)?
         .load_template("template", template_file)?

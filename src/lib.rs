@@ -2,20 +2,21 @@ pub mod common;
 pub mod font;
 pub mod schemas;
 pub mod utils;
-use printpdf::{ParsedFont, PdfDocument};
+use printpdf::{FontId, ParsedFont, PdfDocument};
 use schemas::Error;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct PDForge {
-    doc: PdfDocument,
+    name: String,
     font_map: font::FontMap,
     template_map: HashMap<String, schemas::Template>,
 }
 
 impl PDForge {
     pub fn render(
-        &mut self,
+        &self,
         template_name: &str,
         inputs: Vec<Vec<HashMap<&'static str, String>>>,
         table_data: Option<HashMap<&'static str, Vec<Vec<String>>>>,
@@ -32,13 +33,17 @@ impl PDForge {
         let static_inputs = static_inputs.unwrap_or_default();
 
         match self.template_map.get(template_name) {
-            Some(template) => template.render_with_inputs_table_data_and_static_inputs(
-                &mut self.doc,
-                &self.font_map,
-                inputs,
-                table_data,
-                static_inputs,
-            ),
+            Some(template) => {
+                let mut doc = PdfDocument::new(&self.name);
+                let font_map = self.font_map.register_fonts_for_document(&mut doc);
+                template.render_with_inputs_table_data_and_static_inputs(
+                    &mut doc,
+                    &font_map,
+                    inputs,
+                    table_data,
+                    static_inputs,
+                )
+            }
             None => Err(Error::Whatever {
                 message: format!("Template not found: {}", template_name),
                 source: None,
@@ -48,7 +53,7 @@ impl PDForge {
 }
 
 pub struct PDForgeBuilder {
-    doc: PdfDocument,
+    name: String,
     font_map: font::FontMap,
     template_map: HashMap<String, schemas::Template>,
 }
@@ -56,7 +61,7 @@ pub struct PDForgeBuilder {
 impl PDForgeBuilder {
     pub fn new(name: String) -> Self {
         PDForgeBuilder {
-            doc: PdfDocument::new(&name),
+            name,
             font_map: font::FontMap::default(),
             template_map: HashMap::new(),
         }
@@ -69,9 +74,11 @@ impl PDForgeBuilder {
                     message: format!("Failed to parse font bytes for: {}", font_name),
                 }
             })?;
-        let font_id = self.doc.add_font(&parsed_font);
-        self.font_map
-            .add_font(String::from(font_name), font_id.clone(), &parsed_font);
+        self.font_map.add_font_arc(
+            String::from(font_name),
+            FontId::new(),
+            Arc::new(parsed_font),
+        );
 
         Ok(self)
     }
@@ -95,7 +102,7 @@ impl PDForgeBuilder {
 
     pub fn build(self) -> PDForge {
         PDForge {
-            doc: self.doc,
+            name: self.name,
             font_map: self.font_map,
             template_map: self.template_map,
         }
