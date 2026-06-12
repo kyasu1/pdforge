@@ -369,7 +369,7 @@ impl Table {
             buffer.insert(page_index, ops);
 
             // Render cell content
-            schema.render(base_pdf.height, doc, page_index, buffer)?;
+            schema.render(base_pdf.width, base_pdf.height, doc, page_index, buffer)?;
         }
 
         Ok(())
@@ -490,7 +490,10 @@ impl Table {
                     cols.push(Schema::QrCode(qr_code));
                 }
                 _ => {
-                    unimplemented!();
+                    return Err(Error::UnsupportedSchema {
+                        context: "table column".to_string(),
+                        schema_type: schema.type_name().to_string(),
+                    });
                 }
             }
         }

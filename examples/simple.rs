@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|s| s.to_str())
         .unwrap_or("output");
 
-    let mut pdforge = pdforge::PDForgeBuilder::new("Example".to_string())
+    let pdforge = pdforge::PDForgeBuilder::new("Example".to_string())
         .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
         .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("template", template_file)?

@@ -97,7 +97,7 @@ impl Group {
 
         buffer.insert(page, vec![Op::SaveGraphicsState, matrix]);
         for schema in &mut self.schemas {
-            schema.render(self.base.height, doc, page, buffer)?;
+            schema.render(self.base.width, self.base.height, doc, page, buffer)?;
         }
         buffer.insert(page, vec![Op::RestoreGraphicsState]);
 
@@ -137,9 +137,31 @@ impl HasBaseSchema for Group {
 impl TryFrom<JsonGroupSchema> for Schema {
     type Error = Error;
 
-    fn try_from(json: JsonGroupSchema) -> Result<Self, Self::Error> {
-        // フォントマップが必要なため、この実装は制限されます
-        // 実際の使用では、from_jsonメソッドを使用してください
-        todo!("Use Group::from_json instead")
+    fn try_from(_json: JsonGroupSchema) -> Result<Self, Self::Error> {
+        Err(Error::UnsupportedSchema {
+            context: "JsonGroupSchema TryFrom without FontMap".to_string(),
+            schema_type: "Group".to_string(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn try_from_json_group_returns_error_instead_of_panicking() {
+        let json: JsonGroupSchema = serde_json::from_value(serde_json::json!({
+            "name": "group",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 100.0,
+            "height": 100.0,
+            "schemas": []
+        }))
+        .expect("group json should deserialize");
+
+        let result = Schema::try_from(json);
+
+        assert!(matches!(result, Err(Error::UnsupportedSchema { .. })));
     }
 }
