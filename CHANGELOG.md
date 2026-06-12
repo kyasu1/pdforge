@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-06-12
+
 ### Changed
 - Template variables are now rendered only inside JSON string values. This prevents user input from breaking or injecting JSON structure, but templates that relied on Tera expanding outside string values to generate JSON arrays or objects must be rewritten.
 

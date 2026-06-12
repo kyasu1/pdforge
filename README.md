@@ -36,7 +36,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.11.0"
+pdforge = "0.11.1"
 ```
 
 ## Quick Start
@@ -886,6 +886,12 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Version 0.11.1
+- **Render Correctness**: Repeated `render()` calls no longer accumulate pages from previous renders
+- **Template Safety**: Template variables are rendered inside JSON string values, preserving quotes, backslashes, and newlines safely
+- **Panic Fixes**: Empty `DynamicText` and unsupported nested schemas now return stable results instead of panicking
+- **Layout Fixes**: Nested schemas use their parent width instead of assuming A4 width
 
 ### Version 0.11.0
 - **New Text Wrapping Control**: Added `lineBreakMode` with `word` and `char` options for `text`, `dynamicText`, and table text cells
