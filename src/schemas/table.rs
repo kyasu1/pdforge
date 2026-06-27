@@ -703,6 +703,7 @@ impl HasBaseSchema for Table {
 mod tests {
     use super::*;
     use crate::font::FontMap;
+    use crate::schemas::spacer::{FlowCursor, JsonSpacerSchema, Spacer};
     use printpdf::{ParsedFont, PdfDocument};
     use serde_json::json;
     use std::path::PathBuf;
@@ -1081,5 +1082,81 @@ mod tests {
             Schema::Text(text) => assert_eq!(text.resolved_line_break_mode(), LineBreakMode::Word),
             _ => panic!("expected text schema"),
         }
+    }
+
+    #[test]
+    fn spacer_creates_exact_gap_between_flowing_tables() {
+        let font_map = create_real_test_font_map();
+        let mut first =
+            Table::from_json(create_text_table_schema(None, None, None, None), &font_map).unwrap();
+        let mut second = first.clone();
+        let spacer = Spacer::from_json(JsonSpacerSchema { height: 5.0 }).unwrap();
+        let base_pdf = create_base_pdf();
+        let mut doc = PdfDocument::new("spacer table test");
+        let mut buffer = OpBuffer::default();
+        let mut cursor = FlowCursor::new(0);
+
+        (cursor.page, cursor.y) = first
+            .render(&base_pdf, &mut doc, cursor.page, cursor.y, &mut buffer)
+            .unwrap();
+        let first_end = cursor.y.unwrap();
+
+        spacer.advance(&base_pdf, &mut cursor);
+
+        assert_eq!(cursor.y, Some(first_end + Mm(5.0)));
+
+        let second_start = cursor.y.unwrap();
+        (cursor.page, cursor.y) = second
+            .render(&base_pdf, &mut doc, cursor.page, cursor.y, &mut buffer)
+            .unwrap();
+
+        let first_height = first_end - Mm(50.0);
+        assert_eq!(cursor.y, Some(second_start + first_height));
+    }
+
+    #[test]
+    fn dynamic_text_spacer_and_table_share_one_flow_cursor() {
+        let font_map = create_real_test_font_map();
+        let dynamic_json: crate::schemas::dynamic_text::JsonDynamicTextSchema =
+            serde_json::from_value(json!({
+                "name": "intro",
+                "position": { "x": 10.0, "y": 20.0 },
+                "width": 100.0,
+                "height": 20.0,
+                "content": "Introduction",
+                "fontName": "TestFont",
+                "fontSize": 10.0,
+                "lineHeight": 1.0
+            }))
+            .unwrap();
+        let mut dynamic =
+            crate::schemas::dynamic_text::DynamicText::from_json(dynamic_json, &font_map).unwrap();
+        let spacer = Spacer::from_json(JsonSpacerSchema { height: 5.0 }).unwrap();
+        let mut table =
+            Table::from_json(create_text_table_schema(None, None, None, None), &font_map).unwrap();
+        let mut measuring_table = table.clone();
+        let base_pdf = create_base_pdf();
+        let mut doc = PdfDocument::new("mixed flow test");
+        let mut buffer = OpBuffer::default();
+        let (_, measured_end) = measuring_table
+            .render(&base_pdf, &mut doc, 0, Some(Mm(0.0)), &mut buffer)
+            .unwrap();
+        let table_height = measured_end.unwrap();
+        let mut cursor = FlowCursor::new(0);
+
+        (cursor.page, cursor.y) = dynamic
+            .render(&base_pdf, cursor.page, cursor.y, &mut buffer)
+            .unwrap();
+        let dynamic_end = cursor.y.unwrap();
+        spacer.advance(&base_pdf, &mut cursor);
+
+        assert_eq!(cursor.y, Some(dynamic_end + Mm(5.0)));
+
+        let table_start = cursor.y.unwrap();
+        (cursor.page, cursor.y) = table
+            .render(&base_pdf, &mut doc, cursor.page, cursor.y, &mut buffer)
+            .unwrap();
+
+        assert_eq!(cursor.y, Some(table_start + table_height));
     }
 }

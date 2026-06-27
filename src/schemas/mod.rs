@@ -6,6 +6,7 @@ pub mod line;
 pub mod pdf_utils;
 pub mod qrcode;
 pub mod rect;
+pub mod spacer;
 pub mod svg;
 pub mod table;
 pub mod text;
@@ -22,6 +23,7 @@ use time;
 // Snafu context for error handling
 pub use snafu::ResultExt;
 
+use spacer::{FlowCursor, Spacer};
 use table::Table;
 use text::Text;
 
@@ -59,6 +61,9 @@ pub enum Error {
         context: String,
         schema_type: String,
     },
+
+    #[snafu(display("Spacer height must be non-negative, got {height}"))]
+    InvalidSpacerHeight { height: f32 },
 
     #[snafu(display("Font file I/O error: {message}"))]
     FontFileIo {
@@ -109,6 +114,7 @@ enum JsonSchema {
     Rectangle(rect::JsonRectSchema),
     Line(line::JsonLineSchema),
     Group(group::JsonGroupSchema),
+    Spacer(spacer::JsonSpacerSchema),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -183,6 +189,7 @@ pub enum Schema {
     Rect(rect::Rect),
     Line(line::Line),
     Group(group::Group),
+    Spacer(spacer::Spacer),
 }
 
 impl Schema {
@@ -197,6 +204,7 @@ impl Schema {
             Schema::Rect(_) => "Rectangle",
             Schema::Line(_) => "Line",
             Schema::Group(_) => "Group",
+            Schema::Spacer(_) => "Spacer",
         }
     }
 
@@ -211,6 +219,7 @@ impl Schema {
             Schema::Rect(rect) => rect.get_base(),
             Schema::Line(line) => line.get_base(),
             Schema::Group(group) => group.get_base(),
+            Schema::Spacer(spacer) => spacer.base().clone(),
         }
     }
 
@@ -225,6 +234,7 @@ impl Schema {
             Schema::Rect(rect) => rect.get_base(),
             Schema::Line(line) => line.get_base(),
             Schema::Group(group) => group.get_base(),
+            Schema::Spacer(spacer) => spacer.base().clone(),
         }
     }
 }
@@ -241,6 +251,7 @@ impl HasBaseSchema for Schema {
             Schema::Rect(s) => s.base(),
             Schema::Line(s) => s.base(),
             Schema::Group(s) => s.base(),
+            Schema::Spacer(s) => s.base(),
         }
     }
 
@@ -255,6 +266,7 @@ impl HasBaseSchema for Schema {
             Schema::Rect(s) => s.base_mut(),
             Schema::Line(s) => s.base_mut(),
             Schema::Group(s) => s.base_mut(),
+            Schema::Spacer(s) => s.base_mut(),
         }
     }
 }
@@ -338,6 +350,7 @@ impl SchemaTrait for Schema {
                 obj.render(&base_pdf, doc, page, buffer)?;
                 Ok(())
             }
+            Schema::Spacer(_) => Ok(()),
         }
     }
 
@@ -358,6 +371,7 @@ impl SchemaTrait for Schema {
             Schema::Svg(s) => s.set_y(y),
             Schema::Rect(s) => s.set_y(y),
             Schema::Table(s) => s.base_mut().y = y,
+            Schema::Spacer(s) => s.base_mut().y = y,
         }
     }
 
@@ -378,6 +392,7 @@ impl SchemaTrait for Schema {
             Schema::Svg(s) => s.set_height(height),
             Schema::Rect(s) => s.set_height(height),
             Schema::Table(s) => s.base_mut().height = height,
+            Schema::Spacer(s) => s.base_mut().height = height,
         }
     }
 }
@@ -561,6 +576,10 @@ impl Template {
                     JsonSchema::Group(json) => {
                         Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                     }
+                    JsonSchema::Spacer(_) => Err(Error::UnsupportedSchema {
+                        context: "staticSchema".to_string(),
+                        schema_type: "Spacer".to_string(),
+                    }),
                 }
             })
             .collect();
@@ -695,6 +714,7 @@ impl Template {
                         JsonSchema::Group(json) => {
                             Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                         }
+                        JsonSchema::Spacer(json) => Ok(Schema::Spacer(Spacer::from_json(json)?)),
                     }
                 })
                 .collect::<Result<Vec<Schema>, Error>>()?;
@@ -801,6 +821,9 @@ impl Template {
                                 JsonSchema::Group(json) => {
                                     Ok(Schema::Group(group::Group::from_json(json, font_map)?))
                                 }
+                                JsonSchema::Spacer(json) => {
+                                    Ok(Schema::Spacer(Spacer::from_json(json)?))
+                                }
                             }
                         })
                         .collect::<Result<Vec<Schema>, Error>>()
@@ -832,11 +855,9 @@ impl Template {
         static_inputs: HashMap<&'static str, String>,
     ) -> Result<Vec<u8>, Error> {
         let mut buffer = OpBuffer::default();
-        let mut current_page = 0;
-        let mut y: Option<Mm> = None;
-
         // First render all page content to determine actual page count
         for (page_index, page) in schemas.iter().enumerate() {
+            let mut flow_cursor = FlowCursor::new(page_index);
             for schema in page {
                 match schema {
                     Schema::Text(obj) => {
@@ -845,13 +866,22 @@ impl Template {
                     }
                     Schema::DynamicText(obj) => {
                         let mut obj = obj.clone();
-                        (current_page, y) =
-                            obj.render(&self.base_pdf, current_page, y, &mut buffer)?;
+                        (flow_cursor.page, flow_cursor.y) = obj.render(
+                            &self.base_pdf,
+                            flow_cursor.page,
+                            flow_cursor.y,
+                            &mut buffer,
+                        )?;
                     }
                     Schema::Table(obj) => {
                         let mut obj = obj.clone();
-                        (current_page, y) =
-                            obj.render(&self.base_pdf, doc, page_index, y, &mut buffer)?;
+                        (flow_cursor.page, flow_cursor.y) = obj.render(
+                            &self.base_pdf,
+                            doc,
+                            flow_cursor.page,
+                            flow_cursor.y,
+                            &mut buffer,
+                        )?;
                     }
                     Schema::QrCode(obj) => {
                         obj.render(self.base_pdf.height, doc, page_index, &mut buffer)?;
@@ -872,6 +902,7 @@ impl Template {
                         let mut obj = obj.clone();
                         obj.render(&self.base_pdf, doc, page_index, &mut buffer)?;
                     }
+                    Schema::Spacer(obj) => obj.advance(&self.base_pdf, &mut flow_cursor),
                 }
             }
         }
@@ -922,6 +953,12 @@ impl Template {
                     }
                     Schema::Group(mut obj) => {
                         obj.render(&self.base_pdf, doc, page_idx, &mut buffer)?;
+                    }
+                    Schema::Spacer(_) => {
+                        return Err(Error::UnsupportedSchema {
+                            context: "staticSchema".to_string(),
+                            schema_type: "Spacer".to_string(),
+                        });
                     }
                 }
             }
