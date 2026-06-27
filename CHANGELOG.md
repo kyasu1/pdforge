@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-06-27
+
+### Added
+- Added a height-only `spacer` schema for explicit vertical gaps between flowing tables and dynamic text.
+
+### Changed
+- Tables, dynamic text, and spacers now share page and vertical-position flow state within each template page.
+
 ## [0.11.1] - 2026-06-12
 
 ### Changed
