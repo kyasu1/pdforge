@@ -656,6 +656,10 @@
         ]
       },
       {
+        "type": "spacer",
+        "height": 5
+      },
+      {
         "type": "table",
         "name": "totals_table",
         "position": {
