@@ -1,0 +1,316 @@
+{
+  "schemas": [
+    [
+      {
+        "type": "table",
+        "name": "product_list",
+        "position": { "x": 10, "y": 10 },
+        "width": 190,
+        "height": 277,
+        "content": "",
+        "showHead": true,
+        "headWidthPercentages": [
+          { "content": "商品コード", "percent": 14, "fontSize": 9, "alignment": "center" },
+          { "content": "商品名", "percent": 31, "fontSize": 9, "alignment": "left" },
+          { "content": "カテゴリ", "percent": 17, "fontSize": 9, "alignment": "left" },
+          { "content": "数量", "percent": 10, "fontSize": 9, "alignment": "right" },
+          { "content": "単価", "percent": 14, "fontSize": 9, "alignment": "right" },
+          { "content": "金額", "percent": 14, "fontSize": 9, "alignment": "right" }
+        ],
+        "tableStyles": {
+          "borderWidth": 0.25,
+          "borderColor": "#64748b"
+        },
+        "headStyles": {
+          "fontSize": 9,
+          "fontName": "NotoSansJP",
+          "characterSpacing": 0,
+          "alignment": "center",
+          "verticalAlignment": "middle",
+          "lineHeight": 1,
+          "fontColor": "#ffffff",
+          "borderColor": "#334155",
+          "backgroundColor": "#334155",
+          "borderWidth": { "top": 0.2, "right": 0.2, "bottom": 0.2, "left": 0.2 },
+          "padding": { "top": 2, "right": 2, "bottom": 2, "left": 2 }
+        },
+        "bodyStyles": {
+          "fontSize": 8,
+          "fontName": "NotoSansJP",
+          "characterSpacing": 0,
+          "alignment": "left",
+          "verticalAlignment": "middle",
+          "lineHeight": 1,
+          "fontColor": "#0f172a",
+          "borderColor": "#94a3b8",
+          "backgroundColor": "#ffffff",
+          "alternateBackgroundColor": "#f1f5f9",
+          "borderWidth": { "top": 0.1, "right": 0.1, "bottom": 0.1, "left": 0.1 },
+          "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+        },
+        "columnStyles": {},
+        "required": false,
+        "readOnly": false,
+        "columns": [
+          {
+            "schema": {
+              "name": "product_code",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "center",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#0f172a",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+            },
+            "height": 5
+          },
+          {
+            "schema": {
+              "name": "product_name",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "left",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#0f172a",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+            },
+            "height": 5
+          },
+          {
+            "schema": {
+              "name": "category",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "left",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#0f172a",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+            },
+            "height": 5
+          },
+          {
+            "schema": {
+              "name": "quantity",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#0f172a",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+            },
+            "height": 5
+          },
+          {
+            "schema": {
+              "name": "unit_price",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#0f172a",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+            },
+            "height": 5
+          },
+          {
+            "schema": {
+              "name": "amount",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#0f172a",
+              "fontSize": 8,
+              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+            },
+            "height": 5
+          }
+        ],
+        "fields": [
+          ["P-001", "ノートパソコン 14インチ", "PC・周辺機器", "2", "¥98,000", "¥196,000"],
+          ["P-002", "USB-C ドッキングステーション", "PC・周辺機器", "3", "¥18,500", "¥55,500"],
+          ["P-003", "27インチ液晶モニター", "PC・周辺機器", "4", "¥32,000", "¥128,000"],
+          ["P-004", "ワイヤレスキーボード", "PC・周辺機器", "5", "¥6,800", "¥34,000"],
+          ["P-005", "ワイヤレスマウス", "PC・周辺機器", "5", "¥4,200", "¥21,000"],
+          ["P-006", "Web会議用カメラ", "PC・周辺機器", "3", "¥12,800", "¥38,400"],
+          ["P-007", "ノイズキャンセルヘッドセット", "PC・周辺機器", "4", "¥15,000", "¥60,000"],
+          ["P-008", "ポータブルSSD 1TB", "PC・周辺機器", "2", "¥16,500", "¥33,000"],
+          ["P-009", "USBメモリ 64GB", "PC・周辺機器", "10", "¥1,800", "¥18,000"],
+          ["P-010", "HDMIケーブル 2m", "PC・周辺機器", "8", "¥1,500", "¥12,000"],
+          ["P-011", "A4コピー用紙 500枚", "事務用品", "20", "¥650", "¥13,000"],
+          ["P-012", "油性ボールペン 黒 10本", "事務用品", "6", "¥1,200", "¥7,200"],
+          ["P-013", "蛍光マーカー 5色セット", "事務用品", "8", "¥780", "¥6,240"],
+          ["P-014", "付箋 75mm角 12冊", "事務用品", "5", "¥1,450", "¥7,250"],
+          ["P-015", "クリアファイル 100枚", "事務用品", "4", "¥2,100", "¥8,400"],
+          ["P-016", "リングファイル A4", "事務用品", "12", "¥580", "¥6,960"],
+          ["P-017", "ホワイトボードマーカー", "事務用品", "10", "¥220", "¥2,200"],
+          ["P-018", "テープのり 交換式", "事務用品", "10", "¥480", "¥4,800"],
+          ["P-019", "卓上電卓 12桁", "事務用品", "4", "¥2,400", "¥9,600"],
+          ["P-020", "レタートレー 3段", "事務用品", "3", "¥3,200", "¥9,600"],
+          ["P-021", "オフィスチェア", "オフィス家具", "6", "¥28,000", "¥168,000"],
+          ["P-022", "昇降式デスク", "オフィス家具", "2", "¥62,000", "¥124,000"],
+          ["P-023", "脇机 3段", "オフィス家具", "3", "¥24,000", "¥72,000"],
+          ["P-024", "書庫 両開き", "オフィス家具", "2", "¥45,000", "¥90,000"],
+          ["P-025", "ミーティングテーブル", "オフィス家具", "1", "¥78,000", "¥78,000"],
+          ["P-026", "会議用チェア", "オフィス家具", "8", "¥12,500", "¥100,000"],
+          ["P-027", "デスクワゴン", "オフィス家具", "4", "¥19,800", "¥79,200"],
+          ["P-028", "モニターアーム", "オフィス家具", "6", "¥8,900", "¥53,400"],
+          ["P-029", "デスクライト LED", "オフィス家具", "6", "¥5,600", "¥33,600"],
+          ["P-030", "パーティション 120cm", "オフィス家具", "4", "¥16,000", "¥64,000"],
+          ["P-031", "ミネラルウォーター 24本", "飲料・食品", "5", "¥2,400", "¥12,000"],
+          ["P-032", "ドリップコーヒー 100袋", "飲料・食品", "2", "¥4,800", "¥9,600"],
+          ["P-033", "緑茶ティーバッグ 100袋", "飲料・食品", "2", "¥2,900", "¥5,800"],
+          ["P-034", "スティックシュガー 100本", "飲料・食品", "2", "¥980", "¥1,960"],
+          ["P-035", "個包装クッキー 40枚", "飲料・食品", "3", "¥2,200", "¥6,600"],
+          ["P-036", "アルコール除菌シート", "衛生用品", "12", "¥450", "¥5,400"],
+          ["P-037", "ハンドソープ 詰替", "衛生用品", "10", "¥520", "¥5,200"],
+          ["P-038", "ペーパータオル 200枚", "衛生用品", "15", "¥380", "¥5,700"],
+          ["P-039", "不織布マスク 50枚", "衛生用品", "8", "¥1,100", "¥8,800"],
+          ["P-040", "救急セット", "衛生用品", "2", "¥4,500", "¥9,000"],
+          ["P-041", "電源タップ 6個口", "設備用品", "8", "¥2,600", "¥20,800"],
+          ["P-042", "延長コード 5m", "設備用品", "4", "¥2,200", "¥8,800"],
+          ["P-043", "単3アルカリ電池 20本", "設備用品", "5", "¥1,650", "¥8,250"],
+          ["P-044", "ラベルライター", "設備用品", "1", "¥14,800", "¥14,800"],
+          ["P-045", "ラベルテープ 白 12mm", "設備用品", "6", "¥1,100", "¥6,600"],
+          ["P-046", "シュレッダー", "設備用品", "1", "¥26,000", "¥26,000"],
+          ["P-047", "加湿空気清浄機", "設備用品", "2", "¥38,000", "¥76,000"],
+          ["P-048", "壁掛け電波時計", "設備用品", "3", "¥4,800", "¥14,400"],
+          ["P-049", "傘立て 24本用", "設備用品", "1", "¥18,000", "¥18,000"],
+          ["P-050", "台車 折りたたみ式", "設備用品", "1", "¥16,500", "¥16,500"],
+          ["P-051", "プロジェクター台", "設備用品", "1", "¥39,000", "¥39,000"],
+          ["P-052", "スクリーン 100インチ", "設備用品", "1", "¥27,000", "¥27,000"],
+          ["P-053", "LANケーブル 10m", "設備用品", "6", "¥1,900", "¥11,400"],
+          ["P-054", "Wi-Fiルーター", "設備用品", "1", "¥22,000", "¥22,000"]
+        ]
+      },
+      {
+        "type": "spacer",
+        "height": 10
+      },
+      {
+        "type": "table",
+        "name": "order_summary",
+        "position": { "x": 105, "y": 10 },
+        "width": 95,
+        "height": 40,
+        "content": "",
+        "showHead": true,
+        "headWidthPercentages": [
+          { "content": "集計項目", "percent": 55, "fontSize": 10, "alignment": "left" },
+          { "content": "金額", "percent": 45, "fontSize": 10, "alignment": "right" }
+        ],
+        "tableStyles": {
+          "borderWidth": 0.4,
+          "borderColor": "#0f766e"
+        },
+        "headStyles": {
+          "fontSize": 10,
+          "fontName": "NotoSansJP",
+          "characterSpacing": 0,
+          "alignment": "center",
+          "verticalAlignment": "middle",
+          "lineHeight": 1,
+          "fontColor": "#ffffff",
+          "borderColor": "#0f766e",
+          "backgroundColor": "#0f766e",
+          "borderWidth": { "top": 0.2, "right": 0.2, "bottom": 0.2, "left": 0.2 },
+          "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 }
+        },
+        "bodyStyles": {
+          "fontSize": 10,
+          "fontName": "NotoSansJP",
+          "characterSpacing": 0,
+          "alignment": "left",
+          "verticalAlignment": "middle",
+          "lineHeight": 1,
+          "fontColor": "#134e4a",
+          "borderColor": "#5eead4",
+          "backgroundColor": "#f0fdfa",
+          "alternateBackgroundColor": "#ccfbf1",
+          "borderWidth": { "top": 0.2, "right": 0.2, "bottom": 0.2, "left": 0.2 },
+          "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 }
+        },
+        "columnStyles": {},
+        "required": false,
+        "readOnly": false,
+        "columns": [
+          {
+            "schema": {
+              "name": "summary_label",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "left",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#134e4a",
+              "fontSize": 10,
+              "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 }
+            },
+            "height": 7
+          },
+          {
+            "schema": {
+              "name": "summary_amount",
+              "type": "text",
+              "content": "",
+              "position": { "x": 0, "y": 0 },
+              "width": 0,
+              "height": 0,
+              "alignment": "right",
+              "verticalAlignment": "middle",
+              "fontName": "NotoSansJP",
+              "fontColor": "#134e4a",
+              "fontSize": 10,
+              "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 }
+            },
+            "height": 7
+          }
+        ],
+        "fields": [
+          ["小計", "¥1,912,960"],
+          ["消費税（10%）", "¥191,296"],
+          ["合計", "¥2,104,256"]
+        ]
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [10, 10, 10, 10],
+    "staticSchema": []
+  },
+  "schemaVersion": "1.0.0"
+}
