@@ -36,7 +36,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.11.1"
+pdforge = "0.12.0"
 ```
 
 ## Quick Start
@@ -886,6 +886,10 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Version 0.12.0
+- **Flow Spacer**: Added a height-only `spacer` schema for explicit vertical gaps between tables and dynamic text
+- **Shared Flow State**: Tables, dynamic text, and spacers now share page and vertical-position state within each template page
 
 ### Version 0.11.1
 - **Render Correctness**: Repeated `render()` calls no longer accumulate pages from previous renders
