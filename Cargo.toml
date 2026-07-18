@@ -1,6 +1,6 @@
 [package]
 name = "pdforge"
-version = "0.12.1"
+version = "0.12.2"
 edition = "2021"
 
 [dependencies]
@@ -9,9 +9,9 @@ csscolorparser = "0.7.0"
 derive-new = "0.7.0"
 icu_segmenter = { version = "1.5.0", features = ["serde"] }
 image = { version = "0.25.5", features = ["png"] }
-lopdf = "0.44.0"
+lopdf = { version = "0.44.0", default-features = false }
 palette = "0.7.6"
-printpdf = { version = "0.11.1", features = [
+printpdf = { version = "0.11.2", features = [
     "bmp",
     "png",
     "jpeg",
