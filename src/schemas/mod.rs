@@ -975,7 +975,7 @@ impl Template {
         let bytes = doc.with_pages(pages).save(
             &PdfSaveOptions {
                 optimize: false,
-                subset_fonts: false,
+                subset_fonts: true,
                 secure: false,
                 image_optimization: None,
             },
