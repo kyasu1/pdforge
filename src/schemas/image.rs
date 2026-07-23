@@ -179,6 +179,7 @@ impl Image {
                     scale_x: Some(scale_factor),
                     scale_y: Some(scale_factor),
                     dpi: Some(dpi),
+                    no_auto_scale: false,
                 }
             }
             ObjectFit::Cover => {
@@ -201,6 +202,7 @@ impl Image {
                     scale_x: Some(scale_factor),
                     scale_y: Some(scale_factor),
                     dpi: Some(dpi),
+                    no_auto_scale: false,
                 }
             }
             ObjectFit::None => {
@@ -213,6 +215,7 @@ impl Image {
                     scale_x: Some(1.0 / ratio),
                     scale_y: Some(1.0 / ratio),
                     dpi: Some(dpi),
+                    no_auto_scale: false,
                 }
             }
             ObjectFit::ScaleDown => {
@@ -235,6 +238,7 @@ impl Image {
                         scale_x: Some(1.0 / ratio),
                         scale_y: Some(1.0 / ratio),
                         dpi: Some(dpi),
+                        no_auto_scale: false,
                     }
                 } else {
                     // Image is too large - use Contain behavior
@@ -262,6 +266,7 @@ impl Image {
                         scale_x: Some(scale_factor / (dpi / 25.4)),
                         scale_y: Some(scale_factor / (dpi / 25.4)),
                         dpi: Some(dpi),
+                        no_auto_scale: false,
                     }
                 }
             }

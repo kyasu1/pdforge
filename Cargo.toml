@@ -11,7 +11,7 @@ icu_segmenter = { version = "1.5.0", features = ["serde"] }
 image = { version = "0.25.5", features = ["png"] }
 lopdf = { version = "0.44.0", default-features = false }
 palette = "0.7.6"
-printpdf = { version = "0.11.2", features = [
+printpdf = { version = "0.12.3", features = [
     "bmp",
     "png",
     "jpeg",
