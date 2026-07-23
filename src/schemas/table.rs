@@ -1,7 +1,7 @@
 use super::{base::BaseSchema, BasePdf, HasBaseSchema, InvalidColorSnafu, Schema};
 use super::{qrcode, BoundingBox, Frame, JsonFrame, SchemaTrait, VerticalAlignment};
 use crate::font::{FontMap, LineBreakMode};
-use crate::schemas::pdf_utils::{draw_rectangle, DrawRectangle};
+use crate::schemas::pdf_utils::{draw_table_cell, DrawCell};
 use crate::schemas::text;
 use crate::{
     schemas::{Alignment, Error, JsonPosition},
@@ -16,7 +16,6 @@ use std::cmp::max;
 #[serde(rename_all = "camelCase")]
 pub struct JsonCellStyle {
     schema: JsonSchema,
-    height: Option<f32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -58,9 +57,9 @@ pub struct HeadStyles {
     alignment: Alignment,
     vertical_alignment: VerticalAlignment,
     line_height: f32,
-    font_color: String,
-    border_color: String,
-    background_color: String,
+    font_color: csscolorparser::Color,
+    border_color: csscolorparser::Color,
+    background_color: csscolorparser::Color,
     border_width: Frame,
     padding: Frame,
     line_break_mode: Option<LineBreakMode>,
@@ -69,6 +68,9 @@ pub struct HeadStyles {
 impl HeadStyles {
     pub fn from_json(json: JsonHeadStyles) -> Result<Self, Error> {
         let border_width = Frame::from_json(json.border_width)?;
+        let font_color = parse_color_or(&json.font_color, "#000000")?;
+        let border_color = parse_color_or(&json.border_color, "#000000")?;
+        let background_color = parse_color_or(&json.background_color, "#ffffff")?;
         Ok(Self {
             font_size: Pt(json.font_size),
             font_name: json.font_name,
@@ -76,9 +78,9 @@ impl HeadStyles {
             alignment: json.alignment.unwrap_or(Alignment::Left),
             vertical_alignment: json.vertical_alignment.unwrap_or(VerticalAlignment::Middle),
             line_height: json.line_height.unwrap_or(1.0),
-            font_color: json.font_color,
-            border_color: json.border_color,
-            background_color: json.background_color,
+            font_color,
+            border_color,
+            background_color,
             border_width,
             padding: Frame::from_json(json.padding)?,
             line_break_mode: json.line_break_mode,
@@ -105,14 +107,10 @@ pub struct JsonBodyStyles {
     alignment: Alignment,
     vertical_alignment: VerticalAlignment,
     character_spacing: Option<f32>,
-    font_size: f32,
-    font_name: String,
     font_color: String,
     line_height: f32,
-    border_color: String,
     background_color: String,
     alternate_background_color: Option<String>,
-    border_width: JsonFrame,
     padding: JsonFrame,
     line_break_mode: Option<LineBreakMode>,
 }
@@ -122,21 +120,16 @@ pub struct BodyStyles {
     alignment: Alignment,
     vertical_alignment: VerticalAlignment,
     character_spacing: f32,
-    font_size: Pt,
-    font_name: String,
     font_color: csscolorparser::Color,
     line_height: f32,
-    border_color: csscolorparser::Color,
     background_color: csscolorparser::Color,
     alternate_background_color: Option<csscolorparser::Color>,
-    border_width: Frame,
     padding: Frame,
     line_break_mode: LineBreakMode,
 }
 
 impl BodyStyles {
     pub fn from_json(json: JsonBodyStyles) -> Result<Self, Error> {
-        let border_width = Frame::from_json(json.border_width)?;
         let font_color = csscolorparser::parse(&json.font_color).context(InvalidColorSnafu)?;
 
         let background_color =
@@ -149,17 +142,27 @@ impl BodyStyles {
             alignment: json.alignment,
             vertical_alignment: json.vertical_alignment,
             character_spacing: json.character_spacing.unwrap_or(0.0),
-            font_size: Pt(json.font_size),
-            font_name: json.font_name,
             font_color,
             line_height: json.line_height,
-            border_color: csscolorparser::parse(&json.border_color).context(InvalidColorSnafu)?,
             background_color,
             alternate_background_color,
-            border_width,
             padding: Frame::from_json(json.padding)?,
             line_break_mode: json.line_break_mode.unwrap_or(LineBreakMode::Char),
         })
+    }
+
+    /// Text-responsibility defaults a body column inherits when it leaves a
+    /// field unspecified. Background/border stay out — the row painter owns them.
+    fn text_defaults(&self) -> text::TextStyleDefaults {
+        text::TextStyleDefaults {
+            alignment: self.alignment.clone(),
+            vertical_alignment: self.vertical_alignment.clone(),
+            character_spacing: self.character_spacing,
+            line_height: self.line_height,
+            font_color: self.font_color.clone(),
+            padding: Some(self.padding.clone()),
+            line_break_mode: self.line_break_mode,
+        }
     }
 }
 
@@ -209,11 +212,38 @@ pub struct Head {
 pub struct Table {
     base: BaseSchema,
     show_head: bool,
+    head_styles: HeadStyles,
     head_width_percentages: Vec<Head>,
     body_styles: BodyStyles,
     table_styles: TableStyles,
     columns: Vec<Schema>,
     fields: Vec<Vec<String>>,
+}
+
+/// Visual styling applied to every cell rectangle in a single table row.
+#[derive(Debug, Clone)]
+struct RowCellStyle {
+    background: csscolorparser::Color,
+    border_color: csscolorparser::Color,
+    border_width: Frame,
+}
+
+fn to_rgb(color: &csscolorparser::Color) -> Color {
+    Color::Rgb(Rgb {
+        r: color.r,
+        g: color.g,
+        b: color.b,
+        icc_profile: None,
+    })
+}
+
+/// Parse a CSS color, treating an empty/blank string as "unset" and falling
+/// back to `default`. Templates commonly use `""` to mean a field was left
+/// unspecified (e.g. a header with `borderWidth: 0` and `borderColor: ""`).
+fn parse_color_or(value: &str, default: &str) -> Result<csscolorparser::Color, Error> {
+    let value = value.trim();
+    let source = if value.is_empty() { default } else { value };
+    csscolorparser::parse(source).context(InvalidColorSnafu)
 }
 
 impl Table {
@@ -276,6 +306,11 @@ impl Table {
                     Some(head_styles.padding.clone()),
                 )?;
                 text.set_line_break_mode(json_head.line_break_mode.or(head_styles.line_break_mode));
+                text.set_font_color(head_styles.font_color.clone());
+                text.set_character_spacing(Pt(json_head
+                    .character_spacing
+                    .unwrap_or(head_styles.character_spacing)));
+                text.set_line_height(Some(head_styles.line_height));
 
                 Ok(Head {
                     percent: json_head.percent,
@@ -285,10 +320,15 @@ impl Table {
             .collect();
         let heads = heads?;
 
+        let body_text_defaults = body_styles.text_defaults();
         let mut columns = Vec::new();
         for json_column in json.columns {
             let schema = match json_column.schema {
-                JsonSchema::Text(schema) => Schema::Text(text::Text::from_json(schema, font_map)?),
+                JsonSchema::Text(schema) => Schema::Text(text::Text::from_json_with_defaults(
+                    schema,
+                    &body_text_defaults,
+                    font_map,
+                )?),
                 JsonSchema::QrCode(schema) => schema.into(),
             };
 
@@ -297,6 +337,7 @@ impl Table {
         let table = Table {
             base,
             show_head: json.show_head,
+            head_styles,
             head_width_percentages: heads,
             body_styles,
             table_styles,
@@ -310,63 +351,65 @@ impl Table {
         self.base.clone()
     }
 
+    /// Background color for a body row, honoring the alternating (zebra) color.
+    fn body_row_style(&self, visual_row_index: usize) -> RowCellStyle {
+        let background = if visual_row_index % 2 == 1 {
+            self.body_styles
+                .alternate_background_color
+                .clone()
+                .unwrap_or_else(|| self.body_styles.background_color.clone())
+        } else {
+            self.body_styles.background_color.clone()
+        };
+
+        RowCellStyle {
+            background,
+            border_color: self.table_styles.border_color.clone(),
+            border_width: Frame::uniform(self.table_styles.border_width),
+        }
+    }
+
+    /// Visual style for the header row (its own background and border override).
+    fn header_row_style(&self) -> RowCellStyle {
+        RowCellStyle {
+            background: self.head_styles.background_color.clone(),
+            border_color: self.head_styles.border_color.clone(),
+            border_width: self.head_styles.border_width.clone(),
+        }
+    }
+
     /// Render a row immediately to the buffer (memory-efficient approach)
     fn render_row_immediately(
         &self,
         schemas: Vec<Schema>,
-        visual_row_index: usize,
+        cell_style: &RowCellStyle,
         cell_widths: &[Mm],
         base_pdf: &BasePdf,
         page_index: usize,
         doc: &mut PdfDocument,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
-        // Determine background color based on visual_row_index
-        let color = if visual_row_index % 2 == 1 {
-            // Odd rows use alternate_background_color if available
-            match &self.body_styles.alternate_background_color {
-                Some(alt_color) => Color::Rgb(Rgb {
-                    r: alt_color.r,
-                    g: alt_color.g,
-                    b: alt_color.b,
-                    icc_profile: None,
-                }),
-                None => Color::Rgb(Rgb {
-                    r: self.body_styles.background_color.r,
-                    g: self.body_styles.background_color.g,
-                    b: self.body_styles.background_color.b,
-                    icc_profile: None,
-                }),
-            }
-        } else {
-            // Even rows use background_color
-            Color::Rgb(Rgb {
-                r: self.body_styles.background_color.r,
-                g: self.body_styles.background_color.g,
-                b: self.body_styles.background_color.b,
-                icc_profile: None,
-            })
-        };
+        let fill = to_rgb(&cell_style.background);
+        let border_color = to_rgb(&cell_style.border_color);
 
         // Render each cell in the row
         for (col_index, schema) in schemas.iter().enumerate() {
             let base = schema.get_base_copy();
             let width = cell_widths[col_index];
 
-            // Draw background rectangle
-            let rect = DrawRectangle {
+            // Draw the cell background and border
+            let cell = DrawCell {
                 x: base.x,
                 y: base.y,
                 width,
                 height: base.height,
                 rotate: None,
                 page_height: base_pdf.height,
-                color: Some(color.clone()),
-                border_width: Some(self.table_styles.border_width),
-                border_color: None,
+                fill: fill.clone(),
+                border_color: border_color.clone(),
+                border_width: cell_style.border_width.clone(),
             };
-            let ops = draw_rectangle(rect);
-            buffer.insert(page_index, ops);
+            buffer.insert(page_index, draw_table_cell(cell));
 
             // Render cell content
             schema.render(base_pdf.width, base_pdf.height, doc, page_index, buffer)?;
@@ -571,10 +614,10 @@ impl Table {
                 // Render header row immediately if present
                 let actual_page_index = current_page + internal_page_counter;
                 if let Some(header_row) = updated_header_row {
-                    // Header row doesn't count for alternating colors, so use row_index = 0
+                    // Header uses its own styling, independent of the zebra colors.
                     self.render_row_immediately(
                         header_row,
-                        0, // Header always uses even row color
+                        &self.header_row_style(),
                         &cell_widths,
                         base_pdf,
                         actual_page_index,
@@ -586,7 +629,7 @@ impl Table {
                 // Render first data row immediately
                 self.render_row_immediately(
                     updated,
-                    visual_row_index,
+                    &self.body_row_style(visual_row_index),
                     &cell_widths,
                     base_pdf,
                     actual_page_index,
@@ -638,7 +681,7 @@ impl Table {
                         if let Some(header_row) = updated_header_row {
                             self.render_row_immediately(
                                 header_row,
-                                0, // Header always uses even row color
+                                &self.header_row_style(),
                                 &cell_widths,
                                 base_pdf,
                                 actual_page_index,
@@ -650,7 +693,7 @@ impl Table {
                         // Render data row immediately
                         self.render_row_immediately(
                             updated,
-                            visual_row_index,
+                            &self.body_row_style(visual_row_index),
                             &cell_widths,
                             base_pdf,
                             actual_page_index,
@@ -671,7 +714,7 @@ impl Table {
                         let actual_page_index = current_page + internal_page_counter;
                         self.render_row_immediately(
                             updated,
-                            visual_row_index,
+                            &self.body_row_style(visual_row_index),
                             &cell_widths,
                             base_pdf,
                             actual_page_index,
@@ -768,14 +811,10 @@ mod tests {
             alignment: Alignment::Left,
             vertical_alignment: VerticalAlignment::Middle,
             character_spacing: Some(0.0),
-            font_size: 10.0,
-            font_name: "TestFont".to_string(),
             font_color: "#000000".to_string(),
             line_height: 1.5,
-            border_color: "#888888".to_string(),
             background_color: "#ffffff".to_string(),
             alternate_background_color: Some("#f8f8f8".to_string()),
-            border_width: create_test_json_frame(),
             padding: create_test_json_frame(),
             line_break_mode: None,
         }
@@ -840,9 +879,18 @@ mod tests {
         assert_eq!(head_styles.font_name, "TestFont");
         assert_eq!(head_styles.character_spacing, 0.0);
         assert_eq!(head_styles.line_height, 1.0);
-        assert_eq!(head_styles.font_color, "#ffffff");
-        assert_eq!(head_styles.background_color, "#2980ba");
-        assert_eq!(head_styles.border_color, "#000000");
+        assert_eq!(
+            head_styles.font_color,
+            csscolorparser::parse("#ffffff").unwrap()
+        );
+        assert_eq!(
+            head_styles.background_color,
+            csscolorparser::parse("#2980ba").unwrap()
+        );
+        assert_eq!(
+            head_styles.border_color,
+            csscolorparser::parse("#000000").unwrap()
+        );
     }
 
     #[test]
@@ -852,8 +900,6 @@ mod tests {
 
         assert!(result.is_ok());
         let body_styles = result.unwrap();
-        assert_eq!(body_styles.font_size, Pt(10.0));
-        assert_eq!(body_styles.font_name, "TestFont");
         assert_eq!(body_styles.character_spacing, 0.0);
         assert_eq!(body_styles.line_height, 1.5);
         assert!(body_styles.alternate_background_color.is_some());
@@ -972,14 +1018,10 @@ mod tests {
                 "alignment": "left",
                 "verticalAlignment": "middle",
                 "characterSpacing": 0.0,
-                "fontSize": 10.0,
-                "fontName": "TestFont",
                 "fontColor": "#000000",
                 "lineHeight": 1.5,
-                "borderColor": "#888888",
                 "backgroundColor": "#ffffff",
                 "alternateBackgroundColor": "#f8f8f8",
-                "borderWidth": { "top": 1.0, "right": 1.0, "bottom": 1.0, "left": 1.0 },
                 "padding": { "top": 1.0, "right": 1.0, "bottom": 1.0, "left": 1.0 },
                 "lineBreakMode": body_styles_line_break_mode
             },
@@ -1158,5 +1200,101 @@ mod tests {
             .unwrap();
 
         assert_eq!(cursor.y, Some(table_start + table_height));
+    }
+
+    #[test]
+    fn header_row_style_uses_head_background_distinct_from_body() {
+        let font_map = create_real_test_font_map();
+        let table = Table::from_json(create_test_table_schema(), &font_map).unwrap();
+
+        let header = table.header_row_style();
+        let body = table.body_row_style(0);
+
+        assert_eq!(header.background, csscolorparser::parse("#2980ba").unwrap());
+        assert_eq!(body.background, csscolorparser::parse("#ffffff").unwrap());
+        assert_ne!(header.background, body.background);
+    }
+
+    #[test]
+    fn header_text_uses_head_font_color() {
+        let font_map = create_real_test_font_map();
+        let table = Table::from_json(create_test_table_schema(), &font_map).unwrap();
+
+        assert_eq!(
+            *table.head_width_percentages[0].text.font_color(),
+            csscolorparser::parse("#ffffff").unwrap()
+        );
+    }
+
+    #[test]
+    fn body_row_style_uses_configured_table_border_color() {
+        let font_map = create_real_test_font_map();
+        let mut json = create_test_table_schema();
+        json.table_styles.border_color = "#ff0000".to_string();
+        let table = Table::from_json(json, &font_map).unwrap();
+
+        assert_eq!(
+            table.body_row_style(0).border_color,
+            csscolorparser::parse("#ff0000").unwrap()
+        );
+    }
+
+    #[test]
+    fn body_row_style_applies_alternate_background_on_odd_rows() {
+        let font_map = create_real_test_font_map();
+        let table = Table::from_json(create_test_table_schema(), &font_map).unwrap();
+
+        assert_eq!(
+            table.body_row_style(0).background,
+            csscolorparser::parse("#ffffff").unwrap()
+        );
+        assert_eq!(
+            table.body_row_style(1).background,
+            csscolorparser::parse("#f8f8f8").unwrap()
+        );
+    }
+
+    #[test]
+    fn header_row_style_preserves_non_uniform_border_width() {
+        let font_map = create_real_test_font_map();
+        let mut json = create_test_table_schema();
+        json.head_styles.border_width = JsonFrame {
+            top: 2.0,
+            right: 0.0,
+            bottom: 3.0,
+            left: 0.0,
+        };
+        let table = Table::from_json(json, &font_map).unwrap();
+
+        let border = table.header_row_style().border_width;
+        assert_eq!(border.top, Mm(2.0));
+        assert_eq!(border.right, Mm(0.0));
+        assert_eq!(border.bottom, Mm(3.0));
+        assert_eq!(border.left, Mm(0.0));
+    }
+
+    #[test]
+    fn parse_color_or_falls_back_on_empty_or_blank() {
+        assert_eq!(
+            parse_color_or("", "#123456").unwrap(),
+            csscolorparser::parse("#123456").unwrap()
+        );
+        assert_eq!(
+            parse_color_or("   ", "#123456").unwrap(),
+            csscolorparser::parse("#123456").unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_color_or_uses_non_empty_value() {
+        assert_eq!(
+            parse_color_or("#ff0000", "#000000").unwrap(),
+            csscolorparser::parse("#ff0000").unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_color_or_errors_on_invalid_non_empty_color() {
+        assert!(parse_color_or("not-a-color", "#000000").is_err());
     }
 }

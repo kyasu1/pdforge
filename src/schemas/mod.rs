@@ -431,6 +431,16 @@ impl Frame {
             left: Mm(json.left),
         })
     }
+
+    /// Build a Frame with the same width on every side.
+    pub(crate) fn uniform(width: Mm) -> Self {
+        Frame {
+            top: width,
+            right: width,
+            bottom: width,
+            left: width,
+        }
+    }
 }
 
 impl TryFrom<Vec<f32>> for Frame {
