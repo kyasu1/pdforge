@@ -1,3 +1,4 @@
+use super::Frame;
 use crate::font;
 use printpdf::*;
 
@@ -247,4 +248,222 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
         },
         Op::RestoreGraphicsState,
     ]
+}
+
+/// A single table cell: a filled rectangle with a per-side border.
+///
+/// `border_width` carries an independent width for each edge so non-uniform
+/// borders (e.g. a header with only a thick bottom rule) are drawn faithfully
+/// instead of being collapsed to a single width.
+#[derive(Debug, Clone)]
+pub(crate) struct DrawCell {
+    pub x: Mm,
+    pub y: Mm,
+    pub width: Mm,
+    pub height: Mm,
+    pub rotate: Option<f32>,
+    pub page_height: Mm,
+    pub fill: Color,
+    pub border_color: Color,
+    pub border_width: Frame,
+}
+
+pub(crate) fn draw_table_cell(props: DrawCell) -> Vec<Op> {
+    let matrix_values = calculate_transform_matrix_with_center_pivot(
+        props.x,
+        props.page_height - props.y - props.height,
+        props.width,
+        props.height,
+        props.rotate,
+    );
+    let matrix: Op = Op::SetTransformationMatrix {
+        matrix: CurTransMat::Raw(matrix_values),
+    };
+
+    let x1 = Pt(0.0);
+    let y1 = Pt(0.0);
+    let x2: Pt = props.width.into();
+    let y2: Pt = props.height.into();
+
+    let rect_points = vec![
+        LinePoint {
+            p: Point { x: x1, y: y1 },
+            bezier: false,
+        },
+        LinePoint {
+            p: Point { x: x2, y: y1 },
+            bezier: false,
+        },
+        LinePoint {
+            p: Point { x: x2, y: y2 },
+            bezier: false,
+        },
+        LinePoint {
+            p: Point { x: x1, y: y2 },
+            bezier: false,
+        },
+    ];
+
+    let bw = &props.border_width;
+    let uniform = bw.top == bw.right && bw.right == bw.bottom && bw.bottom == bw.left;
+
+    let mut ops = vec![Op::SaveGraphicsState, matrix];
+
+    if uniform {
+        let width_pt: Pt = bw.top.into();
+        let mode = if width_pt.0 > 0.0 {
+            PaintMode::FillStroke
+        } else {
+            PaintMode::Fill
+        };
+        ops.push(Op::SetOutlineColor {
+            col: props.border_color,
+        });
+        ops.push(Op::SetFillColor { col: props.fill });
+        ops.push(Op::SetOutlineThickness { pt: width_pt });
+        ops.push(Op::DrawPolygon {
+            polygon: Polygon {
+                rings: vec![PolygonRing {
+                    points: rect_points,
+                }],
+                mode,
+                winding_order: WindingOrder::NonZero,
+            },
+        });
+    } else {
+        // Fill first, then stroke each edge with its own thickness.
+        ops.push(Op::SetFillColor { col: props.fill });
+        ops.push(Op::DrawPolygon {
+            polygon: Polygon {
+                rings: vec![PolygonRing {
+                    points: rect_points,
+                }],
+                mode: PaintMode::Fill,
+                winding_order: WindingOrder::NonZero,
+            },
+        });
+        ops.push(Op::SetOutlineColor {
+            col: props.border_color,
+        });
+        let edges = [
+            (Point { x: x1, y: y2 }, Point { x: x2, y: y2 }, bw.top),
+            (Point { x: x2, y: y1 }, Point { x: x2, y: y2 }, bw.right),
+            (Point { x: x1, y: y1 }, Point { x: x2, y: y1 }, bw.bottom),
+            (Point { x: x1, y: y1 }, Point { x: x1, y: y2 }, bw.left),
+        ];
+        for (a, b, w) in edges {
+            let w_pt: Pt = w.into();
+            if w_pt.0 <= 0.0 {
+                continue;
+            }
+            ops.push(Op::SetOutlineThickness { pt: w_pt });
+            ops.push(Op::DrawLine {
+                line: Line {
+                    points: vec![
+                        LinePoint {
+                            p: a,
+                            bezier: false,
+                        },
+                        LinePoint {
+                            p: b,
+                            bezier: false,
+                        },
+                    ],
+                    is_closed: false,
+                },
+            });
+        }
+    }
+
+    ops.push(Op::RestoreGraphicsState);
+    ops
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_cell(border_width: Frame) -> DrawCell {
+        DrawCell {
+            x: Mm(10.0),
+            y: Mm(20.0),
+            width: Mm(30.0),
+            height: Mm(8.0),
+            rotate: None,
+            page_height: Mm(297.0),
+            fill: Color::Rgb(Rgb {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                icc_profile: None,
+            }),
+            border_color: Color::Rgb(Rgb {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                icc_profile: None,
+            }),
+            border_width,
+        }
+    }
+
+    fn polygon_modes(ops: &[Op]) -> Vec<PaintMode> {
+        ops.iter()
+            .filter_map(|op| match op {
+                Op::DrawPolygon { polygon } => Some(polygon.mode),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn line_count(ops: &[Op]) -> usize {
+        ops.iter()
+            .filter(|op| matches!(op, Op::DrawLine { .. }))
+            .count()
+    }
+
+    fn thicknesses(ops: &[Op]) -> Vec<Pt> {
+        ops.iter()
+            .filter_map(|op| match op {
+                Op::SetOutlineThickness { pt } => Some(*pt),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn uniform_zero_border_fills_without_stroke() {
+        let ops = draw_table_cell(sample_cell(Frame::uniform(Mm(0.0))));
+
+        assert_eq!(polygon_modes(&ops), vec![PaintMode::Fill]);
+        assert_eq!(line_count(&ops), 0);
+    }
+
+    #[test]
+    fn uniform_positive_border_fill_strokes_with_width() {
+        let ops = draw_table_cell(sample_cell(Frame::uniform(Mm(0.3))));
+
+        assert_eq!(polygon_modes(&ops), vec![PaintMode::FillStroke]);
+        assert_eq!(line_count(&ops), 0);
+        let expected: Pt = Mm(0.3).into();
+        assert_eq!(thicknesses(&ops), vec![expected]);
+    }
+
+    #[test]
+    fn non_uniform_border_fills_then_strokes_only_positive_edges() {
+        let ops = draw_table_cell(sample_cell(Frame {
+            top: Mm(2.0),
+            right: Mm(0.0),
+            bottom: Mm(3.0),
+            left: Mm(0.0),
+        }));
+
+        // A single fill polygon, no stroked polygon.
+        assert_eq!(polygon_modes(&ops), vec![PaintMode::Fill]);
+        // Only the two positive edges (top, bottom) are drawn as lines.
+        assert_eq!(line_count(&ops), 2);
+        let top: Pt = Mm(2.0).into();
+        let bottom: Pt = Mm(3.0).into();
+        assert_eq!(thicknesses(&ops), vec![top, bottom]);
+    }
 }

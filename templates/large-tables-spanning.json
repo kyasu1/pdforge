@@ -87,22 +87,13 @@
           }
         },
         "bodyStyles": {
-          "fontSize": 9,
-          "fontName": "NotoSansJP",
           "characterSpacing": 0,
           "alignment": "left",
           "verticalAlignment": "middle",
           "lineHeight": 1.2,
           "fontColor": "#2c3e50",
-          "borderColor": "#bdc3c7",
           "backgroundColor": "#ffffff",
           "alternateBackgroundColor": "#f8f9fa",
-          "borderWidth": {
-            "top": 0.1,
-            "right": 0.1,
-            "bottom": 0.1,
-            "left": 0.1
-          },
           "padding": {
             "top": 2,
             "right": 3,
@@ -128,8 +119,7 @@
               "fontColor": "#2c3e50",
               "fontSize": 9,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 5.0
+            }
           },
           {
             "schema": {
@@ -145,8 +135,7 @@
               "fontColor": "#2c3e50",
               "fontSize": 9,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 5.0
+            }
           },
           {
             "schema": {
@@ -162,8 +151,7 @@
               "fontColor": "#2c3e50",
               "fontSize": 9,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 5.0
+            }
           },
           {
             "schema": {
@@ -179,8 +167,7 @@
               "fontColor": "#3498db",
               "fontSize": 9,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 5.0
+            }
           },
           {
             "schema": {
@@ -196,8 +183,7 @@
               "fontColor": "#27ae60",
               "fontSize": 9,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 5.0
+            }
           }
         ],
         "fields": [
@@ -395,22 +381,13 @@
           }
         },
         "bodyStyles": {
-          "fontSize": 8,
-          "fontName": "NotoSansJP",
           "characterSpacing": 0,
           "alignment": "left",
           "verticalAlignment": "middle",
           "lineHeight": 1.2,
           "fontColor": "#2c3e50",
-          "borderColor": "#d5b3e5",
           "backgroundColor": "#ffffff",
           "alternateBackgroundColor": "#f8f5fb",
-          "borderWidth": {
-            "top": 0.1,
-            "right": 0.1,
-            "bottom": 0.1,
-            "left": 0.1
-          },
           "padding": {
             "top": 2,
             "right": 3,
@@ -436,8 +413,7 @@
               "fontColor": "#2c3e50",
               "fontSize": 8,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 4.5
+            }
           },
           {
             "schema": {
@@ -453,8 +429,7 @@
               "fontColor": "#2c3e50",
               "fontSize": 8,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 4.5
+            }
           },
           {
             "schema": {
@@ -470,8 +445,7 @@
               "fontColor": "#8e44ad",
               "fontSize": 8,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 4.5
+            }
           },
           {
             "schema": {
@@ -487,8 +461,7 @@
               "fontColor": "#e67e22",
               "fontSize": 8,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 4.5
+            }
           },
           {
             "schema": {
@@ -504,8 +477,7 @@
               "fontColor": "#3498db",
               "fontSize": 8,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 4.5
+            }
           },
           {
             "schema": {
@@ -521,8 +493,7 @@
               "fontColor": "#27ae60",
               "fontSize": 8,
               "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
-            },
-            "height": 4.5
+            }
           }
         ],
         "fields": [

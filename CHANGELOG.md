@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-23
+
+### Added
+- Table headers now honor `headStyles` styling that was previously parsed but ignored: `backgroundColor`, `fontColor`, `characterSpacing`, `lineHeight`, `borderColor`, and per-side `borderWidth` (`Frame`).
+- Table cell borders now use `tableStyles.borderColor` (previously always black).
+- Body cells now inherit unspecified `alignment`, `verticalAlignment`, `characterSpacing`, `lineHeight`, `fontColor`, `padding`, and `lineBreakMode` from `bodyStyles`.
+- Empty (`""`) color strings in `headStyles` are treated as "unset" and fall back to defaults.
+
+### Changed
+- Table header background now comes from `headStyles.backgroundColor` instead of erroneously reusing `bodyStyles.backgroundColor`.
+- Header borders now come from `headStyles.borderWidth`/`borderColor`; a `borderWidth` of `0` yields no header border (previously headers inherited `tableStyles.borderWidth`). See [docs/table-styling-migration.md](docs/table-styling-migration.md).
+
+### Removed
+- Removed unused schema fields with no rendering effect: `bodyStyles.fontSize`, `bodyStyles.fontName`, `bodyStyles.borderColor`, `bodyStyles.borderWidth`, and the column `CellStyle.height`. JSON parsing remains lenient (unknown fields are ignored).
+
 ## [0.12.0] - 2026-06-27
 
 ### Added

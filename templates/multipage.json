@@ -60,22 +60,13 @@
           }
         },
         "bodyStyles": {
-          "fontSize": 13,
-          "fontName": "NotoSansJP",
           "characterSpacing": 0,
           "alignment": "left",
           "verticalAlignment": "middle",
           "lineHeight": 1,
           "fontColor": "#000000",
-          "borderColor": "#888888",
           "backgroundColor": "#FFFFFF",
           "alternateBackgroundColor": "#f8f8f8",
-          "borderWidth": {
-            "top": 0.1,
-            "right": 0.1,
-            "bottom": 0.1,
-            "left": 0.1
-          },
           "padding": {
             "top": 5,
             "right": 5,

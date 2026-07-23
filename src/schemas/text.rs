@@ -38,6 +38,22 @@ pub struct JsonTextSchema {
     line_break_mode: Option<LineBreakMode>,
 }
 
+/// Fallback values for the text-responsibility fields of a [`Text`], used
+/// when a `JsonTextSchema` leaves them unspecified (e.g. table body cells
+/// inheriting from `bodyStyles`). Background and border are intentionally
+/// excluded — those are painted by the enclosing cell rectangle, not the
+/// text, so injecting them here would double-draw and clobber zebra rows.
+#[derive(Debug, Clone)]
+pub(crate) struct TextStyleDefaults {
+    pub alignment: Alignment,
+    pub vertical_alignment: VerticalAlignment,
+    pub character_spacing: f32,
+    pub line_height: f32,
+    pub font_color: csscolorparser::Color,
+    pub padding: Option<Frame>,
+    pub line_break_mode: LineBreakMode,
+}
+
 #[derive(Debug, Clone)]
 pub struct Text {
     base: BaseSchema,
@@ -111,6 +127,82 @@ impl Text {
     }
 
     pub fn from_json(json: JsonTextSchema, font_map: &FontMap) -> Result<Text, Error> {
+        let alignment = json.alignment.clone().unwrap_or(Alignment::Left);
+        let vertical_alignment = json
+            .vertical_alignment
+            .clone()
+            .unwrap_or(VerticalAlignment::Top);
+        let character_spacing = json.character_spacing.map(Pt).unwrap_or(Pt(0.0));
+        let line_height = json.line_height;
+        let font_color = csscolorparser::parse(json.font_color.as_deref().unwrap_or("#000000"))
+            .context(InvalidColorSnafu)?;
+        let padding = json.padding.clone();
+        let line_break_mode = json.line_break_mode;
+
+        Self::from_json_resolved(
+            json,
+            alignment,
+            vertical_alignment,
+            character_spacing,
+            line_height,
+            font_color,
+            padding,
+            line_break_mode,
+            font_map,
+        )
+    }
+
+    pub(crate) fn from_json_with_defaults(
+        json: JsonTextSchema,
+        defaults: &TextStyleDefaults,
+        font_map: &FontMap,
+    ) -> Result<Text, Error> {
+        let alignment = json
+            .alignment
+            .clone()
+            .unwrap_or_else(|| defaults.alignment.clone());
+        let vertical_alignment = json
+            .vertical_alignment
+            .clone()
+            .unwrap_or_else(|| defaults.vertical_alignment.clone());
+        let character_spacing = Pt(json.character_spacing.unwrap_or(defaults.character_spacing));
+        let line_height = Some(json.line_height.unwrap_or(defaults.line_height));
+        let font_color = match json.font_color.as_deref() {
+            Some(color) => csscolorparser::parse(color).context(InvalidColorSnafu)?,
+            None => defaults.font_color.clone(),
+        };
+        let padding = json.padding.clone().or_else(|| defaults.padding.clone());
+        let line_break_mode = Some(json.line_break_mode.unwrap_or(defaults.line_break_mode));
+
+        Self::from_json_resolved(
+            json,
+            alignment,
+            vertical_alignment,
+            character_spacing,
+            line_height,
+            font_color,
+            padding,
+            line_break_mode,
+            font_map,
+        )
+    }
+
+    /// Shared assembly for both public constructors: parses the non-text-style
+    /// fields (font, geometry, background/border) and combines them with the
+    /// already-resolved text-style values. The two constructors differ only in
+    /// how those text-style values are resolved (bare defaults vs. `bodyStyles`).
+    #[allow(clippy::too_many_arguments)]
+    fn from_json_resolved(
+        json: JsonTextSchema,
+        alignment: Alignment,
+        vertical_alignment: VerticalAlignment,
+        character_spacing: Pt,
+        line_height: Option<f32>,
+        font_color: csscolorparser::Color,
+        padding: Option<Frame>,
+        line_break_mode: Option<LineBreakMode>,
+        font_map: &FontMap,
+    ) -> Result<Text, Error> {
         let (font_id, font) = font_map
             .find(&json.font_name)
             .whatever_context("Font specified in the schema is not loaded")?;
@@ -124,9 +216,6 @@ impl Text {
             Mm(json.height),
         );
 
-        let character_spacing = json.character_spacing.map(Pt).unwrap_or(Pt(0.0));
-        let line_height = json.line_height;
-        let line_break_mode = json.line_break_mode;
         let font_size = match json.font_size {
             JsonFontSize::Dynamic { min, max, fit } => {
                 FontSize::Dynamic(DynamicFontSize::new(Pt(min), Pt(max), fit))
@@ -134,19 +223,19 @@ impl Text {
             JsonFontSize::Fixed(f) => FontSize::Fixed(Pt(f)),
         };
 
-        let alignment = json.alignment.unwrap_or(Alignment::Left);
-        let vertical_alignment = json.vertical_alignment.unwrap_or(VerticalAlignment::Top);
-
-        let font_color = csscolorparser::parse(&json.font_color.unwrap_or("#000000".to_string()))
-            .context(InvalidColorSnafu)?;
-
         let background_color = json
             .background_color
             .as_ref()
             .map(|c| csscolorparser::parse(c).context(InvalidColorSnafu))
             .transpose()?;
 
-        let text = Text {
+        let border_color = json
+            .border_color
+            .as_ref()
+            .map(|c| csscolorparser::parse(c).context(InvalidColorSnafu))
+            .transpose()?;
+
+        Ok(Text {
             base,
             content: json.content,
             character_spacing,
@@ -161,20 +250,14 @@ impl Text {
             font: font.clone(),
             font_color,
             background_color,
-            padding: json.padding,
+            padding,
             rotate: json.rotate,
             scale_x: json.scale_x,
             scale_y: json.scale_y,
-            border_color: json
-                .border_color
-                .as_ref()
-                .map(|c| csscolorparser::parse(c).context(InvalidColorSnafu))
-                .transpose()?,
+            border_color,
             border_width: json.border_width.map(Pt),
             line_break_mode,
-        };
-
-        Ok(text)
+        })
     }
 
     pub fn render(
@@ -466,6 +549,15 @@ impl Text {
 
     pub fn set_content(&mut self, content: String) {
         self.content = content;
+    }
+    pub fn set_font_color(&mut self, font_color: csscolorparser::Color) {
+        self.font_color = font_color;
+    }
+    pub fn font_color(&self) -> &csscolorparser::Color {
+        &self.font_color
+    }
+    pub fn set_character_spacing(&mut self, character_spacing: Pt) {
+        self.character_spacing = character_spacing;
     }
     pub fn has_line_height(&self) -> bool {
         self.line_height.is_some()
@@ -769,5 +861,74 @@ mod tests {
         assert!(text.has_line_break_mode());
         assert_eq!(text.line_break_mode(), Some(LineBreakMode::Char));
         assert_eq!(text.resolved_line_break_mode(), LineBreakMode::Char);
+    }
+
+    fn sample_defaults() -> TextStyleDefaults {
+        TextStyleDefaults {
+            alignment: Alignment::Right,
+            vertical_alignment: VerticalAlignment::Bottom,
+            character_spacing: 3.0,
+            line_height: 2.0,
+            font_color: csscolorparser::parse("#ff0000").unwrap(),
+            padding: Some(Frame::uniform(Mm(4.0))),
+            line_break_mode: LineBreakMode::Word,
+        }
+    }
+
+    #[test]
+    fn from_json_with_defaults_inherits_unspecified_fields() {
+        let font_map = test_font_map();
+        let json: JsonTextSchema = serde_json::from_value(json!({
+            "name": "cell",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 50.0,
+            "height": 10.0,
+            "content": "x",
+            "fontName": "TestFont",
+            "fontSize": 10.0
+        }))
+        .unwrap();
+
+        let text = Text::from_json_with_defaults(json, &sample_defaults(), &font_map).unwrap();
+
+        assert!(matches!(text.alignment, Alignment::Right));
+        assert!(matches!(text.vertical_alignment, VerticalAlignment::Bottom));
+        assert_eq!(text.character_spacing, Pt(3.0));
+        assert_eq!(text.line_height, Some(2.0));
+        assert_eq!(
+            *text.font_color(),
+            csscolorparser::parse("#ff0000").unwrap()
+        );
+        assert_eq!(text.line_break_mode, Some(LineBreakMode::Word));
+        assert!(text.padding.is_some());
+    }
+
+    #[test]
+    fn from_json_with_defaults_keeps_explicit_overrides() {
+        let font_map = test_font_map();
+        let json: JsonTextSchema = serde_json::from_value(json!({
+            "name": "cell",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 50.0,
+            "height": 10.0,
+            "content": "x",
+            "fontName": "TestFont",
+            "fontSize": 10.0,
+            "alignment": "center",
+            "characterSpacing": 1.0,
+            "fontColor": "#00ff00",
+            "lineBreakMode": "char"
+        }))
+        .unwrap();
+
+        let text = Text::from_json_with_defaults(json, &sample_defaults(), &font_map).unwrap();
+
+        assert!(matches!(text.alignment, Alignment::Center));
+        assert_eq!(text.character_spacing, Pt(1.0));
+        assert_eq!(
+            *text.font_color(),
+            csscolorparser::parse("#00ff00").unwrap()
+        );
+        assert_eq!(text.line_break_mode, Some(LineBreakMode::Char));
     }
 }
