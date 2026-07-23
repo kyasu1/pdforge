@@ -217,6 +217,7 @@
 | `alignment` | `Alignment` | - | 個別水平配置（未指定時は `headStyles.alignment` を使用） |
 | `verticalAlignment` | `VerticalAlignment` | - | 個別垂直配置（未指定時は `headStyles.verticalAlignment` を使用） |
 | `characterSpacing` | `number` | - | 個別文字間隔 |
+| `lineBreakMode` | `LineBreakMode` | - | 個別改行モード（未指定時は `headStyles.lineBreakMode` を使用） |
 
 ### `HeadStyles` — ヘッダースタイル
 
@@ -233,46 +234,64 @@
 | `verticalAlignment` | `VerticalAlignment` | - | `"middle"` | 垂直配置 |
 | `lineHeight` | `number` | - | `1.0` | 行の高さ倍率 |
 | `characterSpacing` | `number` | - | `0.0` | 文字間隔 (pt) |
+| `lineBreakMode` | `LineBreakMode` | - | なし | 改行モード（列が省略したときのヘッダー既定） |
+
+> **次リリースでの変更:** `backgroundColor` / `fontColor` / `borderColor` / `borderWidth` /
+> `characterSpacing` / `lineHeight` は以前パースされるだけで描画に反映されていなかったが、
+> 現在はヘッダー行に適用される。特にヘッダー背景はこれまで `bodyStyles.backgroundColor` を
+> 流用していた。`borderWidth` は四辺個別（`Frame`）で忠実に描画される。空文字（`""`）の
+> 色は「未指定」として扱われフォールバックする。詳細は
+> [`docs/table-styling-migration.md`](./table-styling-migration.md) を参照。
 
 ### `BodyStyles` — データ行スタイル
 
+`backgroundColor` / `alternateBackgroundColor` はセル矩形（行の塗り）に、それ以外の
+テキスト系プロパティは **列（`CellStyle.schema`）が値を省略したときのデフォルト**として
+適用される。データ行の枠線は `TableStyles`（グリッド枠）が担当する。
+
 | プロパティ | 型 | 必須 | デフォルト | 説明 |
 |---|---|---|---|---|
-| `fontSize` | `number` | ✓ | | フォントサイズ (pt) |
-| `fontName` | `string` | ✓ | | フォント名 |
-| `fontColor` | `string` | ✓ | | フォント色（CSS色） |
+| `fontColor` | `string` | ✓ | | 列が `fontColor` を省略したときのフォント色（CSS色） |
 | `backgroundColor` | `string` | ✓ | | 偶数行（0, 2, 4...）の背景色（CSS色） |
-| `borderColor` | `string` | ✓ | | 枠線色（CSS色） |
-| `borderWidth` | `Frame` | ✓ | | 各辺の枠線幅 (mm) |
-| `padding` | `Frame` | ✓ | | 各辺の余白 (mm) |
-| `alignment` | `Alignment` | ✓ | | 水平配置 |
-| `verticalAlignment` | `VerticalAlignment` | ✓ | | 垂直配置 |
-| `lineHeight` | `number` | ✓ | | 行の高さ倍率 |
+| `padding` | `Frame` | ✓ | | 列が `padding` を省略したときの余白 (mm) |
+| `alignment` | `Alignment` | ✓ | | 列が省略したときの水平配置 |
+| `verticalAlignment` | `VerticalAlignment` | ✓ | | 列が省略したときの垂直配置 |
+| `lineHeight` | `number` | ✓ | | 列が省略したときの行の高さ倍率 |
 | `alternateBackgroundColor` | `string` | - | なし | 奇数行（1, 3, 5...）の背景色（交互カラー行） |
-| `characterSpacing` | `number` | - | `0.0` | 文字間隔 (pt) |
+| `characterSpacing` | `number` | - | `0.0` | 列が省略したときの文字間隔 (pt) |
+| `lineBreakMode` | `LineBreakMode` | - | `"char"` | 列が `lineBreakMode` を省略したときの改行モード |
+
+> **次リリースでの変更:** `fontSize` / `fontName` / `borderColor` / `borderWidth` は
+> `BodyStyles` から削除された。本文フォントは各列（`CellStyle.schema`）が必ず持ち、
+> データ行の枠線は `TableStyles` が描画するため、これらは効果を持たなかった。
+> 詳細は [`docs/table-styling-migration.md`](./table-styling-migration.md) を参照。
 
 ### `TableStyles` — テーブルスタイル
 
 | プロパティ | 型 | 必須 | 説明 |
 |---|---|---|---|
-| `borderWidth` | `number` | ✓ | 外枠の太さ (mm) |
-| `borderColor` | `string` | ✓ | 外枠の色（CSS色） |
+| `borderWidth` | `number` | ✓ | データ行グリッド枠の太さ (mm) |
+| `borderColor` | `string` | ✓ | データ行グリッド枠の色（CSS色） |
+
+> **次リリースでの変更:** `borderColor` はこれまで無視され枠線は常に黒だったが、現在は
+> 指定した色でデータ行の枠線が描画される。
 
 ### `CellStyle` — セル定義
 
 ```json
 {
-    "schema": { "type": "text", ... },
-    "height": 10.0
+    "schema": { "type": "text", ... }
 }
 ```
 
 | プロパティ | 型 | 必須 | 説明 |
 |---|---|---|---|
 | `schema` | `TextSchema \| QrCodeSchema` | ✓ | セルのスキーマ（`text` または `qrCode` のみ対応） |
-| `height` | `number` | - | セルの最小高さ (mm) |
 
 > **制限事項:** セルに使えるスキーマは `text` と `qrCode` のみ。それ以外はパニックが発生する。
+>
+> **次リリースでの変更:** `height`（セルの最小高さ）は未実装のまま削除された。行の高さは
+> セル内容から自動計算される。
 
 ---
 

@@ -259,13 +259,9 @@ Example:
     "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 }
   },
   "bodyStyles": {
-    "fontSize": 11,
-    "fontName": "NotoSansJP",
     "fontColor": "#000000",
     "backgroundColor": "#ffffff",
     "alternateBackgroundColor": "#f8f8f8",
-    "borderColor": "#cccccc",
-    "borderWidth": { "top": 0.1, "right": 0.1, "bottom": 0.1, "left": 0.1 },
     "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 },
     "alignment": "left",
     "verticalAlignment": "middle",
@@ -317,6 +313,14 @@ Example:
 
 **Multi-Page Tables**: Tables automatically span multiple pages when content exceeds the available space. The library handles pagination, headers, and proper content flow across pages automatically.
 
+**Cell Styling**:
+
+- **Header** cells use `headStyles` for background, font color, character spacing, line height, and per-side border (`borderWidth` as a `Frame`). A `borderWidth` of `0` means the header has no border.
+- **Data-row grid borders** use `tableStyles.borderColor` / `borderWidth`.
+- **Body** cells take their font from each column's `schema`; unspecified `alignment`, `verticalAlignment`, `characterSpacing`, `lineHeight`, `fontColor`, `padding`, and `lineBreakMode` fall back to `bodyStyles`. Zebra striping comes from `bodyStyles.backgroundColor` / `alternateBackgroundColor`.
+
+> **Note:** `bodyStyles.fontSize` / `fontName` / `borderColor` / `borderWidth` and the column `CellStyle.height` were removed as they had no effect. See [docs/table-styling-migration.md](docs/table-styling-migration.md) for the full migration guide.
+
 **Table Line Break Defaults**:
 
 - Table header cells default to `word`, and can be overridden with `headStyles.lineBreakMode` or per-column header entries in `headWidthPercentages[].lineBreakMode`.
@@ -349,13 +353,9 @@ Example:
     "lineBreakMode": "word"
   },
   "bodyStyles": {
-    "fontSize": 10,
-    "fontName": "NotoSansJP",
     "fontColor": "#000000",
     "backgroundColor": "#ffffff",
     "alternateBackgroundColor": "#f8f8f8",
-    "borderColor": "#cccccc",
-    "borderWidth": { "top": 0.1, "right": 0.1, "bottom": 0.1, "left": 0.1 },
     "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 },
     "alignment": "left",
     "verticalAlignment": "middle",
@@ -886,6 +886,12 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Unreleased
+- **Table Header Styling**: `headStyles` background, font color, character spacing, line height, and per-side border (`borderColor` + `Frame` `borderWidth`) are now applied to header rows. Previously these were parsed but ignored, and headers reused `bodyStyles.backgroundColor`.
+- **Table Cell Borders**: Data-row borders now use `tableStyles.borderColor` (previously always black).
+- **Body Style Inheritance**: Body cells inherit unspecified `alignment`, `verticalAlignment`, `characterSpacing`, `lineHeight`, `fontColor`, `padding`, and `lineBreakMode` from `bodyStyles`.
+- **Schema Cleanup (removed fields)**: `bodyStyles.fontSize` / `fontName` / `borderColor` / `borderWidth` and the column `CellStyle.height` were removed (no rendering effect). JSON parsing stays lenient. See [docs/table-styling-migration.md](docs/table-styling-migration.md).
 
 ### Version 0.12.0
 - **Flow Spacer**: Added a height-only `spacer` schema for explicit vertical gaps between tables and dynamic text
