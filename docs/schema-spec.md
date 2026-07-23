@@ -236,7 +236,7 @@
 | `characterSpacing` | `number` | - | `0.0` | 文字間隔 (pt) |
 | `lineBreakMode` | `LineBreakMode` | - | なし | 改行モード（列が省略したときのヘッダー既定） |
 
-> **次リリースでの変更:** `backgroundColor` / `fontColor` / `borderColor` / `borderWidth` /
+> **v0.13.0 での変更:** `backgroundColor` / `fontColor` / `borderColor` / `borderWidth` /
 > `characterSpacing` / `lineHeight` は以前パースされるだけで描画に反映されていなかったが、
 > 現在はヘッダー行に適用される。特にヘッダー背景はこれまで `bodyStyles.backgroundColor` を
 > 流用していた。`borderWidth` は四辺個別（`Frame`）で忠実に描画される。空文字（`""`）の
@@ -261,7 +261,7 @@
 | `characterSpacing` | `number` | - | `0.0` | 列が省略したときの文字間隔 (pt) |
 | `lineBreakMode` | `LineBreakMode` | - | `"char"` | 列が `lineBreakMode` を省略したときの改行モード |
 
-> **次リリースでの変更:** `fontSize` / `fontName` / `borderColor` / `borderWidth` は
+> **v0.13.0 での変更:** `fontSize` / `fontName` / `borderColor` / `borderWidth` は
 > `BodyStyles` から削除された。本文フォントは各列（`CellStyle.schema`）が必ず持ち、
 > データ行の枠線は `TableStyles` が描画するため、これらは効果を持たなかった。
 > 詳細は [`docs/table-styling-migration.md`](./table-styling-migration.md) を参照。
@@ -273,7 +273,7 @@
 | `borderWidth` | `number` | ✓ | データ行グリッド枠の太さ (mm) |
 | `borderColor` | `string` | ✓ | データ行グリッド枠の色（CSS色） |
 
-> **次リリースでの変更:** `borderColor` はこれまで無視され枠線は常に黒だったが、現在は
+> **v0.13.0 での変更:** `borderColor` はこれまで無視され枠線は常に黒だったが、現在は
 > 指定した色でデータ行の枠線が描画される。
 
 ### `CellStyle` — セル定義
@@ -290,7 +290,7 @@
 
 > **制限事項:** セルに使えるスキーマは `text` と `qrCode` のみ。それ以外はパニックが発生する。
 >
-> **次リリースでの変更:** `height`（セルの最小高さ）は未実装のまま削除された。行の高さは
+> **v0.13.0 での変更:** `height`（セルの最小高さ）は未実装のまま削除された。行の高さは
 > セル内容から自動計算される。
 
 ---

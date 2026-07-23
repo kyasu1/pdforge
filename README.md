@@ -36,7 +36,7 @@ Add PDForge to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdforge = "0.12.0"
+pdforge = "0.13.0"
 ```
 
 ## Quick Start
@@ -887,7 +887,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Recent Changes
 
-### Unreleased
+### Version 0.13.0
 - **Table Header Styling**: `headStyles` background, font color, character spacing, line height, and per-side border (`borderColor` + `Frame` `borderWidth`) are now applied to header rows. Previously these were parsed but ignored, and headers reused `bodyStyles.backgroundColor`.
 - **Table Cell Borders**: Data-row borders now use `tableStyles.borderColor` (previously always black).
 - **Body Style Inheritance**: Body cells inherit unspecified `alignment`, `verticalAlignment`, `characterSpacing`, `lineHeight`, `fontColor`, `padding`, and `lineBreakMode` from `bodyStyles`.

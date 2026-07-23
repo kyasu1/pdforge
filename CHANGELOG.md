@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-23
+
 ### Added
 - Table headers now honor `headStyles` styling that was previously parsed but ignored: `backgroundColor`, `fontColor`, `characterSpacing`, `lineHeight`, `borderColor`, and per-side `borderWidth` (`Frame`).
 - Table cell borders now use `tableStyles.borderColor` (previously always black).
