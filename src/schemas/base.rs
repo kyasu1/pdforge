@@ -34,6 +34,7 @@ impl BaseSchema {
             scale_x: Some(ratio * self.width.0),
             scale_y: Some(ratio * self.height.0),
             dpi: Some(dpi),
+            no_auto_scale: false,
         }
     }
 }
