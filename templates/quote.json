@@ -67,22 +67,13 @@
                     }
                 },
                 "bodyStyles": {
-                    "fontSize": 10,
-                    "fontName": "NotoSansJP",
                     "characterSpacing": 0,
                     "alignment": "left",
                     "verticalAlignment": "middle",
                     "lineHeight": 1.2,
                     "fontColor": "#000000",
-                    "borderColor": "#888888",
                     "backgroundColor": "#ffffff",
                     "alternateBackgroundColor": "#f5f5f5",
-                    "borderWidth": {
-                        "top": 0.1,
-                        "right": 0.1,
-                        "bottom": 0.1,
-                        "left": 0.1
-                    },
                     "padding": {
                         "top": 2,
                         "right": 1,
@@ -113,8 +104,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 4.5
+                        }
                     },
                     {
                         "schema": {
@@ -138,8 +128,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 4.5
+                        }
                     },
                     {
                         "schema": {
@@ -163,8 +152,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 4.5
+                        }
                     },
                     {
                         "schema": {
@@ -188,8 +176,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 4.5
+                        }
                     }
                 ],
                 "fields": []

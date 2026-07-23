@@ -91,22 +91,13 @@
                     }
                 },
                 "bodyStyles": {
-                    "fontSize": 9,
-                    "fontName": "NotoSansJP",
                     "characterSpacing": 0,
                     "alignment": "left",
                     "verticalAlignment": "middle",
                     "lineHeight": 1.2,
                     "fontColor": "#000000",
-                    "borderColor": "#bdc3c7",
                     "backgroundColor": "#ffffff",
                     "alternateBackgroundColor": "#f8f9fa",
-                    "borderWidth": {
-                        "top": 0.1,
-                        "right": 0.1,
-                        "bottom": 0.1,
-                        "left": 0.1
-                    },
                     "padding": {
                         "top": 2,
                         "right": 3,
@@ -137,8 +128,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 5.0
+                        }
                     },
                     {
                         "schema": {
@@ -162,8 +152,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 5.0
+                        }
                     },
                     {
                         "schema": {
@@ -187,8 +176,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 5.0
+                        }
                     },
                     {
                         "schema": {
@@ -212,8 +200,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 5.0
+                        }
                     },
                     {
                         "schema": {
@@ -237,8 +224,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 5.0
+                        }
                     },
                     {
                         "schema": {
@@ -262,8 +248,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 5.0
+                        }
                     },
                     {
                         "schema": {
@@ -287,8 +272,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 5.0
+                        }
                     },
                     {
                         "schema": {
@@ -312,8 +296,7 @@
                                 "bottom": 1,
                                 "left": 1
                             }
-                        },
-                        "height": 5.0
+                        }
                     }
                 ],
                 "fields": []
