@@ -5,5 +5,6 @@ printpdf/
 assets/
 .idea/
 .claude/settings.local.json
+.codex/
 examples/pdf/
 cv_ql800_jpn_raster_101.pdf
