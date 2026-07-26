@@ -754,7 +754,7 @@ PDForge includes comprehensive font support with a focus on Japanese typography:
 
 ### Adding Custom Fonts
 
-PDForge provides two methods for loading fonts:
+PDForge provides four methods for loading fonts: two for the common single-face case, and two `_with_index` variants for selecting a specific face out of a font collection.
 
 #### 1. From byte slices (Primary API)
 
@@ -781,7 +781,27 @@ let pdforge = PDForgeBuilder::new("Document".to_string())
     .build();
 ```
 
-**Why two methods?** The `add_font()` method accepts byte slices as the primary API because fonts are ultimately parsed from bytes. This eliminates redundant disk I/O and provides maximum flexibility for different font sources (embedded, network, cache, etc.). The `add_font_from_file()` method is a convenient wrapper for the common case of loading from disk.
+**Why byte slices and file paths?** The `add_font()` method accepts byte slices as the primary API because fonts are ultimately parsed from bytes. This eliminates redundant disk I/O and provides maximum flexibility for different font sources (embedded, network, cache, etc.). The `add_font_from_file()` method is a convenient wrapper for the common case of loading from disk.
+
+#### Loading a specific face from a font collection (`.ttc`/`.otc`)
+
+`add_font()`/`add_font_from_file()` always load face `0`, which is what you want for a plain single-face `.ttf`/`.otf`. A TrueType/OpenType Collection (`.ttc`/`.otc`) file bundles multiple faces in one file — use the `_with_index` variants to pick a specific one:
+
+```rust
+// Load two different faces out of the same .ttc file under distinct names
+let collection_bytes = std::fs::read("./path/to/font-collection.ttc")?;
+let pdforge = PDForgeBuilder::new("Document".to_string())
+    .add_font_with_index("CollectionFaceRegular", &collection_bytes, 0)?
+    .add_font_with_index("CollectionFaceBold", &collection_bytes, 1)?
+    .build();
+
+// Or straight from a file path
+let pdforge = PDForgeBuilder::new("Document".to_string())
+    .add_font_from_file_with_index("CollectionFaceRegular", "./path/to/font-collection.ttc", 0)?
+    .build();
+```
+
+An out-of-range `font_index` returns an `Error::FontParsing` describing the failure.
 
 ## Template Engine
 

@@ -2,10 +2,36 @@ pub mod common;
 pub mod font;
 pub mod schemas;
 pub mod utils;
-use printpdf::{FontId, ParsedFont, PdfDocument};
+use printpdf::{FontId, ParsedFont, PdfDocument, PdfFontParseWarning};
 use schemas::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+/// Formats a `Error::FontParsing` message for a failed `ParsedFont::from_bytes`
+/// call, including any parser warnings (e.g. an out-of-range `font_index` for
+/// a `.ttc`/`.otc` collection) as supporting detail.
+fn format_font_parse_error(
+    font_name: &str,
+    font_index: usize,
+    warnings: &[PdfFontParseWarning],
+) -> String {
+    if warnings.is_empty() {
+        format!(
+            "Failed to parse font bytes for: {} (font_index: {})",
+            font_name, font_index
+        )
+    } else {
+        let details = warnings
+            .iter()
+            .map(|w| w.message.as_str())
+            .collect::<Vec<_>>()
+            .join("; ");
+        format!(
+            "Failed to parse font bytes for: {} (font_index: {}): {}",
+            font_name, font_index, details
+        )
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct PDForge {
@@ -67,12 +93,34 @@ impl PDForgeBuilder {
         }
     }
 
-    pub fn add_font(mut self, font_name: &str, font_bytes: &[u8]) -> Result<Self, Error> {
-        let parsed_font =
-            ParsedFont::from_bytes(font_bytes, 0, &mut Vec::new()).ok_or_else(|| {
-                Error::FontParsing {
-                    message: format!("Failed to parse font bytes for: {}", font_name),
-                }
+    /// Loads a font from a byte slice and registers it under `font_name`.
+    ///
+    /// Equivalent to `add_font_with_index(font_name, font_bytes, 0)`. This is
+    /// the right choice for plain single-face `.ttf`/`.otf` fonts; for a
+    /// TrueType/OpenType Collection (`.ttc`/`.otc`) that bundles multiple
+    /// faces, use [`Self::add_font_with_index`] to select a face other than
+    /// the first.
+    pub fn add_font(self, font_name: &str, font_bytes: &[u8]) -> Result<Self, Error> {
+        self.add_font_with_index(font_name, font_bytes, 0)
+    }
+
+    /// Loads a font from a byte slice, selecting `font_index` as the face to
+    /// use, and registers it under `font_name`.
+    ///
+    /// `font_index` selects the face inside a TrueType/OpenType Collection
+    /// (`.ttc`/`.otc`); pass `0` for a plain single-face `.ttf`/`.otf`. To
+    /// use multiple faces from the same collection file, call this method
+    /// once per face with a distinct `font_name` and the desired index.
+    pub fn add_font_with_index(
+        mut self,
+        font_name: &str,
+        font_bytes: &[u8],
+        font_index: usize,
+    ) -> Result<Self, Error> {
+        let mut warnings: Vec<PdfFontParseWarning> = Vec::new();
+        let parsed_font = ParsedFont::from_bytes(font_bytes, font_index, &mut warnings)
+            .ok_or_else(|| Error::FontParsing {
+                message: format_font_parse_error(font_name, font_index, &warnings),
             })?;
         self.font_map.add_font_arc(
             String::from(font_name),
@@ -83,12 +131,35 @@ impl PDForgeBuilder {
         Ok(self)
     }
 
+    /// Loads a font from a file and registers it under `font_name`.
+    ///
+    /// Equivalent to `add_font_from_file_with_index(font_name, file_path, 0)`.
+    /// This is the right choice for plain single-face `.ttf`/`.otf` fonts;
+    /// for a TrueType/OpenType Collection (`.ttc`/`.otc`) that bundles
+    /// multiple faces, use [`Self::add_font_from_file_with_index`] to select
+    /// a face other than the first.
     pub fn add_font_from_file(self, font_name: &str, file_path: &str) -> Result<Self, Error> {
+        self.add_font_from_file_with_index(font_name, file_path, 0)
+    }
+
+    /// Loads a font from a file, selecting `font_index` as the face to use,
+    /// and registers it under `font_name`.
+    ///
+    /// `font_index` selects the face inside a TrueType/OpenType Collection
+    /// (`.ttc`/`.otc`); pass `0` for a plain single-face `.ttf`/`.otf`. To
+    /// use multiple faces from the same collection file, call this method
+    /// once per face with a distinct `font_name` and the desired index.
+    pub fn add_font_from_file_with_index(
+        self,
+        font_name: &str,
+        file_path: &str,
+        font_index: usize,
+    ) -> Result<Self, Error> {
         let font_bytes = std::fs::read(file_path).map_err(|e| Error::FontFileIo {
             source: e,
             message: format!("Failed to read font file: {}", file_path),
         })?;
-        self.add_font(font_name, &font_bytes)
+        self.add_font_with_index(font_name, &font_bytes, font_index)
     }
 
     pub fn load_template(mut self, template_name: &str, template: &str) -> Result<Self, Error> {

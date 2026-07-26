@@ -98,25 +98,36 @@ The library supports these PDF elements:
 
 ### Font Management
 
-PDForge provides two methods for loading fonts:
+PDForge provides four methods for loading fonts, all delegating down to `ParsedFont::from_bytes(bytes, font_index, warnings)` from `printpdf`:
 
 1. **From byte slice** - `PDForgeBuilder.add_font(name, bytes)` **(Primary API)**
    - Accepts font data as `&[u8]`
    - Most flexible and efficient approach
    - Useful for embedded fonts, network-loaded fonts, or cached font data
    - Eliminates redundant disk I/O
+   - Loads face index `0`; equivalent to `add_font_with_index(name, bytes, 0)`
    - See `examples/font_from_bytes.rs` for usage
 
 2. **From file path** - `PDForgeBuilder.add_font_from_file(name, path)` **(Convenience wrapper)**
    - Convenient for loading fonts directly from disk
    - Internally reads the file and calls `add_font()`
+   - Loads face index `0`; equivalent to `add_font_from_file_with_index(name, path, 0)`
    - See `examples/simple.rs` for usage
+
+3. **From byte slice with face index** - `PDForgeBuilder.add_font_with_index(name, bytes, font_index)`
+   - Selects a specific face inside a TrueType/OpenType Collection (`.ttc`/`.otc`)
+   - Use `font_index` `0` for single-face `.ttf`/`.otf` fonts
+   - To load multiple faces from the same collection, call once per face with a distinct `name` and index
+   - An out-of-range `font_index` surfaces as `Error::FontParsing`
+
+4. **From file path with face index** - `PDForgeBuilder.add_font_from_file_with_index(name, path, font_index)`
+   - Same face-selection behavior as `add_font_with_index`, reading from disk
 
 - `FontMap` manages font references and metadata
 - Default fonts include comprehensive Japanese typography support
 - Font files stored in `assets/fonts/`
 
-**Design rationale**: `add_font()` accepts byte slices as the primary API because fonts are ultimately parsed from bytes. This eliminates redundant disk I/O and provides maximum flexibility for different font sources (embedded, network, cache, etc.).
+**Design rationale**: `add_font()` accepts byte slices as the primary API because fonts are ultimately parsed from bytes. This eliminates redundant disk I/O and provides maximum flexibility for different font sources (embedded, network, cache, etc.). The `_with_index` variants exist as separate methods (rather than changing the signature of `add_font`/`add_font_from_file`) to keep the common single-face case ergonomic while remaining backward compatible.
 
 ## Development Notes
 
