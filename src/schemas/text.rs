@@ -582,13 +582,16 @@ impl Text {
     }
     pub fn get_height(&self) -> Result<Mm, Error> {
         let font_size = self.get_font_size()?;
+        // Must be the same width `render` wraps at, or the reported height does
+        // not describe what actually gets drawn.
+        let (box_width, _) = self.get_effective_box_size();
 
         let lines: Vec<String> = self
             .font_spec
             .split_text_to_size(
                 &self.content,
                 font_size,
-                self.base.width.into(),
+                box_width.into(),
                 self.character_spacing,
             )
             .context(FontSnafu)?;
@@ -602,17 +605,22 @@ impl Text {
     fn get_font_size(&self) -> Result<Pt, Error> {
         match self.font_size.clone() {
             FontSize::Fixed(font_size) => Ok(font_size),
-            FontSize::Dynamic(dynamic_font_size) => self
-                .font_spec
-                .calculate_dynamic_font_size(
-                    dynamic_font_size,
-                    self.line_height,
-                    self.character_spacing,
-                    self.base.width,
-                    self.base.height,
-                    &self.content,
-                )
-                .context(FontSnafu),
+            FontSize::Dynamic(dynamic_font_size) => {
+                // Auto-sizing fits text to a box, and the box text is drawn into
+                // is the padded one — sizing against the full box picks a font
+                // that overflows.
+                let (box_width, box_height) = self.get_effective_box_size();
+                self.font_spec
+                    .calculate_dynamic_font_size(
+                        dynamic_font_size,
+                        self.line_height,
+                        self.character_spacing,
+                        box_width,
+                        box_height,
+                        &self.content,
+                    )
+                    .context(FontSnafu)
+            }
         }
     }
 }
@@ -718,6 +726,102 @@ mod tests {
         let mut font_map = FontMap::default();
         font_map.add_font("TestFont".to_string(), font_id, parsed_font.as_ref());
         font_map
+    }
+
+    /// A padded `Text` whose content wraps. `render` lays this out inside
+    /// `base.width` minus the horizontal padding, so anything that measures the
+    /// element has to wrap at the same width.
+    fn padded_wrapping_text() -> Text {
+        let font_map = test_font_map();
+        Text::new(
+            Mm(0.0),
+            Mm(0.0),
+            Mm(20.0),
+            Mm(0.0),
+            "TestFont".to_string(),
+            Pt(10.0),
+            "20mm fixed".to_string(),
+            Alignment::Left,
+            VerticalAlignment::Top,
+            &font_map,
+            Some(Frame {
+                top: Mm(1.0),
+                right: Mm(5.0),
+                bottom: Mm(1.0),
+                left: Mm(5.0),
+            }),
+        )
+        .unwrap()
+    }
+
+    /// How many lines `render` will actually draw.
+    fn rendered_line_count(text: &Text) -> usize {
+        let font_size = text.get_font_size().unwrap();
+        let (box_width, _) = text.get_effective_box_size();
+        text.font_spec
+            .split_text_to_size(
+                &text.content,
+                font_size,
+                box_width.into(),
+                text.character_spacing,
+            )
+            .unwrap()
+            .len()
+    }
+
+    #[test]
+    fn get_height_wraps_at_the_same_width_render_does() {
+        let text = padded_wrapping_text();
+
+        let lines = rendered_line_count(&text);
+        assert!(
+            lines > 1,
+            "fixture should wrap; got {lines} line(s) — pick narrower content"
+        );
+
+        let font_size = Pt(10.0);
+        let line_height = text.line_height.unwrap_or(1.0);
+        let content_height: Mm = Pt(lines as f32 * font_size.0 * line_height).into();
+        let expected = content_height + Mm(1.0) + Mm(1.0); // vertical padding
+
+        let measured = text.get_height().unwrap();
+        assert!(
+            (measured.0 - expected.0).abs() < 1e-3,
+            "get_height reported {measured:?} but render draws {lines} lines needing {expected:?}"
+        );
+    }
+
+    #[test]
+    fn get_height_accounts_for_horizontal_padding() {
+        // Same element, same content: widening the horizontal padding leaves less
+        // room for text, so the measured height can only grow.
+        let narrow_padding = padded_wrapping_text();
+
+        let font_map = test_font_map();
+        let wide_padding = Text::new(
+            Mm(0.0),
+            Mm(0.0),
+            Mm(20.0),
+            Mm(0.0),
+            "TestFont".to_string(),
+            Pt(10.0),
+            "20mm fixed".to_string(),
+            Alignment::Left,
+            VerticalAlignment::Top,
+            &font_map,
+            Some(Frame {
+                top: Mm(1.0),
+                right: Mm(8.0),
+                bottom: Mm(1.0),
+                left: Mm(8.0),
+            }),
+        )
+        .unwrap();
+
+        assert!(
+            wide_padding.get_height().unwrap() > narrow_padding.get_height().unwrap(),
+            "wider horizontal padding must not measure shorter"
+        );
     }
 
     // Simplified tests that focus on testing individual methods without requiring full Text construction
