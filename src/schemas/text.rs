@@ -791,6 +791,105 @@ mod tests {
         );
     }
 
+    /// Auto-sized text with the given padding. `fit` is `"horizontal"` or
+    /// `"vertical"`; everything else is held constant so the padding is the only
+    /// variable between fixtures.
+    fn auto_sized_text(fit: &str, padding: Option<(f32, f32)>) -> Text {
+        let font_map = test_font_map();
+        let mut value = json!({
+            "name": "auto",
+            "position": { "x": 0.0, "y": 0.0 },
+            "width": 40.0,
+            "height": 20.0,
+            "content": "Auto sized text that wraps",
+            "fontName": "TestFont",
+            "fontSize": { "min": 4.0, "max": 40.0, "fit": fit }
+        });
+        if let Some((horizontal, vertical)) = padding {
+            value["padding"] = json!({
+                "top": vertical,
+                "right": horizontal,
+                "bottom": vertical,
+                "left": horizontal,
+            });
+        }
+
+        let json: JsonTextSchema = serde_json::from_value(value).unwrap();
+        Text::from_json(json, &font_map).unwrap()
+    }
+
+    #[test]
+    fn horizontal_auto_sizing_fits_the_padded_box() {
+        // Auto-sizing grows the font until the text fills the box. Padding
+        // shrinks that box, so it has to pick a smaller size — sizing against
+        // the unpadded box yields text too wide for the space it is drawn in.
+        let unpadded = auto_sized_text("horizontal", None).get_font_size().unwrap();
+        let padded = auto_sized_text("horizontal", Some((8.0, 1.0)))
+            .get_font_size()
+            .unwrap();
+
+        assert!(
+            padded < unpadded,
+            "horizontal padding must shrink the auto size: padded {padded:?} vs unpadded {unpadded:?}"
+        );
+    }
+
+    #[test]
+    fn vertical_auto_sizing_fits_the_padded_box() {
+        // Same argument on the other axis: the shrink test compares against the
+        // box height, which padding also reduces.
+        let unpadded = auto_sized_text("vertical", None).get_font_size().unwrap();
+        let padded = auto_sized_text("vertical", Some((1.0, 6.0)))
+            .get_font_size()
+            .unwrap();
+
+        assert!(
+            padded < unpadded,
+            "vertical padding must shrink the auto size: padded {padded:?} vs unpadded {unpadded:?}"
+        );
+    }
+
+    #[test]
+    fn auto_sized_text_stays_inside_its_padded_box() {
+        // The end-to-end property the two tests above serve: whatever size is
+        // chosen, the laid-out text must fit the box render actually uses.
+        for fit in ["horizontal", "vertical"] {
+            let text = auto_sized_text(fit, Some((8.0, 3.0)));
+            let font_size = text.get_font_size().unwrap();
+            let (box_width, box_height) = text.get_effective_box_size();
+
+            let lines = text
+                .font_spec
+                .split_text_to_size(
+                    &text.content,
+                    font_size,
+                    box_width.into(),
+                    text.character_spacing,
+                )
+                .unwrap();
+
+            let line_height = text.line_height.unwrap_or(1.0);
+            let content_height: Mm = Pt(lines.len() as f32 * font_size.0 * line_height).into();
+            assert!(
+                content_height <= box_height,
+                "fit={fit}: {} line(s) at {font_size:?} need {content_height:?} in a {box_height:?} box",
+                lines.len()
+            );
+
+            for line in &lines {
+                let width: Mm = text
+                    .font_spec
+                    .width_of_text_at_size(line, font_size, text.character_spacing)
+                    .unwrap()
+                    .into();
+                assert!(
+                    width <= box_width,
+                    "fit={fit}: line {line:?} is {width:?} wide in a {box_width:?} box"
+                );
+            }
+        }
+    }
+
     #[test]
     fn get_height_accounts_for_horizontal_padding() {
         // Same element, same content: widening the horizontal padding leaves less
