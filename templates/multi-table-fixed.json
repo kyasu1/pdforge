@@ -27,26 +27,6 @@
         "height": 80,
         "content": "[[\"Product Alpha\",\"Manufacturing\",\"$25,000\"],[\"Product Beta\",\"Technology\",\"$18,500\"],[\"Product Gamma\",\"Services\",\"$32,200\"],[\"Product Delta\",\"Retail\",\"$15,800\"]]",
         "showHead": true,
-        "headWidthPercentages": [
-          {
-            "content": "Product Name",
-            "percent": 50,
-            "fontSize": 12,
-            "alignment": "left"
-          },
-          {
-            "content": "Category",
-            "percent": 30,
-            "fontSize": 12,
-            "alignment": "center"
-          },
-          {
-            "content": "Q1 Revenue",
-            "percent": 20,
-            "fontSize": 12,
-            "alignment": "right"
-          }
-        ],
         "tableStyles": {
           "borderWidth": 0.5,
           "borderColor": "#2980b9"
@@ -94,7 +74,13 @@
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "50%",
+            "header": {
+              "content": "Product Name",
+              "fontSize": 12,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "product",
               "type": "text",
               "content": "",
@@ -118,7 +104,13 @@
             }
           },
           {
-            "schema": {
+            "width": "30%",
+            "header": {
+              "content": "Category",
+              "fontSize": 12,
+              "alignment": "center"
+            },
+            "cell": {
               "name": "category",
               "type": "text",
               "content": "",
@@ -142,7 +134,13 @@
             }
           },
           {
-            "schema": {
+            "width": "20%",
+            "header": {
+              "content": "Q1 Revenue",
+              "fontSize": 12,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "revenue",
               "type": "text",
               "content": "",
@@ -237,26 +235,6 @@
         "height": 80,
         "content": "[[\"Product Alpha\",\"Manufacturing\",\"$28,300\"],[\"Product Beta\",\"Technology\",\"$21,750\"],[\"Product Gamma\",\"Services\",\"$35,900\"],[\"Product Delta\",\"Retail\",\"$19,200\"]]",
         "showHead": true,
-        "headWidthPercentages": [
-          {
-            "content": "Product Name",
-            "percent": 50,
-            "fontSize": 12,
-            "alignment": "left"
-          },
-          {
-            "content": "Category",
-            "percent": 30,
-            "fontSize": 12,
-            "alignment": "center"
-          },
-          {
-            "content": "Q2 Revenue",
-            "percent": 20,
-            "fontSize": 12,
-            "alignment": "right"
-          }
-        ],
         "tableStyles": {
           "borderWidth": 0.5,
           "borderColor": "#27ae60"
@@ -304,7 +282,13 @@
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "50%",
+            "header": {
+              "content": "Product Name",
+              "fontSize": 12,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "product",
               "type": "text",
               "content": "",
@@ -328,7 +312,13 @@
             }
           },
           {
-            "schema": {
+            "width": "30%",
+            "header": {
+              "content": "Category",
+              "fontSize": 12,
+              "alignment": "center"
+            },
+            "cell": {
               "name": "category",
               "type": "text",
               "content": "",
@@ -352,7 +342,13 @@
             }
           },
           {
-            "schema": {
+            "width": "20%",
+            "header": {
+              "content": "Q2 Revenue",
+              "fontSize": 12,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "revenue",
               "type": "text",
               "content": "",
@@ -447,26 +443,6 @@
         "height": 70,
         "content": "[[\"Product Alpha\",\"$53,300\",\"25.9%\"],[\"Product Beta\",\"$40,250\",\"19.6%\"],[\"Product Gamma\",\"$68,100\",\"33.1%\"],[\"Product Delta\",\"$35,000\",\"17.0%\"],[\"Other Products\",\"$8,950\",\"4.4%\"]]",
         "showHead": true,
-        "headWidthPercentages": [
-          {
-            "content": "Product Line",
-            "percent": 50,
-            "fontSize": 12,
-            "alignment": "left"
-          },
-          {
-            "content": "Total Revenue",
-            "percent": 30,
-            "fontSize": 12,
-            "alignment": "center"
-          },
-          {
-            "content": "Market Share",
-            "percent": 20,
-            "fontSize": 12,
-            "alignment": "right"
-          }
-        ],
         "tableStyles": {
           "borderWidth": 0.5,
           "borderColor": "#e74c3c"
@@ -514,7 +490,13 @@
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "50%",
+            "header": {
+              "content": "Product Line",
+              "fontSize": 12,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "product",
               "type": "text",
               "content": "",
@@ -538,7 +520,13 @@
             }
           },
           {
-            "schema": {
+            "width": "30%",
+            "header": {
+              "content": "Total Revenue",
+              "fontSize": 12,
+              "alignment": "center"
+            },
+            "cell": {
               "name": "total",
               "type": "text",
               "content": "",
@@ -562,7 +550,13 @@
             }
           },
           {
-            "schema": {
+            "width": "20%",
+            "header": {
+              "content": "Market Share",
+              "fontSize": 12,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "share",
               "type": "text",
               "content": "",
@@ -634,20 +628,6 @@
         "height": 50,
         "content": "[[\"Total H1 Revenue\",\"$205,600\"],[\"Growth vs Last Year\",\"+12.4%\"],[\"Top Performer\",\"Product Gamma\"],[\"Q2 vs Q1 Growth\",\"+13.7%\"]]",
         "showHead": true,
-        "headWidthPercentages": [
-          {
-            "content": "Key Metrics",
-            "percent": 65,
-            "fontSize": 12,
-            "alignment": "left"
-          },
-          {
-            "content": "Values",
-            "percent": 35,
-            "fontSize": 12,
-            "alignment": "center"
-          }
-        ],
         "tableStyles": {
           "borderWidth": 0.5,
           "borderColor": "#9b59b6"
@@ -695,7 +675,13 @@
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "65%",
+            "header": {
+              "content": "Key Metrics",
+              "fontSize": 12,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "metric",
               "type": "text",
               "content": "",
@@ -719,7 +705,13 @@
             }
           },
           {
-            "schema": {
+            "width": "35%",
+            "header": {
+              "content": "Values",
+              "fontSize": 12,
+              "alignment": "center"
+            },
+            "cell": {
               "name": "value",
               "type": "text",
               "content": "",

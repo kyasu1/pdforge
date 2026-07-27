@@ -4,19 +4,14 @@
       {
         "type": "table",
         "name": "product_list",
-        "position": { "x": 10, "y": 10 },
+        "position": {
+          "x": 10,
+          "y": 10
+        },
         "width": 190,
         "height": 277,
         "content": "",
         "showHead": true,
-        "headWidthPercentages": [
-          { "content": "商品コード", "percent": 14, "fontSize": 9, "alignment": "center" },
-          { "content": "商品名", "percent": 31, "fontSize": 9, "alignment": "left" },
-          { "content": "カテゴリ", "percent": 17, "fontSize": 9, "alignment": "left" },
-          { "content": "数量", "percent": 10, "fontSize": 9, "alignment": "right" },
-          { "content": "単価", "percent": 14, "fontSize": 9, "alignment": "right" },
-          { "content": "金額", "percent": 14, "fontSize": 9, "alignment": "right" }
-        ],
         "tableStyles": {
           "borderWidth": 0.25,
           "borderColor": "#64748b"
@@ -31,8 +26,18 @@
           "fontColor": "#ffffff",
           "borderColor": "#334155",
           "backgroundColor": "#334155",
-          "borderWidth": { "top": 0.2, "right": 0.2, "bottom": 0.2, "left": 0.2 },
-          "padding": { "top": 2, "right": 2, "bottom": 2, "left": 2 }
+          "borderWidth": {
+            "top": 0.2,
+            "right": 0.2,
+            "bottom": 0.2,
+            "left": 0.2
+          },
+          "padding": {
+            "top": 2,
+            "right": 2,
+            "bottom": 2,
+            "left": 2
+          }
         },
         "bodyStyles": {
           "characterSpacing": 0,
@@ -42,18 +47,32 @@
           "fontColor": "#0f172a",
           "backgroundColor": "#ffffff",
           "alternateBackgroundColor": "#f1f5f9",
-          "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+          "padding": {
+            "top": 1,
+            "right": 2,
+            "bottom": 1,
+            "left": 2
+          }
         },
         "columnStyles": {},
         "required": false,
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "14%",
+            "header": {
+              "content": "商品コード",
+              "fontSize": 9,
+              "alignment": "center"
+            },
+            "cell": {
               "name": "product_code",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "center",
@@ -61,15 +80,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#0f172a",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+              "padding": {
+                "top": 1,
+                "right": 2,
+                "bottom": 1,
+                "left": 2
+              }
             }
           },
           {
-            "schema": {
+            "width": "31%",
+            "header": {
+              "content": "商品名",
+              "fontSize": 9,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "product_name",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "left",
@@ -77,15 +110,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#0f172a",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+              "padding": {
+                "top": 1,
+                "right": 2,
+                "bottom": 1,
+                "left": 2
+              }
             }
           },
           {
-            "schema": {
+            "width": "17%",
+            "header": {
+              "content": "カテゴリ",
+              "fontSize": 9,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "category",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "left",
@@ -93,15 +140,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#0f172a",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+              "padding": {
+                "top": 1,
+                "right": 2,
+                "bottom": 1,
+                "left": 2
+              }
             }
           },
           {
-            "schema": {
+            "width": "10%",
+            "header": {
+              "content": "数量",
+              "fontSize": 9,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "quantity",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -109,15 +170,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#0f172a",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+              "padding": {
+                "top": 1,
+                "right": 2,
+                "bottom": 1,
+                "left": 2
+              }
             }
           },
           {
-            "schema": {
+            "width": "14%",
+            "header": {
+              "content": "単価",
+              "fontSize": 9,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "unit_price",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -125,15 +200,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#0f172a",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+              "padding": {
+                "top": 1,
+                "right": 2,
+                "bottom": 1,
+                "left": 2
+              }
             }
           },
           {
-            "schema": {
+            "width": "14%",
+            "header": {
+              "content": "金額",
+              "fontSize": 9,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "amount",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -141,7 +230,12 @@
               "fontName": "NotoSansJP",
               "fontColor": "#0f172a",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 2, "bottom": 1, "left": 2 }
+              "padding": {
+                "top": 1,
+                "right": 2,
+                "bottom": 1,
+                "left": 2
+              }
             }
           }
         ],
@@ -209,15 +303,14 @@
       {
         "type": "table",
         "name": "order_summary",
-        "position": { "x": 105, "y": 10 },
+        "position": {
+          "x": 105,
+          "y": 10
+        },
         "width": 95,
         "height": 40,
         "content": "",
         "showHead": true,
-        "headWidthPercentages": [
-          { "content": "集計項目", "percent": 55, "fontSize": 10, "alignment": "left" },
-          { "content": "金額", "percent": 45, "fontSize": 10, "alignment": "right" }
-        ],
         "tableStyles": {
           "borderWidth": 0.4,
           "borderColor": "#0f766e"
@@ -232,8 +325,18 @@
           "fontColor": "#ffffff",
           "borderColor": "#0f766e",
           "backgroundColor": "#0f766e",
-          "borderWidth": { "top": 0.2, "right": 0.2, "bottom": 0.2, "left": 0.2 },
-          "padding": { "top": 3, "right": 3, "bottom": 3, "left": 3 }
+          "borderWidth": {
+            "top": 0.2,
+            "right": 0.2,
+            "bottom": 0.2,
+            "left": 0.2
+          },
+          "padding": {
+            "top": 3,
+            "right": 3,
+            "bottom": 3,
+            "left": 3
+          }
         },
         "bodyStyles": {
           "characterSpacing": 0,
@@ -243,18 +346,32 @@
           "fontColor": "#134e4a",
           "backgroundColor": "#f0fdfa",
           "alternateBackgroundColor": "#ccfbf1",
-          "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 }
+          "padding": {
+            "top": 2,
+            "right": 3,
+            "bottom": 2,
+            "left": 3
+          }
         },
         "columnStyles": {},
         "required": false,
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "55%",
+            "header": {
+              "content": "集計項目",
+              "fontSize": 10,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "summary_label",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "left",
@@ -262,15 +379,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#134e4a",
               "fontSize": 10,
-              "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 }
+              "padding": {
+                "top": 2,
+                "right": 3,
+                "bottom": 2,
+                "left": 3
+              }
             }
           },
           {
-            "schema": {
+            "width": "45%",
+            "header": {
+              "content": "金額",
+              "fontSize": 10,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "summary_amount",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -278,7 +409,12 @@
               "fontName": "NotoSansJP",
               "fontColor": "#134e4a",
               "fontSize": 10,
-              "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 }
+              "padding": {
+                "top": 2,
+                "right": 3,
+                "bottom": 2,
+                "left": 3
+              }
             }
           }
         ],

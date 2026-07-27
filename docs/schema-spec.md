@@ -175,7 +175,6 @@
     "width": 190,
     "height": 100,
     "showHead": true,
-    "headWidthPercentages": [...],
     "headStyles": {...},
     "bodyStyles": {...},
     "tableStyles": {...},
@@ -187,18 +186,79 @@
 | プロパティ | 型 | 必須 | 説明 |
 |---|---|---|---|
 | `showHead` | `boolean` | ✓ | ヘッダー行を表示するか |
-| `headWidthPercentages` | `HeadColumn[]` | ✓ | 列定義（幅のパーセンテージ合計は 100 でなければならない） |
 | `headStyles` | `HeadStyles` | ✓ | ヘッダー行のスタイル |
 | `bodyStyles` | `BodyStyles` | ✓ | データ行のスタイル |
 | `tableStyles` | `TableStyles` | ✓ | テーブル全体の枠線スタイル |
-| `columns` | `CellStyle[]` | ✓ | 列ごとのセルスキーマ定義 |
-| `fields` | `string[][]` | ✓ | テーブルデータ（行 × 列の文字列配列）。API からの動的注入も可能 |
+| `columns` | `Column[]` | ✓ | 列定義（幅・ヘッダー・セルスキーマ）。最低 1 列必要 |
+| `fields` | `string[][]` | ✓ | テーブルデータ（行 × 列の文字列配列）。各行の要素数は `columns` の数と一致する必要がある。API からの動的注入も可能 |
 
-### `HeadColumn` — 列定義
+### `Column` — 列定義
+
+幅・ヘッダー・セルスキーマを 1 つのエントリにまとめる。
 
 ```json
 {
-    "percent": 30,
+    "width": "2fr",
+    "header": {
+        "content": "列タイトル",
+        "fontSize": 12,
+        "alignment": "center"
+    },
+    "cell": {
+        "type": "text",
+        "name": "col1",
+        "position": { "x": 0, "y": 0 },
+        "width": 0,
+        "height": 0,
+        "content": "",
+        "alignment": "left"
+    }
+}
+```
+
+| プロパティ | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `width` | `number \| string` | ✓ | 列の幅（下記参照） |
+| `header` | `Head` | ✓ | ヘッダーセルの定義。`showHead: false` でも必須 |
+| `cell` | `TextSchema \| QrCodeSchema` | ✓ | データ行のセルスキーマ |
+
+#### `width` — 列幅の指定
+
+| 記法 | 例 | 意味 |
+|---|---|---|
+| 数値 | `25` | 25mm 固定 |
+| `"<n>mm"` | `"25mm"` | 25mm 固定 |
+| `"<n>%"` | `"20%"` | テーブル有効幅の 20% |
+| `"<n>fr"` | `"2fr"` | 残余幅を fr 比で按分 |
+| `"fr"` | `"fr"` | `"1fr"` と同じ |
+
+サフィックスは大文字小文字を区別しない。値全体の前後の空白は無視されるが、数値と
+サフィックスの間の空白は許容しない（`"20 %"` はエラー）。値は正の数かつ `f32::MAX`
+以下でなければならない。上限があるのは、個々の値が有限でも解決時の合算で無限大に
+到達し、その比が NaN になり得るため。
+
+**解決順序**:
+
+1. テーブル有効幅 = `min(スキーマの width, ページ幅 − 左右パディング)`
+2. 固定幅（mm）とパーセント指定を先に確保する
+3. 残った幅を `fr` 列に重み比で按分する
+4. `fr` 列が無く幅が余る場合、テーブルは有効幅より狭くなる（左寄せ）
+5. 固定幅とパーセントの合計が有効幅を超える場合、それらを比例縮小して収め、`fr` 列は 0 幅になる（エラーにはしない）
+
+パーセントの合計を 100 にする制約は無い。
+
+```json
+"columns": [
+    { "width": 20,     "header": { "content": "No" },   "cell": { "type": "text", ... } },
+    { "width": "2fr",  "header": { "content": "品名" }, "cell": { "type": "text", ... } },
+    { "width": "25%",  "header": { "content": "金額" }, "cell": { "type": "text", ... } }
+]
+```
+
+### `Head` — ヘッダーセル
+
+```json
+{
     "content": "列タイトル",
     "fontSize": 12,
     "fontName": "NotoSansJP",
@@ -210,7 +270,6 @@
 
 | プロパティ | 型 | 必須 | 説明 |
 |---|---|---|---|
-| `percent` | `number` | ✓ | 列の幅（全列合計 = 100） |
 | `content` | `string` | ✓ | ヘッダーのテキスト |
 | `fontSize` | `number` | - | 個別フォントサイズ（未指定時は `headStyles.fontSize` を使用） |
 | `fontName` | `string` | - | 個別フォント名（未指定時は `headStyles.fontName` を使用） |
@@ -246,7 +305,7 @@
 ### `BodyStyles` — データ行スタイル
 
 `backgroundColor` / `alternateBackgroundColor` はセル矩形（行の塗り）に、それ以外の
-テキスト系プロパティは **列（`CellStyle.schema`）が値を省略したときのデフォルト**として
+テキスト系プロパティは **列（`Column.cell`）が値を省略したときのデフォルト**として
 適用される。データ行の枠線は `TableStyles`（グリッド枠）が担当する。
 
 | プロパティ | 型 | 必須 | デフォルト | 説明 |
@@ -262,7 +321,7 @@
 | `lineBreakMode` | `LineBreakMode` | - | `"char"` | 列が `lineBreakMode` を省略したときの改行モード |
 
 > **v0.13.0 での変更:** `fontSize` / `fontName` / `borderColor` / `borderWidth` は
-> `BodyStyles` から削除された。本文フォントは各列（`CellStyle.schema`）が必ず持ち、
+> `BodyStyles` から削除された。本文フォントは各列（`Column.cell`）が必ず持ち、
 > データ行の枠線は `TableStyles` が描画するため、これらは効果を持たなかった。
 > 詳細は [`docs/table-styling-migration.md`](./table-styling-migration.md) を参照。
 
@@ -276,19 +335,10 @@
 > **v0.13.0 での変更:** `borderColor` はこれまで無視され枠線は常に黒だったが、現在は
 > 指定した色でデータ行の枠線が描画される。
 
-### `CellStyle` — セル定義
+### `Column.cell` — セル定義
 
-```json
-{
-    "schema": { "type": "text", ... }
-}
-```
-
-| プロパティ | 型 | 必須 | 説明 |
-|---|---|---|---|
-| `schema` | `TextSchema \| QrCodeSchema` | ✓ | セルのスキーマ（`text` または `qrCode` のみ対応） |
-
-> **制限事項:** セルに使えるスキーマは `text` と `qrCode` のみ。それ以外はパニックが発生する。
+> **制限事項:** セルに使えるスキーマは `text` と `qrCode` のみ。それ以外は
+> `UnsupportedSchema` エラーになる。
 >
 > **v0.13.0 での変更:** `height`（セルの最小高さ）は未実装のまま削除された。行の高さは
 > セル内容から自動計算される。

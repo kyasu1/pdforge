@@ -27,38 +27,6 @@
         "height": 900,
         "content": "",
         "showHead": true,
-        "headWidthPercentages": [
-          {
-            "content": "Quarter",
-            "percent": 15,
-            "fontSize": 10,
-            "alignment": "center"
-          },
-          {
-            "content": "Department",
-            "percent": 25,
-            "fontSize": 10,
-            "alignment": "left"
-          },
-          {
-            "content": "Category",
-            "percent": 25,
-            "fontSize": 10,
-            "alignment": "left"
-          },
-          {
-            "content": "Budget",
-            "percent": 17,
-            "fontSize": 10,
-            "alignment": "right"
-          },
-          {
-            "content": "Actual",
-            "percent": 18,
-            "fontSize": 10,
-            "alignment": "right"
-          }
-        ],
         "tableStyles": {
           "borderWidth": 0.3,
           "borderColor": "#34495e"
@@ -106,11 +74,20 @@
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "15%",
+            "header": {
+              "content": "Quarter",
+              "fontSize": 10,
+              "alignment": "center"
+            },
+            "cell": {
               "name": "quarter",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "center",
@@ -118,15 +95,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#2c3e50",
               "fontSize": 9,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "25%",
+            "header": {
+              "content": "Department",
+              "fontSize": 10,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "department",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "left",
@@ -134,15 +125,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#2c3e50",
               "fontSize": 9,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "25%",
+            "header": {
+              "content": "Category",
+              "fontSize": 10,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "category",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "left",
@@ -150,15 +155,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#2c3e50",
               "fontSize": 9,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "17%",
+            "header": {
+              "content": "Budget",
+              "fontSize": 10,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "budget",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -166,15 +185,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#3498db",
               "fontSize": 9,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "18%",
+            "header": {
+              "content": "Actual",
+              "fontSize": 10,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "actual",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -182,7 +215,12 @@
               "fontName": "NotoSansJP",
               "fontColor": "#27ae60",
               "fontSize": 9,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           }
         ],
@@ -315,44 +353,6 @@
         "height": 900,
         "content": "",
         "showHead": true,
-        "headWidthPercentages": [
-          {
-            "content": "SKU",
-            "percent": 15,
-            "fontSize": 10,
-            "alignment": "center"
-          },
-          {
-            "content": "Product Name",
-            "percent": 30,
-            "fontSize": 10,
-            "alignment": "left"
-          },
-          {
-            "content": "Category",
-            "percent": 20,
-            "fontSize": 10,
-            "alignment": "left"
-          },
-          {
-            "content": "Stock",
-            "percent": 12,
-            "fontSize": 10,
-            "alignment": "right"
-          },
-          {
-            "content": "Unit Price",
-            "percent": 11,
-            "fontSize": 10,
-            "alignment": "right"
-          },
-          {
-            "content": "Total Value",
-            "percent": 12,
-            "fontSize": 10,
-            "alignment": "right"
-          }
-        ],
         "tableStyles": {
           "borderWidth": 0.3,
           "borderColor": "#8e44ad"
@@ -400,11 +400,20 @@
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "15%",
+            "header": {
+              "content": "SKU",
+              "fontSize": 10,
+              "alignment": "center"
+            },
+            "cell": {
               "name": "sku",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "center",
@@ -412,15 +421,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#2c3e50",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "30%",
+            "header": {
+              "content": "Product Name",
+              "fontSize": 10,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "product_name",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "left",
@@ -428,15 +451,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#2c3e50",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "20%",
+            "header": {
+              "content": "Category",
+              "fontSize": 10,
+              "alignment": "left"
+            },
+            "cell": {
               "name": "category",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "left",
@@ -444,15 +481,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#8e44ad",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "12%",
+            "header": {
+              "content": "Stock",
+              "fontSize": 10,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "stock",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -460,15 +511,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#e67e22",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "11%",
+            "header": {
+              "content": "Unit Price",
+              "fontSize": 10,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "unit_price",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -476,15 +541,29 @@
               "fontName": "NotoSansJP",
               "fontColor": "#3498db",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           },
           {
-            "schema": {
+            "width": "12%",
+            "header": {
+              "content": "Total Value",
+              "fontSize": 10,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "total_value",
               "type": "text",
               "content": "",
-              "position": { "x": 0, "y": 0 },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
               "width": 0,
               "height": 0,
               "alignment": "right",
@@ -492,7 +571,12 @@
               "fontName": "NotoSansJP",
               "fontColor": "#27ae60",
               "fontSize": 8,
-              "padding": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+              "padding": {
+                "top": 1,
+                "right": 1,
+                "bottom": 1,
+                "left": 1
+              }
             }
           }
         ],
@@ -582,12 +666,7 @@
   "basePdf": {
     "width": 210,
     "height": 297,
-    "padding": [
-      20,
-      10,
-      20,
-      10
-    ]
+    "padding": [20, 10, 20, 10]
   },
   "schemaVersion": "1.0.0"
 }

@@ -1,5 +1,9 @@
 # テーブルスタイリング マイグレーションガイド（v0.13.0）
 
+> **Note:** この文書は v0.13.0 時点のスタイリング移行を扱う。列定義はその後 `columns[]` に
+> 統合され、セルスキーマは `columns[].cell` に置かれる（旧 `columns[].schema`）。
+> 現行仕様は [`docs/schema-spec.md`](./schema-spec.md) を参照。
+
 v0.13.0 で `table` スキーマのスタイリングを整理し、これまで**JSON に書けるのに描画へ反映されていなかったフィールド**を実際に機能させました。あわせて、効果を持たなかったフィールドをスキーマから削除しました。
 
 このガイドは既存テンプレートの更新手順をまとめたものです。
@@ -17,9 +21,9 @@ v0.13.0 で `table` スキーマのスタイリングを整理し、これまで
 
 | 場所 | 削除フィールド | 理由 |
 |---|---|---|
-| `bodyStyles` | `fontSize` / `fontName` | 本文フォントは各列（`columns[].schema`）が必ず持つため未使用だった |
+| `bodyStyles` | `fontSize` / `fontName` | 本文フォントは各列（`columns[].cell`）が必ず持つため未使用だった |
 | `bodyStyles` | `borderColor` / `borderWidth` | データ行の枠線は `tableStyles` が描画するため未使用だった |
-| `columns[]`（`CellStyle`） | `height` | 未実装。行の高さはセル内容から自動計算される |
+| `columns[]` のセル | `height` | 未実装。行の高さはセル内容から自動計算される |
 
 > リポジトリ同梱の `templates/*.json` はすでにこれらを削除済みです。
 
@@ -71,7 +75,7 @@ v0.13.0 で `table` スキーマのスタイリングを整理し、これまで
 
 ### 2-5. データ行のスタイル継承 — `bodyStyles`
 
-- **新:** 列（`columns[].schema`）が `alignment` / `verticalAlignment` / `characterSpacing` / `lineHeight` / `fontColor` / `padding` / `lineBreakMode` を省略した場合、`bodyStyles` の対応値が既定として使われる。
+- **新:** 列（`columns[].cell`）が `alignment` / `verticalAlignment` / `characterSpacing` / `lineHeight` / `fontColor` / `padding` / `lineBreakMode` を省略した場合、`bodyStyles` の対応値が既定として使われる。
 - 背景色・枠線は従来どおりセル矩形側で描画され、`bodyStyles` の値が列テキストへ注入されることはない（交互背景の消失や枠の二重描画を避けるため）。
 - **対応:** 列側で明示している場合は従来どおり列の値が優先されるため、通常は対応不要。
 

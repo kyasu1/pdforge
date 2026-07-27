@@ -29,38 +29,6 @@
                 "width": 190,
                 "height": 52.932,
                 "showHead": true,
-                "headWidthPercentages": [
-                    {
-                        "content": "Top",
-                        "percent": 15,
-                        "fontSize": 16
-                    },
-                    {
-                        "content": "Middle",
-                        "percent": 15
-                    },
-                    {
-                        "content": "Bottom",
-                        "percent": 15
-                    },
-                    {
-                        "content": "Left Middle",
-                        "percent": 15
-                    },
-                    {
-                        "content": "Center Middle",
-                        "percent": 15
-                    },
-                    {
-                        "content": "Right Middle",
-                        "percent": 15
-                    },
-                    {
-                        "percent": 10,
-                        "content": "Price",
-                        "alignment": "right"
-                    }
-                ],
                 "tableStyles": {
                     "borderWidth": 0.3,
                     "borderColor": "#000000"
@@ -108,7 +76,12 @@
                 "readOnly": false,
                 "columns": [
                     {
-                        "schema": {
+                        "width": "15%",
+                        "header": {
+                            "content": "Top",
+                            "fontSize": 16
+                        },
+                        "cell": {
                             "name": "col1",
                             "type": "text",
                             "content": "",
@@ -132,7 +105,11 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "15%",
+                        "header": {
+                            "content": "Middle"
+                        },
+                        "cell": {
                             "name": "col1",
                             "type": "text",
                             "content": "",
@@ -156,7 +133,11 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "15%",
+                        "header": {
+                            "content": "Bottom"
+                        },
+                        "cell": {
                             "name": "col1",
                             "type": "text",
                             "content": "",
@@ -180,7 +161,11 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "15%",
+                        "header": {
+                            "content": "Left Middle"
+                        },
+                        "cell": {
                             "name": "col1",
                             "type": "text",
                             "content": "",
@@ -204,7 +189,11 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "15%",
+                        "header": {
+                            "content": "Center Middle"
+                        },
+                        "cell": {
                             "name": "col1",
                             "type": "text",
                             "content": "",
@@ -228,7 +217,11 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "15%",
+                        "header": {
+                            "content": "Right Middle"
+                        },
+                        "cell": {
                             "name": "col1",
                             "type": "text",
                             "content": "",
@@ -252,7 +245,12 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "10%",
+                        "header": {
+                            "content": "Price",
+                            "alignment": "right"
+                        },
+                        "cell": {
                             "name": "col1",
                             "type": "text",
                             "content": "",
