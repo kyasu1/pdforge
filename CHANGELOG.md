@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-07-26
+
+### Added
+- `PDForgeBuilder::add_font_with_index` and `add_font_from_file_with_index` for selecting a specific face by index inside a TrueType/OpenType Collection (`.ttc`/`.otc`). `add_font`/`add_font_from_file` continue to load face 0 by default.
+
 ## [0.13.1] - 2026-07-23
 
 ### Changed
