@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Table columns can now declare fixed and flexible widths, not just percentages. A column's `width` accepts `25` / `"25mm"` (fixed millimetres), `"20%"` (share of the table width), and `"2fr"` / `"fr"` (share of the leftover width, like CSS grid). Fixed and percent columns are placed first and the remainder is split between the `fr` columns by weight.
+- Rows whose cell count does not match the column count are now rejected at parse time with the offending row index, instead of panicking mid-render.
+- `templates/table-column-widths.json` demonstrates the mixed notations.
+
+### Changed
+- **BREAKING** — table column definitions are unified under `columns[]`. `headWidthPercentages` is removed; each `columns[]` entry now carries `width`, `header`, and `cell`. The `columns[].schema` wrapper is gone — the cell schema sits directly under `cell`.
+
+  ```json
+  // before
+  "headWidthPercentages": [
+    { "content": "Name", "percent": 70 },
+    { "content": "Price", "percent": 30 }
+  ],
+  "columns": [
+    { "schema": { "type": "text", "name": "name",  "...": "..." } },
+    { "schema": { "type": "text", "name": "price", "...": "..." } }
+  ]
+
+  // after
+  "columns": [
+    {
+      "width": "70%",
+      "header": { "content": "Name" },
+      "cell": { "type": "text", "name": "name", "...": "..." }
+    },
+    {
+      "width": "30%",
+      "header": { "content": "Price" },
+      "cell": { "type": "text", "name": "price", "...": "..." }
+    }
+  ]
+  ```
+
+  A percentage `N` migrates to `"N%"` unchanged. `header` stays required even when `showHead` is `false` — it controls painting only, not the column shape.
+
+- **BREAKING** — column widths no longer have to add up to 100%. The previous exact-sum check rejected legitimate layouts such as three columns of `33.33`. Widths that fall short leave the table narrower than its declared width; widths that overflow are scaled down to fit, with any `fr` columns collapsing to zero. Neither case is an error.
+- Column widths are resolved in `f64` and converted to `f32` once at the end, so a table whose percentages sum to 100 no longer risks tipping into the overflow path on rounding alone.
+- Column `width` values must be positive and no larger than `f32::MAX`. `0fr` divided by zero, a zero-width column wraps text to one grapheme cluster per line, and values that are finite individually can still sum to infinity during resolution — two `1e308fr` columns yielded `NaN` widths.
+- Whitespace between a width's number and its suffix is rejected (`"20 %"`); only whitespace around the whole value is ignored.
 ## [0.14.0] - 2026-07-26
 
 ### Added

@@ -12,10 +12,106 @@ use serde::Deserialize;
 use snafu::prelude::*;
 use std::cmp::max;
 
+/// Relative tolerance used when deciding whether the declared column widths
+/// overflow the table. Without it, a table whose percentages sum to exactly 100
+/// can tip into the overflow branch on floating-point rounding alone.
+const OVERFLOW_EPSILON_RATIO: f64 = 1e-6;
+
+/// How a single column's width is declared in the template.
+///
+/// Resolution order is fixed → percent → fraction: fixed and percent widths are
+/// taken from the table width first, and whatever is left over is split between
+/// the fraction columns by weight.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ColumnWidth {
+    /// An absolute width in millimetres.
+    Fixed(f64),
+    /// A percentage of the table's effective width.
+    Percent(f64),
+    /// A share of the width left over after fixed and percent columns are placed.
+    Fraction(f64),
+}
+
+/// Raw `width` value: either a bare number (millimetres) or a suffixed string.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum JsonColumnWidth {
+    Number(f32),
+    Text(String),
+}
+
+impl JsonColumnWidth {
+    /// Accepts `25`, `"25mm"`, `"20%"`, `"2fr"` and `"fr"` (= `1fr`). Suffixes are
+    /// case-insensitive and surrounding whitespace is ignored.
+    fn parse(&self, column_index: usize) -> Result<ColumnWidth, Error> {
+        let width = match self {
+            JsonColumnWidth::Number(value) => ColumnWidth::Fixed(*value as f64),
+            JsonColumnWidth::Text(raw) => {
+                let text = raw.trim();
+                let lowered = text.to_ascii_lowercase();
+
+                // Bare "fr" means one share, matching the CSS grid shorthand.
+                if lowered == "fr" {
+                    ColumnWidth::Fraction(1.0)
+                } else if let Some(number) = lowered.strip_suffix("fr") {
+                    ColumnWidth::Fraction(parse_number(number, text, column_index)?)
+                } else if let Some(number) = lowered.strip_suffix('%') {
+                    ColumnWidth::Percent(parse_number(number, text, column_index)?)
+                } else if let Some(number) = lowered.strip_suffix("mm") {
+                    ColumnWidth::Fixed(parse_number(number, text, column_index)?)
+                } else {
+                    whatever!(
+                        "column {column_index}: invalid width {text:?}; \
+                         expected a number (mm) or one of \"25mm\", \"20%\", \"2fr\""
+                    )
+                }
+            }
+        };
+
+        // A zero fraction would make the fraction weights sum to zero and divide
+        // by it; a zero fixed/percent width collapses the cell so far that text
+        // wraps to one grapheme cluster per line. Neither is ever intended.
+        //
+        // The upper bound matters just as much: each value is finite on its own,
+        // but the resolver sums them, and two `1e308fr` columns overflow to
+        // infinity, whose ratio is NaN. Capping at `f32::MAX` — the precision
+        // widths end up in anyway — leaves no room for the f64 aggregates to
+        // overflow at any realistic column count.
+        let value = match width {
+            ColumnWidth::Fixed(v) | ColumnWidth::Percent(v) | ColumnWidth::Fraction(v) => v,
+        };
+        if !value.is_finite() || value <= 0.0 || value > f32::MAX as f64 {
+            whatever!(
+                "column {column_index}: width must be a positive number no larger than {}, got {value}",
+                f32::MAX
+            );
+        }
+
+        Ok(width)
+    }
+}
+
+/// Parse the numeric part of a width literal. `f64::from_str` happily accepts
+/// `"NaN"` and `"inf"`, so the caller checks `is_finite` afterwards.
+fn parse_number(number: &str, original: &str, column_index: usize) -> Result<f64, Error> {
+    // Deliberately not trimmed: leading/trailing space around the whole literal
+    // is fine, but `"20 %"` is a typo, not a width.
+    number.parse::<f64>().map_err(|_| {
+        snafu::FromString::without_source(format!(
+            "column {column_index}: invalid width {original:?}; \
+             expected a number (mm) or one of \"25mm\", \"20%\", \"2fr\""
+        ))
+    })
+}
+
+/// A column as declared in the template: its width, its header cell, and the
+/// schema used to render every body cell in that column.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct JsonCellStyle {
-    schema: JsonSchema,
+pub struct JsonColumn {
+    width: JsonColumnWidth,
+    header: JsonHead,
+    cell: JsonSchema,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -91,7 +187,6 @@ impl HeadStyles {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonHead {
-    percent: f32,
     content: String,
     font_size: Option<f32>,
     font_name: Option<String>,
@@ -175,11 +270,9 @@ pub struct JsonTableSchema {
     height: f32,
     show_head: bool,
     head_styles: JsonHeadStyles,
-    head_width_percentages: Vec<JsonHead>,
     body_styles: JsonBodyStyles,
     table_styles: JsonTableStyles,
-    //
-    columns: Vec<JsonCellStyle>,
+    columns: Vec<JsonColumn>,
     pub fields: Vec<Vec<String>>,
 }
 
@@ -202,10 +295,14 @@ impl TableStyles {
     }
 }
 
+/// A resolved column: width declaration, header cell, and body cell template.
+/// Keeping the three together means the header, the cell schema and the width
+/// can never drift out of sync by index.
 #[derive(Debug, Clone)]
-pub struct Head {
-    percent: f32,
-    text: text::Text,
+pub struct Column {
+    width: ColumnWidth,
+    header: text::Text,
+    cell: Schema,
 }
 
 #[derive(Debug, Clone)]
@@ -213,10 +310,9 @@ pub struct Table {
     base: BaseSchema,
     show_head: bool,
     head_styles: HeadStyles,
-    head_width_percentages: Vec<Head>,
     body_styles: BodyStyles,
     table_styles: TableStyles,
-    columns: Vec<Schema>,
+    columns: Vec<Column>,
     fields: Vec<Vec<String>>,
 }
 
@@ -247,18 +343,115 @@ fn parse_color_or(value: &str, default: &str) -> Result<csscolorparser::Color, E
 }
 
 impl Table {
-    fn cell_widths(&self, base_pdf: &BasePdf) -> Vec<Mm> {
-        // Calculate available width considering horizontal padding
+    /// Width the table actually gets: the template width, capped by what is left
+    /// of the page after horizontal padding.
+    fn effective_width(&self, base_pdf: &BasePdf) -> Mm {
         let available_width =
             (base_pdf.width - base_pdf.padding.left - base_pdf.padding.right).max(Mm(0.0));
-        // Use the smaller of template width or available width
-        let effective_width = self.base.width.min(available_width);
+        // The schema's own width is not validated anywhere, and a negative one
+        // would flip the overflow scale factor and hand back negative columns.
+        self.base.width.min(available_width).max(Mm(0.0))
+    }
 
-        self.head_width_percentages
-            .clone()
+    /// Turn the declared column widths into concrete millimetre widths.
+    ///
+    /// Fixed and percent columns are placed first. If they fit, the remainder is
+    /// split between the fraction columns by weight; if they overflow, they are
+    /// scaled down to fit and the fraction columns collapse to zero. Overflow is
+    /// not an error because the table width depends on `basePdf.padding`, so a
+    /// page-setup change must not turn into a runtime failure.
+    ///
+    /// Arithmetic runs in `f64` and only lands in `f32` at the end, so a table
+    /// whose percentages sum to 100 does not drift into the overflow branch.
+    fn resolve_column_widths(&self, base_pdf: &BasePdf) -> Vec<Mm> {
+        let table_width = self.effective_width(base_pdf).0 as f64;
+
+        let mut widths = vec![0.0_f64; self.columns.len()];
+        let mut allocated = 0.0_f64;
+        let mut fraction_total = 0.0_f64;
+
+        for (index, column) in self.columns.iter().enumerate() {
+            match column.width {
+                ColumnWidth::Fixed(mm) => {
+                    widths[index] = mm;
+                    allocated += mm;
+                }
+                ColumnWidth::Percent(percent) => {
+                    let width = table_width * percent / 100.0;
+                    widths[index] = width;
+                    allocated += width;
+                }
+                ColumnWidth::Fraction(weight) => fraction_total += weight,
+            }
+        }
+
+        let overflows = allocated > table_width + table_width.abs() * OVERFLOW_EPSILON_RATIO;
+
+        if overflows {
+            // Shrink the declared widths to fit. Fraction columns have no width
+            // to shrink and stay at zero.
+            let scale = if allocated > 0.0 {
+                table_width / allocated
+            } else {
+                0.0
+            };
+            for width in widths.iter_mut() {
+                *width *= scale;
+            }
+        } else if fraction_total > 0.0 {
+            let remaining = (table_width - allocated).max(0.0);
+            for (index, column) in self.columns.iter().enumerate() {
+                if let ColumnWidth::Fraction(weight) = column.width {
+                    widths[index] = remaining * weight / fraction_total;
+                }
+            }
+        }
+        // Without fraction columns and without overflow the table simply ends up
+        // narrower than `table_width`; the row painters already left-align it.
+
+        let mut resolved: Vec<Mm> = widths
             .into_iter()
-            .map(|head| Mm(effective_width.0 * head.percent / 100.0))
-            .collect()
+            .map(|w| {
+                // Parse-time bounds should make this unreachable; the clamp keeps
+                // a bad width from reaching the renderer if one ever slips past.
+                debug_assert!(w.is_finite() && w >= 0.0, "resolved column width {w}");
+                Mm(if w.is_finite() {
+                    w.max(0.0) as f32
+                } else {
+                    0.0
+                })
+            })
+            .collect();
+
+        // Absorb the f32 rounding residual so column borders meet exactly. This
+        // has to happen after the cast — correcting in f64 and casting afterwards
+        // reintroduces the very error it is meant to remove.
+        //
+        // Only a fraction column may absorb it: fixed and percent columns must
+        // keep the width they declared. Skipped on overflow, where fraction
+        // columns are zero by definition and would go negative.
+        if !overflows && fraction_total > 0.0 {
+            if let Some(target) = self.widest_fraction_column(&resolved) {
+                let sum: f32 = resolved.iter().map(|w| w.0).sum();
+                let corrected = resolved[target].0 + (table_width as f32 - sum);
+                if corrected.is_finite() && corrected >= 0.0 {
+                    resolved[target] = Mm(corrected);
+                }
+            }
+        }
+
+        resolved
+    }
+
+    /// Index of the widest fraction column — the safest place to absorb the
+    /// rounding residual, since a tiny-weight column could otherwise go negative.
+    fn widest_fraction_column(&self, resolved: &[Mm]) -> Option<usize> {
+        self.columns
+            .iter()
+            .enumerate()
+            .filter(|(_, column)| matches!(column.width, ColumnWidth::Fraction(_)))
+            .max_by(|(a, _), (b, _)| resolved[*a].0.total_cmp(&resolved[*b].0))
+            .map(|(index, _)| index)
     }
 
     pub fn from_json(json: JsonTableSchema, font_map: &FontMap) -> Result<Self, Error> {
@@ -276,54 +469,42 @@ impl Table {
 
         let body_styles = BodyStyles::from_json(json.body_styles)?;
 
-        if json
-            .head_width_percentages
-            .iter()
-            .map(|json| json.percent)
-            .sum::<f32>()
-            != 100.0
-        {
-            whatever!("total of column width must be 100%");
+        if json.columns.is_empty() {
+            whatever!("table must declare at least one column");
         }
 
-        let heads: Result<Vec<Head>, Error> = json
-            .head_width_percentages
-            .into_iter()
-            .map(|json_head| {
-                let mut text = text::Text::new(
-                    Mm(0.0),
-                    Mm(0.0),
-                    Mm(json.width * json_head.percent / 100.0),
-                    Mm(0.0),
-                    json_head.font_name.unwrap_or(head_styles.font_name.clone()),
-                    json_head.font_size.map(Pt).unwrap_or(head_styles.font_size),
-                    json_head.content.clone(),
-                    json_head.alignment.unwrap_or(head_styles.clone().alignment),
-                    json_head
-                        .vertical_alignment
-                        .unwrap_or(head_styles.clone().vertical_alignment),
-                    font_map,
-                    Some(head_styles.padding.clone()),
-                )?;
-                text.set_line_break_mode(json_head.line_break_mode.or(head_styles.line_break_mode));
-                text.set_font_color(head_styles.font_color.clone());
-                text.set_character_spacing(Pt(json_head
-                    .character_spacing
-                    .unwrap_or(head_styles.character_spacing)));
-                text.set_line_height(Some(head_styles.line_height));
-
-                Ok(Head {
-                    percent: json_head.percent,
-                    text,
-                })
-            })
-            .collect();
-        let heads = heads?;
-
         let body_text_defaults = body_styles.text_defaults();
-        let mut columns = Vec::new();
-        for json_column in json.columns {
-            let schema = match json_column.schema {
+        let mut columns = Vec::with_capacity(json.columns.len());
+
+        for (index, json_column) in json.columns.into_iter().enumerate() {
+            let width = json_column.width.parse(index)?;
+            let json_head = json_column.header;
+
+            // The real width is assigned per render in `create_header_row`, once
+            // the page geometry is known.
+            let mut header = text::Text::new(
+                Mm(0.0),
+                Mm(0.0),
+                Mm(0.0),
+                Mm(0.0),
+                json_head.font_name.unwrap_or(head_styles.font_name.clone()),
+                json_head.font_size.map(Pt).unwrap_or(head_styles.font_size),
+                json_head.content.clone(),
+                json_head.alignment.unwrap_or(head_styles.clone().alignment),
+                json_head
+                    .vertical_alignment
+                    .unwrap_or(head_styles.clone().vertical_alignment),
+                font_map,
+                Some(head_styles.padding.clone()),
+            )?;
+            header.set_line_break_mode(json_head.line_break_mode.or(head_styles.line_break_mode));
+            header.set_font_color(head_styles.font_color.clone());
+            header.set_character_spacing(Pt(json_head
+                .character_spacing
+                .unwrap_or(head_styles.character_spacing)));
+            header.set_line_height(Some(head_styles.line_height));
+
+            let cell = match json_column.cell {
                 JsonSchema::Text(schema) => Schema::Text(text::Text::from_json_with_defaults(
                     schema,
                     &body_text_defaults,
@@ -332,13 +513,29 @@ impl Table {
                 JsonSchema::QrCode(schema) => schema.into(),
             };
 
-            columns.push(schema)
+            columns.push(Column {
+                width,
+                header,
+                cell,
+            });
         }
+
+        // Row rendering indexes `columns` by cell position, so a row that does
+        // not match the column count would panic mid-render.
+        for (row_index, row) in json.fields.iter().enumerate() {
+            if row.len() != columns.len() {
+                whatever!(
+                    "row {row_index}: expected {} cells to match the column count, got {}",
+                    columns.len(),
+                    row.len()
+                );
+            }
+        }
+
         let table = Table {
             base,
             show_head: json.show_head,
             head_styles,
-            head_width_percentages: heads,
             body_styles,
             table_styles,
             columns,
@@ -441,8 +638,8 @@ impl Table {
 
         let mut max_height = Mm(0.0);
 
-        for (head_index, head) in self.head_width_percentages.iter().enumerate() {
-            let mut text = head.text.clone();
+        for (head_index, column) in self.columns.iter().enumerate() {
+            let mut text = column.header.clone();
 
             text.set_x(x);
             text.set_y(y_line_mm);
@@ -492,7 +689,7 @@ impl Table {
         let mut max_height = Mm(0.0);
 
         for (col_index, col) in row.into_iter().enumerate() {
-            let schema = &self.columns[col_index];
+            let schema = &self.columns[col_index].cell;
             let cell_width = cell_widths[col_index];
             match schema {
                 Schema::Text(text) => {
@@ -556,7 +753,7 @@ impl Table {
         let y_top_mm: Mm = current_top_mm.unwrap_or(self.base.y);
         let y_bottom_mm = base_pdf.height - base_pdf.padding.bottom;
         let mut y_line_mm: Mm = y_top_mm;
-        let cell_widths = self.cell_widths(base_pdf);
+        let cell_widths = self.resolve_column_widths(base_pdf);
 
         // Track row index for alternating background colors (0-indexed, header is not counted)
         let mut visual_row_index: usize = 0;
@@ -752,11 +949,6 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::{Arc, OnceLock};
 
-    fn create_test_font_map() -> FontMap {
-        // Create an empty FontMap for testing purposes
-        FontMap::default()
-    }
-
     fn create_real_test_font_map() -> FontMap {
         static FONT: OnceLock<Arc<ParsedFont>> = OnceLock::new();
 
@@ -827,7 +1019,53 @@ mod tests {
         }
     }
 
+    fn create_test_json_column(label: &str, width: JsonColumnWidth) -> JsonColumn {
+        JsonColumn {
+            width,
+            header: JsonHead {
+                content: label.to_string(),
+                font_size: Some(12.0),
+                font_name: Some("TestFont".to_string()),
+                character_spacing: Some(0.0),
+                alignment: Some(Alignment::Center),
+                vertical_alignment: Some(VerticalAlignment::Middle),
+                line_break_mode: None,
+            },
+            cell: serde_json::from_value(json!({
+                "type": "text",
+                "name": label,
+                "position": { "x": 0.0, "y": 0.0 },
+                "width": 0.0,
+                "height": 0.0,
+                "content": "",
+                "fontName": "TestFont",
+                "fontSize": 10.0
+            }))
+            .unwrap(),
+        }
+    }
+
     fn create_test_table_schema() -> JsonTableSchema {
+        create_test_table_schema_with_widths(vec![
+            JsonColumnWidth::Text("50%".to_string()),
+            JsonColumnWidth::Text("50%".to_string()),
+        ])
+    }
+
+    fn create_test_table_schema_with_widths(widths: Vec<JsonColumnWidth>) -> JsonTableSchema {
+        let columns = widths
+            .into_iter()
+            .enumerate()
+            .map(|(index, width)| create_test_json_column(&format!("Column {}", index + 1), width))
+            .collect::<Vec<_>>();
+        let fields = (0..3)
+            .map(|row| {
+                (0..columns.len())
+                    .map(|col| format!("Data {row}-{col}"))
+                    .collect()
+            })
+            .collect();
+
         JsonTableSchema {
             name: "test_table".to_string(),
             position: JsonPosition { x: 10.0, y: 50.0 },
@@ -835,36 +1073,42 @@ mod tests {
             height: 100.0,
             show_head: true,
             head_styles: create_test_head_styles(),
-            head_width_percentages: vec![
-                JsonHead {
-                    percent: 50.0,
-                    content: "Column 1".to_string(),
-                    font_size: Some(12.0),
-                    font_name: Some("TestFont".to_string()),
-                    character_spacing: Some(0.0),
-                    alignment: Some(Alignment::Center),
-                    vertical_alignment: Some(VerticalAlignment::Middle),
-                    line_break_mode: None,
-                },
-                JsonHead {
-                    percent: 50.0,
-                    content: "Column 2".to_string(),
-                    font_size: Some(12.0),
-                    font_name: Some("TestFont".to_string()),
-                    character_spacing: Some(0.0),
-                    alignment: Some(Alignment::Center),
-                    vertical_alignment: Some(VerticalAlignment::Middle),
-                    line_break_mode: None,
-                },
-            ],
             body_styles: create_test_body_styles(),
             table_styles: create_test_table_styles(),
-            columns: vec![],
-            fields: vec![
-                vec!["Header 1".to_string(), "Header 2".to_string()],
-                vec!["Data 1".to_string(), "Data 2".to_string()],
-                vec!["Data 3".to_string(), "Data 4".to_string()],
-            ],
+            columns,
+            fields,
+        }
+    }
+
+    /// Resolve column widths against an A4-width page with no padding, so the
+    /// table's own `width` (190mm) is what gets divided up.
+    fn resolve_widths(widths: Vec<&str>) -> Vec<f32> {
+        let json = create_test_table_schema_with_widths(
+            widths
+                .into_iter()
+                .map(|w| JsonColumnWidth::Text(w.to_string()))
+                .collect(),
+        );
+        let font_map = create_real_test_font_map();
+        let table = Table::from_json(json, &font_map).expect("table should parse");
+        table
+            .resolve_column_widths(&create_test_base_pdf())
+            .into_iter()
+            .map(|mm| mm.0)
+            .collect()
+    }
+
+    fn create_test_base_pdf() -> BasePdf {
+        BasePdf {
+            width: Mm(210.0),
+            height: Mm(297.0),
+            padding: Frame {
+                top: Mm(0.0),
+                right: Mm(0.0),
+                bottom: Mm(0.0),
+                left: Mm(0.0),
+            },
+            static_schema: vec![],
         }
     }
 
@@ -933,19 +1177,378 @@ mod tests {
         assert!(result.is_err());
     }
 
+    //
+    // Column width grammar
+    //
+
     #[test]
-    fn test_table_from_json_invalid_column_percentages() {
+    fn column_width_accepts_every_supported_notation() {
+        let cases = [
+            (JsonColumnWidth::Number(25.0), ColumnWidth::Fixed(25.0)),
+            (
+                JsonColumnWidth::Text("25mm".into()),
+                ColumnWidth::Fixed(25.0),
+            ),
+            (
+                JsonColumnWidth::Text("20%".into()),
+                ColumnWidth::Percent(20.0),
+            ),
+            (
+                JsonColumnWidth::Text("2fr".into()),
+                ColumnWidth::Fraction(2.0),
+            ),
+            (
+                JsonColumnWidth::Text("fr".into()),
+                ColumnWidth::Fraction(1.0),
+            ),
+            // Suffixes are case-insensitive and surrounding space is ignored.
+            (
+                JsonColumnWidth::Text(" 25MM ".into()),
+                ColumnWidth::Fixed(25.0),
+            ),
+            (
+                JsonColumnWidth::Text("2FR".into()),
+                ColumnWidth::Fraction(2.0),
+            ),
+            (
+                JsonColumnWidth::Text("  20% ".into()),
+                ColumnWidth::Percent(20.0),
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let parsed = input.parse(0);
+            assert_eq!(parsed.unwrap(), expected, "failed for {input:?}");
+        }
+    }
+
+    #[test]
+    fn column_width_rejects_malformed_and_non_positive_values() {
+        // `f64::from_str` accepts "NaN"/"inf", so those must be caught explicitly.
+        let cases = [
+            "abc", "-5", "-5mm", "0fr", "0mm", "0%", "NaNmm", "inffr", "", "mm", "%", "20 pt",
+            // Space between the number and its suffix is a typo, not a width.
+            "20 %", "25 mm", "2 fr",
+            // Doubled suffixes: "mm" is stripped, then "2fr" fails to parse.
+            "2frmm", "20%mm", "5mmfr",
+        ];
+
+        for input in cases {
+            let parsed = JsonColumnWidth::Text(input.to_string()).parse(0);
+            assert!(parsed.is_err(), "expected {input:?} to be rejected");
+        }
+    }
+
+    #[test]
+    fn column_width_rejects_values_too_large_for_the_output_precision() {
+        // Each of these is finite on its own, but the resolver sums them: two
+        // `1e308fr` columns overflow to infinity and their ratio is NaN.
+        for input in ["1e308fr", "1e308%", "1e308mm", "1e39mm"] {
+            let parsed = JsonColumnWidth::Text(input.to_string()).parse(0);
+            assert!(parsed.is_err(), "expected {input:?} to be rejected");
+        }
+
+        // Anything that still fits in f32 is accepted. (`format!("{}", f32::MAX)`
+        // is not usable here: its decimal form rounds up past the real maximum.)
+        assert!(JsonColumnWidth::Text("3.4e38mm".into()).parse(0).is_ok());
+    }
+
+    #[test]
+    fn resolution_never_yields_nan_for_extreme_but_legal_widths() {
+        // Guards the aggregate-overflow path end to end: the parse-time bound is
+        // what keeps these finite, so a regression there surfaces here.
+        for widths in [
+            vec!["3e38fr", "3e38fr"],
+            vec!["3e38%", "1fr"],
+            vec!["3e38mm", "3e38mm"],
+            vec!["3e38mm", "1fr"],
+        ] {
+            for width in resolve_widths(widths.clone()) {
+                assert!(width.is_finite(), "{widths:?} produced {width}");
+                assert!(width >= 0.0, "{widths:?} produced {width}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_negative_schema_width_does_not_produce_negative_columns() {
+        // `BaseSchema.width` is not validated anywhere; a negative one used to
+        // flip the overflow scale factor and hand back negative columns.
+        let mut json = create_test_table_schema_with_widths(vec![
+            JsonColumnWidth::Number(1.0),
+            JsonColumnWidth::Text("1fr".into()),
+        ]);
+        json.width = -10.0;
+
+        let font_map = create_real_test_font_map();
+        let table = Table::from_json(json, &font_map).unwrap();
+
+        for width in table.resolve_column_widths(&create_test_base_pdf()) {
+            assert!(width.0.is_finite(), "got {}", width.0);
+            assert!(width.0 >= 0.0, "got {}", width.0);
+        }
+    }
+
+    #[test]
+    fn column_width_error_names_the_offending_column() {
+        let error = JsonColumnWidth::Text("nonsense".into())
+            .parse(3)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("column 3"), "unexpected message: {error}");
+    }
+
+    //
+    // Column width resolution
+    //
+
+    #[test]
+    fn percent_columns_divide_the_table_width() {
+        let widths = resolve_widths(vec!["70%", "15%", "15%"]);
+        assert_eq!(widths, vec![133.0, 28.5, 28.5]);
+    }
+
+    #[test]
+    fn fixed_columns_keep_their_declared_width() {
+        let widths = resolve_widths(vec!["20mm", "30mm"]);
+        assert_eq!(widths, vec![20.0, 30.0]);
+    }
+
+    #[test]
+    fn fraction_columns_split_the_remaining_width() {
+        // 190 - 20 - 47.5 = 122.5 left, split 2:1.
+        let widths = resolve_widths(vec!["20mm", "2fr", "25%", "1fr"]);
+        assert!((widths[0] - 20.0).abs() < 1e-3);
+        assert!((widths[2] - 47.5).abs() < 1e-3);
+        assert!((widths[1] - 81.6667).abs() < 1e-3, "got {}", widths[1]);
+        assert!((widths[3] - 40.8333).abs() < 1e-3, "got {}", widths[3]);
+    }
+
+    #[test]
+    fn column_order_does_not_change_the_allocation() {
+        let straight = resolve_widths(vec!["20mm", "1fr", "25%"]);
+        let shuffled = resolve_widths(vec!["25%", "20mm", "1fr"]);
+
+        // Same declarations, different order: each kind keeps its width.
+        assert!((straight[0] - shuffled[1]).abs() < 1e-3);
+        assert!((straight[1] - shuffled[2]).abs() < 1e-3);
+        assert!((straight[2] - shuffled[0]).abs() < 1e-3);
+    }
+
+    #[test]
+    fn fraction_columns_fill_the_table_width_exactly() {
+        // The rounding residual is absorbed so column borders meet.
+        for widths in [
+            vec!["1fr", "1fr", "1fr"],
+            vec!["20mm", "1fr", "1fr"],
+            vec!["33%", "1fr", "17mm", "2fr"],
+        ] {
+            let resolved = resolve_widths(widths.clone());
+            let sum: f32 = resolved.iter().sum();
+            assert_eq!(sum, 190.0, "widths {widths:?} summed to {sum}");
+        }
+    }
+
+    #[test]
+    fn without_fraction_columns_the_table_stays_narrower() {
+        // No fraction column means nothing may absorb the leftover: the last
+        // column must not be stretched to fill the table.
+        let widths = resolve_widths(vec!["20mm", "30mm"]);
+        assert_eq!(widths[1], 30.0);
+        assert_eq!(widths.iter().sum::<f32>(), 50.0);
+    }
+
+    #[test]
+    fn overflowing_fixed_and_percent_columns_are_scaled_to_fit() {
+        // 150 + 150 = 300mm declared into a 190mm table.
+        let widths = resolve_widths(vec!["150mm", "150mm"]);
+        let sum: f32 = widths.iter().sum();
+        assert!((sum - 190.0).abs() < 1e-2, "sum was {sum}");
+        assert!((widths[0] - widths[1]).abs() < 1e-3);
+    }
+
+    #[test]
+    fn overflow_collapses_fraction_columns_to_zero() {
+        let widths = resolve_widths(vec!["150mm", "150mm", "1fr"]);
+        assert_eq!(widths[2], 0.0);
+        let sum: f32 = widths.iter().sum();
+        assert!((sum - 190.0).abs() < 1e-2, "sum was {sum}");
+    }
+
+    #[test]
+    fn percent_over_one_hundred_is_allowed_and_scaled_down() {
+        let widths = resolve_widths(vec!["150%"]);
+        assert!((widths[0] - 190.0).abs() < 1e-2, "got {}", widths[0]);
+    }
+
+    #[test]
+    fn percentages_summing_to_one_hundred_never_trip_the_overflow_branch() {
+        // Real template values. Allocating these in sequence and adding the
+        // results back up can overshoot the table width by a rounding step; the
+        // overflow test tolerates that so the columns keep their declared share.
+        let templates: [&[&str]; 5] = [
+            &["14%", "31%", "17%", "10%", "14%", "14%"], // product_list
+            &["15%", "25%", "25%", "17%", "18%"],        // financial_table
+            &["10%", "32%", "10%", "10%", "10%", "8%", "10%", "10%"], // print-renews
+            &["15%", "30%", "20%", "12%", "11%", "12%"], // inventory_table
+            &["15%", "15%", "15%", "15%", "15%", "15%", "10%"], // table.json
+        ];
+
+        for percents in templates {
+            let widths = resolve_widths(percents.to_vec());
+            let expected: Vec<f32> = percents
+                .iter()
+                .map(|p| {
+                    let value: f64 = p.trim_end_matches('%').parse().unwrap();
+                    (190.0 * value / 100.0) as f32
+                })
+                .collect();
+            for (index, (got, want)) in widths.iter().zip(expected.iter()).enumerate() {
+                assert!(
+                    (got - want).abs() < 1e-3,
+                    "{percents:?} column {index}: got {got}, want {want}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn residual_correction_never_produces_a_negative_width() {
+        // A tiny-weight fraction column must not be driven below zero by the
+        // rounding correction, which is why the widest one absorbs it.
+        for widths in [
+            vec!["100fr", "0.0001fr"],
+            vec!["189mm", "0.0001fr"],
+            vec!["0.001fr", "0.001fr", "100mm"],
+        ] {
+            for width in resolve_widths(widths.clone()) {
+                assert!(width.is_finite(), "{widths:?} produced {width}");
+                assert!(width >= 0.0, "{widths:?} produced {width}");
+            }
+        }
+    }
+
+    #[test]
+    fn resolution_survives_a_page_with_no_usable_width() {
+        // Padding wider than the page leaves nothing to divide up. This must not
+        // hang or produce negative widths.
+        let json = create_test_table_schema_with_widths(vec![
+            JsonColumnWidth::Text("1fr".into()),
+            JsonColumnWidth::Text("50%".into()),
+        ]);
+        let font_map = create_real_test_font_map();
+        let table = Table::from_json(json, &font_map).unwrap();
+
+        let base_pdf = BasePdf {
+            width: Mm(210.0),
+            height: Mm(297.0),
+            padding: Frame {
+                top: Mm(0.0),
+                right: Mm(150.0),
+                bottom: Mm(0.0),
+                left: Mm(150.0),
+            },
+            static_schema: vec![],
+        };
+
+        for width in table.resolve_column_widths(&base_pdf) {
+            assert!(width.0.is_finite());
+            assert!(width.0 >= 0.0);
+        }
+    }
+
+    #[test]
+    fn table_width_is_capped_by_the_page_padding() {
+        let json = create_test_table_schema_with_widths(vec![JsonColumnWidth::Text("100%".into())]);
+        let font_map = create_real_test_font_map();
+        let table = Table::from_json(json, &font_map).unwrap();
+
+        // 210 - 20 - 20 = 170mm available, less than the table's own 190mm.
+        let base_pdf = BasePdf {
+            width: Mm(210.0),
+            height: Mm(297.0),
+            padding: Frame {
+                top: Mm(0.0),
+                right: Mm(20.0),
+                bottom: Mm(0.0),
+                left: Mm(20.0),
+            },
+            static_schema: vec![],
+        };
+
+        let widths = table.resolve_column_widths(&base_pdf);
+        assert!((widths[0].0 - 170.0).abs() < 1e-3, "got {}", widths[0].0);
+    }
+
+    #[test]
+    fn column_boundaries_land_where_expected() {
+        // The cumulative x offsets are what actually position the cells, and a
+        // 0.01mm drift is invisible by eye — pin them numerically.
+        let widths = resolve_widths(vec!["20mm", "1fr", "25%"]);
+        let mut x = 0.0_f32;
+        let mut boundaries = vec![];
+        for width in &widths {
+            x += width;
+            boundaries.push(x);
+        }
+
+        assert!((boundaries[0] - 20.0).abs() < 1e-3);
+        assert!(
+            (boundaries[1] - 142.5).abs() < 1e-3,
+            "got {}",
+            boundaries[1]
+        );
+        assert_eq!(boundaries[2], 190.0);
+    }
+
+    //
+    // Structural validation
+    //
+
+    #[test]
+    fn table_requires_at_least_one_column() {
         let mut json = create_test_table_schema();
-        // Make percentages not add up to 100%
-        json.head_width_percentages[0].percent = 40.0;
-        json.head_width_percentages[1].percent = 40.0; // Total = 80%, not 100%
+        json.columns.clear();
+        json.fields.clear();
 
-        let font_map = create_test_font_map();
-        let result = Table::from_json(json, &font_map);
+        let font_map = create_real_test_font_map();
+        let error = Table::from_json(json, &font_map).unwrap_err().to_string();
+        assert!(error.contains("at least one column"), "got: {error}");
+    }
 
-        assert!(result.is_err());
-        let error_message = format!("{}", result.unwrap_err());
-        assert!(error_message.contains("total of column width must be 100%"));
+    #[test]
+    fn rows_must_match_the_column_count() {
+        // Row rendering indexes columns by cell position, so a mismatched row
+        // used to panic mid-render.
+        for row in [
+            vec!["only one".to_string()],
+            vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        ] {
+            let mut json = create_test_table_schema();
+            let actual = row.len();
+            json.fields = vec![vec!["a".to_string(), "b".to_string()], row];
+
+            let font_map = create_real_test_font_map();
+            let error = Table::from_json(json, &font_map).unwrap_err().to_string();
+
+            assert!(error.contains("row 1"), "missing row index: {error}");
+            assert!(error.contains("expected 2"), "missing expected: {error}");
+            assert!(
+                error.contains(&format!("got {actual}")),
+                "missing actual: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn headers_are_required_even_when_the_head_is_hidden() {
+        // `showHead` controls painting only; the column shape stays the same.
+        let mut json = create_test_table_schema();
+        json.show_head = false;
+
+        let font_map = create_real_test_font_map();
+        let table = Table::from_json(json, &font_map).unwrap();
+        assert_eq!(table.columns.len(), 2);
     }
 
     #[test]
@@ -1004,16 +1607,6 @@ mod tests {
                 "padding": { "top": 1.0, "right": 1.0, "bottom": 1.0, "left": 1.0 },
                 "lineBreakMode": head_styles_line_break_mode
             },
-            "headWidthPercentages": [{
-                "percent": 100.0,
-                "content": "Header Value",
-                "fontSize": 12.0,
-                "fontName": "TestFont",
-                "characterSpacing": 0.0,
-                "alignment": "center",
-                "verticalAlignment": "middle",
-                "lineBreakMode": head_line_break_mode
-            }],
             "bodyStyles": {
                 "alignment": "left",
                 "verticalAlignment": "middle",
@@ -1030,7 +1623,17 @@ mod tests {
                 "borderColor": "#000000"
             },
             "columns": [{
-                "schema": {
+                "width": "100%",
+                "header": {
+                    "content": "Header Value",
+                    "fontSize": 12.0,
+                    "fontName": "TestFont",
+                    "characterSpacing": 0.0,
+                    "alignment": "center",
+                    "verticalAlignment": "middle",
+                    "lineBreakMode": head_line_break_mode
+                },
+                "cell": {
                     "type": "text",
                     "name": "body_column",
                     "position": { "x": 0.0, "y": 0.0 },
@@ -1061,9 +1664,7 @@ mod tests {
         let table = Table::from_json(json, &font_map).unwrap();
 
         assert_eq!(
-            table.head_width_percentages[0]
-                .text
-                .resolved_line_break_mode(),
+            table.columns[0].header.resolved_line_break_mode(),
             LineBreakMode::Char
         );
     }
@@ -1075,9 +1676,7 @@ mod tests {
         let table = Table::from_json(json, &font_map).unwrap();
 
         assert_eq!(
-            table.head_width_percentages[0]
-                .text
-                .resolved_line_break_mode(),
+            table.columns[0].header.resolved_line_break_mode(),
             LineBreakMode::Char
         );
     }
@@ -1221,7 +1820,7 @@ mod tests {
         let table = Table::from_json(create_test_table_schema(), &font_map).unwrap();
 
         assert_eq!(
-            *table.head_width_percentages[0].text.font_color(),
+            *table.columns[0].header.font_color(),
             csscolorparser::parse("#ffffff").unwrap()
         );
     }

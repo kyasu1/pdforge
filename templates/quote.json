@@ -13,32 +13,6 @@
                 "content": "",
                 "width": 190,
                 "height": 160,
-                "headWidthPercentages": [
-                    {
-                        "content": "No",
-                        "percent": 10,
-                        "fontSize": 10,
-                        "alignment": "center"
-                    },
-                    {
-                        "content": "商品名",
-                        "percent": 50,
-                        "fontSize": 10,
-                        "alignment": "center"
-                    },
-                    {
-                        "content": "買取査定",
-                        "percent": 20,
-                        "fontSize": 10,
-                        "alignment": "center"
-                    },
-                    {
-                        "content": "質入査定",
-                        "percent": 20,
-                        "fontSize": 10,
-                        "alignment": "center"
-                    }
-                ],
                 "tableStyles": {
                     "borderWidth": 0.3,
                     "borderColor": "#000000"
@@ -83,7 +57,13 @@
                 },
                 "columns": [
                     {
-                        "schema": {
+                        "width": "10%",
+                        "header": {
+                            "content": "No",
+                            "fontSize": 10,
+                            "alignment": "center"
+                        },
+                        "cell": {
                             "name": "No",
                             "type": "text",
                             "content": "",
@@ -107,7 +87,13 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "50%",
+                        "header": {
+                            "content": "商品名",
+                            "fontSize": 10,
+                            "alignment": "center"
+                        },
+                        "cell": {
                             "name": "商品名",
                             "type": "text",
                             "content": "",
@@ -131,7 +117,13 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "20%",
+                        "header": {
+                            "content": "買取査定",
+                            "fontSize": 10,
+                            "alignment": "center"
+                        },
+                        "cell": {
                             "name": "買取査定",
                             "type": "text",
                             "content": "",
@@ -155,7 +147,13 @@
                         }
                     },
                     {
-                        "schema": {
+                        "width": "20%",
+                        "header": {
+                            "content": "質入査定",
+                            "fontSize": 10,
+                            "alignment": "center"
+                        },
+                        "cell": {
                             "name": "質入査定",
                             "type": "text",
                             "content": "",

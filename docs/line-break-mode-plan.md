@@ -1,5 +1,9 @@
 # `lineBreakMode` 追加計画
 
+> **Note:** この文書は執筆当時のスキーマに基づく。テーブルの列定義は現在 `columns[]` に
+> 統合されており、`headWidthPercentages` は存在しない。現行仕様は
+> [`docs/schema-spec.md`](./schema-spec.md) を参照。
+
 ## Summary
 
 狭い幅では `WordSegmenter` 固定だと語をまとめすぎて大きな空白が出やすい。

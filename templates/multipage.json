@@ -12,26 +12,6 @@
         "height": 52.932,
         "content": "[[\"Alice\",\"New York\",\"Alice is a freelance web designer and developer\"],[\"Bob\",\"Paris\",\"Bob is a freelance illustrator and graphic designer\"]]",
         "showHead": true,
-        "headWidthPercentages": [
-          {
-            "content": "Name",
-            "percent": 70,
-            "fontSize": 12,
-            "alignment": "center"
-          },
-          {
-            "percent": 15,
-            "content": "Party",
-            "fontSize": 12,
-            "alignment": "center"
-          },
-          {
-            "percent": 15,
-            "content": "Gen",
-            "fontSize": 12,
-            "alignment": "right"
-          }
-        ],
         "tableStyles": {
           "borderWidth": 0.3,
           "borderColor": "#000000"
@@ -79,7 +59,13 @@
         "readOnly": false,
         "columns": [
           {
-            "schema": {
+            "width": "70%",
+            "header": {
+              "content": "Name",
+              "fontSize": 12,
+              "alignment": "center"
+            },
+            "cell": {
               "name": "col1",
               "type": "text",
               "content": "",
@@ -103,7 +89,13 @@
             }
           },
           {
-            "schema": {
+            "width": "15%",
+            "header": {
+              "content": "Party",
+              "fontSize": 12,
+              "alignment": "center"
+            },
+            "cell": {
               "type": "qrCode",
               "name": "col2",
               "content": "",
@@ -124,7 +116,13 @@
             }
           },
           {
-            "schema": {
+            "width": "15%",
+            "header": {
+              "content": "Gen",
+              "fontSize": 12,
+              "alignment": "right"
+            },
+            "cell": {
               "name": "col3",
               "type": "text",
               "content": "",

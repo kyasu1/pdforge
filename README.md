@@ -235,16 +235,6 @@ Example:
   "width": 190,
   "height": 100,
   "showHead": true,
-  "headWidthPercentages": [
-    { "content": "Name", "percent": 30, "fontSize": 12, "alignment": "center" },
-    { "content": "City", "percent": 20, "fontSize": 12, "alignment": "center" },
-    {
-      "content": "Description",
-      "percent": 50,
-      "fontSize": 12,
-      "alignment": "left"
-    }
-  ],
   "tableStyles": {
     "borderWidth": 0.3,
     "borderColor": "#000000"
@@ -269,7 +259,9 @@ Example:
   },
   "columns": [
     {
-      "schema": {
+      "width": "30%",
+      "header": { "content": "Name", "fontSize": 12, "alignment": "center" },
+      "cell": {
         "type": "text",
         "name": "name",
         "content": "",
@@ -281,7 +273,9 @@ Example:
       }
     },
     {
-      "schema": {
+      "width": 40,
+      "header": { "content": "City", "fontSize": 12, "alignment": "center" },
+      "cell": {
         "type": "text",
         "name": "city",
         "content": "",
@@ -293,7 +287,9 @@ Example:
       }
     },
     {
-      "schema": {
+      "width": "1fr",
+      "header": { "content": "Description", "fontSize": 12, "alignment": "left" },
+      "cell": {
         "type": "text",
         "name": "description",
         "content": "",
@@ -311,22 +307,44 @@ Example:
 }
 ```
 
+**Column Widths**: each entry in `columns` declares its own `width`:
+
+| Notation | Example | Meaning |
+|---|---|---|
+| number | `25` | fixed 25mm |
+| `"<n>mm"` | `"25mm"` | fixed 25mm |
+| `"<n>%"` | `"20%"` | 20% of the table's effective width |
+| `"<n>fr"` | `"2fr"` | a share of the leftover width |
+| `"fr"` | `"fr"` | same as `"1fr"` |
+
+Suffixes are case-insensitive, and whitespace around the whole value is ignored — but not between the number and its suffix, so `"20 %"` is rejected. Values must be positive and no larger than `f32::MAX`. Fixed and percent columns are placed first; whatever is left is split between the `fr` columns by weight. Percentages do **not** have to add up to 100 — use `fr` for the leftover instead:
+
+```json
+"columns": [
+  { "width": 20,    "header": { "content": "No" },   "cell": { "type": "text", "...": "..." } },
+  { "width": "2fr", "header": { "content": "Item" }, "cell": { "type": "text", "...": "..." } },
+  { "width": "25%", "header": { "content": "Price" }, "cell": { "type": "text", "...": "..." } }
+]
+```
+
+If the fixed and percent widths together overflow the table, they are scaled down to fit and the `fr` columns collapse to zero — rendering never fails over it. See [templates/table-column-widths.json](templates/table-column-widths.json) for a runnable example.
+
 **Multi-Page Tables**: Tables automatically span multiple pages when content exceeds the available space. The library handles pagination, headers, and proper content flow across pages automatically.
 
 **Cell Styling**:
 
 - **Header** cells use `headStyles` for background, font color, character spacing, line height, and per-side border (`borderWidth` as a `Frame`). A `borderWidth` of `0` means the header has no border.
 - **Data-row grid borders** use `tableStyles.borderColor` / `borderWidth`.
-- **Body** cells take their font from each column's `schema`; unspecified `alignment`, `verticalAlignment`, `characterSpacing`, `lineHeight`, `fontColor`, `padding`, and `lineBreakMode` fall back to `bodyStyles`. Zebra striping comes from `bodyStyles.backgroundColor` / `alternateBackgroundColor`.
+- **Body** cells take their font from each column's `cell`; unspecified `alignment`, `verticalAlignment`, `characterSpacing`, `lineHeight`, `fontColor`, `padding`, and `lineBreakMode` fall back to `bodyStyles`. Zebra striping comes from `bodyStyles.backgroundColor` / `alternateBackgroundColor`.
 
-> **Note:** `bodyStyles.fontSize` / `fontName` / `borderColor` / `borderWidth` and the column `CellStyle.height` were removed as they had no effect. See [docs/table-styling-migration.md](docs/table-styling-migration.md) for the full migration guide.
+> **Note:** `bodyStyles.fontSize` / `fontName` / `borderColor` / `borderWidth` and the column cell `height` were removed as they had no effect. See [docs/table-styling-migration.md](docs/table-styling-migration.md) for the full migration guide.
 
 **Table Line Break Defaults**:
 
-- Table header cells default to `word`, and can be overridden with `headStyles.lineBreakMode` or per-column header entries in `headWidthPercentages[].lineBreakMode`.
+- Table header cells default to `word`, and can be overridden with `headStyles.lineBreakMode` or per-column `columns[].header.lineBreakMode`.
 - Table body text cells default to `char`, which is better for narrow columns and label-like layouts.
 - A table body default can be set with `bodyStyles.lineBreakMode`.
-- Individual body text columns can override that default with `columns[].schema.lineBreakMode`.
+- Individual body text columns can override that default with `columns[].cell.lineBreakMode`.
 
 Example:
 
@@ -338,10 +356,6 @@ Example:
   "width": 100,
   "height": 120,
   "showHead": true,
-  "headWidthPercentages": [
-    { "content": "商品名", "percent": 70, "lineBreakMode": "word" },
-    { "content": "型番", "percent": 30 }
-  ],
   "headStyles": {
     "fontSize": 12,
     "fontName": "NotoSansJP",
@@ -368,7 +382,9 @@ Example:
   },
   "columns": [
     {
-      "schema": {
+      "width": "70%",
+      "header": { "content": "商品名", "lineBreakMode": "word" },
+      "cell": {
         "type": "text",
         "name": "item_name",
         "content": "",
@@ -381,7 +397,9 @@ Example:
       }
     },
     {
-      "schema": {
+      "width": "30%",
+      "header": { "content": "型番" },
+      "cell": {
         "type": "text",
         "name": "model_number",
         "content": "",
@@ -612,9 +630,17 @@ Then reference these in your static schema:
         "width": 170,
         "height": 200,
         "showHead": true,
-        "headWidthPercentages": [
-          { "content": "Name", "percent": 40 },
-          { "content": "Value", "percent": 60 }
+        "columns": [
+          {
+            "width": "40%",
+            "header": { "content": "Name" },
+            "cell": { "type": "text", "name": "name", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "fontSize": 10, "fontName": "NotoSansJP" }
+          },
+          {
+            "width": "1fr",
+            "header": { "content": "Value" },
+            "cell": { "type": "text", "name": "value", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "fontSize": 10, "fontName": "NotoSansJP" }
+          }
         ],
         "fields": []
       }
@@ -906,6 +932,9 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Recent Changes
+
+### Unreleased
+- **Table Column Widths (breaking)**: `headWidthPercentages` is gone; column definitions are unified under `columns[]`, each entry carrying `width`, `header`, and `cell` (the `columns[].schema` wrapper is removed). A column's `width` now accepts fixed millimetres (`25`, `"25mm"`), percentages (`"20%"`), and leftover shares (`"2fr"`, `"fr"`). Percentages no longer have to sum to 100. Rows whose cell count does not match the column count are rejected at parse time instead of panicking mid-render. See [CHANGELOG.md](CHANGELOG.md) for the migration example.
 
 ### Version 0.13.0
 - **Table Header Styling**: `headStyles` background, font color, character spacing, line height, and per-side border (`borderColor` + `Frame` `borderWidth`) are now applied to header rows. Previously these were parsed but ignored, and headers reused `bodyStyles.backgroundColor`.

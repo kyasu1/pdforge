@@ -35,20 +35,6 @@ fn create_simple_table_json() -> serde_json::Value {
         "height": 100.0,
         "content": "[[\"Product\",\"Price\"],[\"Item A\",\"$100\"],[\"Item B\",\"$200\"]]",
         "showHead": true,
-        "headWidthPercentages": [
-            {
-                "content": "Product",
-                "percent": 70.0,
-                "fontSize": 12.0,
-                "alignment": "left"
-            },
-            {
-                "content": "Price",
-                "percent": 30.0,
-                "fontSize": 12.0,
-                "alignment": "right"
-            }
-        ],
         "tableStyles": {
             "borderWidth": 0.3,
             "borderColor": "#000000"
@@ -101,7 +87,44 @@ fn create_simple_table_json() -> serde_json::Value {
             }
         },
         "columnStyles": {},
-        "columns": [],
+        "columns": [
+            {
+                "width": "70%",
+                "header": {
+                    "content": "Product",
+                    "fontSize": 12.0,
+                    "alignment": "left"
+                },
+                "cell": {
+                    "type": "text",
+                    "name": "product",
+                    "position": { "x": 0.0, "y": 0.0 },
+                    "width": 0.0,
+                    "height": 0.0,
+                    "content": "",
+                    "fontName": "TestFont",
+                    "fontSize": 11.0
+                }
+            },
+            {
+                "width": "30%",
+                "header": {
+                    "content": "Price",
+                    "fontSize": 12.0,
+                    "alignment": "right"
+                },
+                "cell": {
+                    "type": "text",
+                    "name": "price",
+                    "position": { "x": 0.0, "y": 0.0 },
+                    "width": 0.0,
+                    "height": 0.0,
+                    "content": "",
+                    "fontName": "TestFont",
+                    "fontSize": 11.0
+                }
+            }
+        ],
         "fields": [
             ["Product", "Price"],
             ["Item A", "$100"],
@@ -120,42 +143,56 @@ fn test_simple_table_creation_from_json() {
 
     let table = Table::from_json(json_schema, &font_map).unwrap();
 
+    // BaseSchema fields are private outside the crate, so the observable
+    // contract here is that a well-formed table deserializes and converts.
     let _base = table.get_base();
-    // Note: BaseSchema fields are private, so we can only test basic construction success
-    assert!(true); // Table was created successfully
 }
 
 #[test]
-fn test_table_column_width_percentages_validation() {
+fn test_table_accepts_mixed_width_notations() {
     let mut json_value = create_simple_table_json();
-
-    // Set invalid percentages that don't add up to 100%
-    json_value["headWidthPercentages"] = serde_json::json!([
-        {
-            "content": "Product",
-            "percent": 40.0,
-            "fontSize": 12.0,
-            "alignment": "left"
-        },
-        {
-            "content": "Price",
-            "percent": 40.0, // Total = 80%, not 100%
-            "fontSize": 12.0,
-            "alignment": "right"
-        }
-    ]);
+    json_value["columns"][0]["width"] = serde_json::json!("1fr");
+    json_value["columns"][1]["width"] = serde_json::json!(40.0);
 
     let json_schema: JsonTableSchema = serde_json::from_value(json_value).unwrap();
     let font_map = create_test_font_map();
-    let result = Table::from_json(json_schema, &font_map);
 
-    assert!(result.is_err());
-    let error_message = format!("{}", result.unwrap_err());
-    assert!(error_message.contains("total of column width must be 100%"));
+    assert!(Table::from_json(json_schema, &font_map).is_ok());
 }
 
 #[test]
-fn test_table_valid_column_width_percentages() {
+fn test_table_rejects_unparseable_column_width() {
+    let mut json_value = create_simple_table_json();
+    json_value["columns"][1]["width"] = serde_json::json!("40 pt");
+
+    let json_schema: JsonTableSchema = serde_json::from_value(json_value).unwrap();
+    let font_map = create_test_font_map();
+    let error = Table::from_json(json_schema, &font_map)
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("column 1"), "got: {error}");
+    assert!(error.contains("40 pt"), "got: {error}");
+}
+
+#[test]
+fn test_table_rejects_rows_that_do_not_match_the_column_count() {
+    let mut json_value = create_simple_table_json();
+    json_value["fields"] = serde_json::json!([["Product", "Price"], ["Item A"]]);
+
+    let json_schema: JsonTableSchema = serde_json::from_value(json_value).unwrap();
+    let font_map = create_test_font_map();
+    let error = Table::from_json(json_schema, &font_map)
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("row 1"), "got: {error}");
+    assert!(error.contains("expected 2"), "got: {error}");
+    assert!(error.contains("got 1"), "got: {error}");
+}
+
+#[test]
+fn test_table_valid_column_widths() {
     let json_value = create_simple_table_json();
     let json_schema: JsonTableSchema = serde_json::from_value(json_value).unwrap();
     let font_map = create_test_font_map();
