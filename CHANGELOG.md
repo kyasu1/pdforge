@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-07-28
+
 ### Fixed
 - `Text::get_height` wrapped text at the full `base.width` while `Text::render` wraps at `base.width` minus horizontal padding, so any padded element that wrapped was measured one or more lines too short (#39). Both now wrap at the same effective width. Table row heights are computed from `get_height`, so padded cells in narrow columns no longer draw text outside their cell rectangle, and page breaks — which compare the measured row height against the remaining space — are decided from the height that actually gets drawn.
 - Dynamic font sizing (`fontSize: { min, max, fit }`) fitted text to the unpadded box for the same reason, picking a size that overflowed. It now sizes against the padded box.

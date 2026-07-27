@@ -933,8 +933,12 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Recent Changes
 
-### Unreleased
+### Version 0.15.0
 - **Table Column Widths (breaking)**: `headWidthPercentages` is gone; column definitions are unified under `columns[]`, each entry carrying `width`, `header`, and `cell` (the `columns[].schema` wrapper is removed). A column's `width` now accepts fixed millimetres (`25`, `"25mm"`), percentages (`"20%"`), and leftover shares (`"2fr"`, `"fr"`). Percentages no longer have to sum to 100. Rows whose cell count does not match the column count are rejected at parse time instead of panicking mid-render. See [CHANGELOG.md](CHANGELOG.md) for the migration example.
+- **Text Height Measurement**: `Text::get_height` wrapped text at the full element width while rendering wraps at the width minus horizontal padding, so padded elements that wrapped were measured too short — padded table cells in narrow columns drew text outside their cell, and page breaks were decided from the wrong height. Dynamic font sizing (`fontSize: { min, max, fit }`) had the same defect and picked sizes that overflowed. Both now measure against the padded box.
+
+### Version 0.14.0
+- **Font Collection Face Index**: `PDForgeBuilder::add_font_with_index` and `add_font_from_file_with_index` select a specific face inside a TrueType/OpenType Collection (`.ttc`/`.otc`). `add_font`/`add_font_from_file` continue to load face 0.
 
 ### Version 0.13.0
 - **Table Header Styling**: `headStyles` background, font color, character spacing, line height, and per-side border (`borderColor` + `Frame` `borderWidth`) are now applied to header rows. Previously these were parsed but ignored, and headers reused `bodyStyles.backgroundColor`.
