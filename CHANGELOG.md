@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-07-28
+
 ### Fixed
 - The half-width space's advance width was read from `ParsedFont::space_width`, which upstream (printpdf 0.12.3 / azul-layout 0.0.12) computes during `from_bytes_internal`, before the font's source bytes are attached — for every byte-parsed face it caches `Some(0)`. A `0` tripped `width_of_text_at_size`'s zero-width fallback, so each space was charged the 500-unit tofu (replacement-glyph) width instead of the font's real `hmtx` advance (224 units for NotoSansJP), over-measuring every space by roughly 2.76pt at 10pt. Any line containing spaces was measured wider than it would actually draw, so it wrapped before its box was full. Space width is now read through the same `lookup_glyph_index` → `get_horizontal_advance` path the renderer draws from, so measurement and rendering agree.
 
