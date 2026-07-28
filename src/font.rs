@@ -247,10 +247,15 @@ impl FontSpec {
             return 0.0;
         }
 
-        if ch == ' ' {
-            return self.font.space_width.unwrap_or(0) as f32 * percentage_font_scaling;
-        }
-
+        // Space deliberately goes through the same `hmtx` lookup as every other
+        // character. `ParsedFont::space_width` is not authoritative here: for
+        // byte-parsed faces upstream computes it inside `from_bytes_internal`,
+        // before the source bytes are attached, so `hmtx` is unreadable and it
+        // caches `Some(0)`. A 0 here fell through to the tofu width in
+        // `width_of_text_at_size`, over-measuring spaces and wrapping lines
+        // before the box was full. `get_horizontal_advance` is what the
+        // renderer draws with, so measuring through it keeps
+        // "measured width == drawn width" true on every construction path.
         self.font
             .lookup_glyph_index(ch as u32)
             .map(|glyph_index| self.font.get_horizontal_advance(glyph_index))
@@ -831,6 +836,100 @@ mod tests {
 
     fn test_font_spec(line_break_mode: LineBreakMode) -> FontSpec {
         FontSpec::new(test_font()).with_line_break_mode(line_break_mode)
+    }
+
+    /// Expected advance width straight from `hmtx`, bypassing `FontSpec`
+    /// entirely. This is the value the renderer actually draws with, so it is
+    /// the non-circular reference for what measurement must return.
+    fn hmtx_width_of(font: &ParsedFont, text: &str, font_size: Pt) -> Pt {
+        let scaling = 1000.0 / font.font_metrics.units_per_em as f32;
+        let units: f32 = text
+            .chars()
+            .map(|ch| {
+                let glyph_index = font
+                    .lookup_glyph_index(ch as u32)
+                    .unwrap_or_else(|| panic!("test font should have a glyph for {ch:?}"));
+                font.get_horizontal_advance(glyph_index) as f32 * scaling
+            })
+            .sum();
+
+        Pt(units * font_size.0 / 1000.0)
+    }
+
+    #[test]
+    fn space_is_measured_with_the_font_advance_not_the_tofu_width() {
+        // Byte-parsed faces cache `space_width` as 0 (upstream reads `hmtx`
+        // before the source bytes are attached), which used to fall through to
+        // the 500-unit tofu width and over-measure every space.
+        let font = test_font();
+        let spec = test_font_spec(LineBreakMode::Word);
+        let font_size = Pt(10.0);
+        let expected = hmtx_width_of(&font, " ", font_size);
+
+        let actual = spec.width_of_text_at_size(" ", font_size, Pt(0.0)).unwrap();
+
+        assert!(
+            (actual.0 - expected.0).abs() < 1e-4,
+            "space measured as {}pt, hmtx advance is {}pt",
+            actual.0,
+            expected.0
+        );
+    }
+
+    #[test]
+    fn spaced_text_is_measured_exactly_as_the_renderer_draws_it() {
+        let font = test_font();
+        let spec = test_font_spec(LineBreakMode::Word);
+        let font_size = Pt(10.0);
+        let text = "腕時計 カルティエ タンクフランセーズ";
+        let expected = hmtx_width_of(&font, text, font_size);
+
+        let actual = spec
+            .width_of_text_at_size(text, font_size, Pt(0.0))
+            .unwrap();
+
+        assert!(
+            (actual.0 - expected.0).abs() < 1e-4,
+            "measured {}pt, renderer draws {}pt",
+            actual.0,
+            expected.0
+        );
+    }
+
+    #[test]
+    fn word_mode_does_not_wrap_a_line_that_exactly_fits_the_box() {
+        // Box width comes from `hmtx`, i.e. the width the renderer will draw.
+        // Over-measuring the two spaces used to push the computed width past
+        // this box and split the line in two.
+        let font = test_font();
+        let spec = test_font_spec(LineBreakMode::Word);
+        let font_size = Pt(10.0);
+        let text = "腕時計 カルティエ タンクフランセーズ";
+        let box_width = hmtx_width_of(&font, text, font_size);
+
+        let lines = spec
+            .split_text_to_size(text, font_size, box_width, Pt(0.0))
+            .unwrap();
+
+        assert_eq!(lines, vec![text.to_string()]);
+    }
+
+    #[test]
+    fn char_mode_does_not_wrap_a_line_that_exactly_fits_the_box() {
+        // `Char` is what table bodies default to (`table.rs`
+        // `line_break_mode.unwrap_or(LineBreakMode::Char)`), so this is the
+        // path the reported quote-table regression actually took.
+        let font = test_font();
+        let spec = test_font_spec(LineBreakMode::Char);
+        let font_size = Pt(10.0);
+        let text = "腕時計 カルティエ タンクフランセーズ";
+        let box_width = hmtx_width_of(&font, text, font_size);
+
+        let lines = spec
+            .split_text_to_size(text, font_size, box_width, Pt(0.0))
+            .unwrap();
+
+        assert_eq!(lines, vec![text.to_string()]);
     }
 
     #[test]
