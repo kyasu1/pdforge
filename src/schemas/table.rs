@@ -345,12 +345,21 @@ fn parse_color_or(value: &str, default: &str) -> Result<csscolorparser::Color, E
 impl Table {
     /// Width the table actually gets: the template width, capped by what is left
     /// of the page after horizontal padding.
+    /// Width the table actually gets.
+    ///
+    /// `position.x` is an absolute page coordinate and is never rewritten, so
+    /// the space available to the table is whatever lies between it and the
+    /// right flow boundary. The declared `width` is a *maximum*: it is kept when
+    /// it fits and trimmed to the boundary when it does not.
+    ///
+    /// `padding.left` deliberately plays no part — it would subtract space the
+    /// table does not necessarily start at, and horizontal placement is fully
+    /// described by `position.x`.
     fn effective_width(&self, base_pdf: &BasePdf) -> Mm {
-        let available_width =
-            (base_pdf.width - base_pdf.padding.left - base_pdf.padding.right).max(Mm(0.0));
+        let available_width = (base_pdf.width - base_pdf.padding.right - self.base.x).max(Mm(0.0));
         // The schema's own width is not validated anywhere, and a negative one
         // would flip the overflow scale factor and hand back negative columns.
-        self.base.width.min(available_width).max(Mm(0.0))
+        self.base.width.max(Mm(0.0)).min(available_width)
     }
 
     /// Turn the declared column widths into concrete millimetre widths.
@@ -619,22 +628,12 @@ impl Table {
         &self,
         y_line_mm: Mm,
         cell_widths: &[Mm],
-        base_pdf: &BasePdf,
     ) -> Result<(Vec<Schema>, Mm), Error> {
         let mut cols: Vec<Schema> = vec![];
-        // Apply left padding to the table start position
-        let mut x = self.base.x.max(base_pdf.padding.left);
-
-        // Ensure table doesn't exceed right padding boundary
-        let max_right_x = base_pdf.width - base_pdf.padding.right;
-        let total_width: Mm = cell_widths
-            .iter()
-            .fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
-        if x + total_width > max_right_x {
-            x = max_right_x - total_width;
-            // Ensure x doesn't go below left padding
-            x = x.max(base_pdf.padding.left);
-        }
+        // `position.x` is absolute. Nothing here may move it: the table is kept
+        // inside the right boundary by trimming its width in
+        // `effective_width`, not by sliding it left.
+        let mut x = self.base.x;
 
         let mut max_height = Mm(0.0);
 
@@ -669,22 +668,12 @@ impl Table {
         row: Vec<String>,
         y_line_mm: Mm,
         cell_widths: &[Mm],
-        base_pdf: &BasePdf,
     ) -> Result<(Vec<Schema>, Mm), Error> {
         let mut cols: Vec<Schema> = vec![];
-        // Apply left padding to the table start position
-        let mut x = self.base.x.max(base_pdf.padding.left);
-
-        // Ensure table doesn't exceed right padding boundary
-        let max_right_x = base_pdf.width - base_pdf.padding.right;
-        let total_width: Mm = cell_widths
-            .iter()
-            .fold(Mm(0.0), |acc, &width| Mm(acc.0 + width.0));
-        if x + total_width > max_right_x {
-            x = max_right_x - total_width;
-            // Ensure x doesn't go below left padding
-            x = x.max(base_pdf.padding.left);
-        }
+        // `position.x` is absolute. Nothing here may move it: the table is kept
+        // inside the right boundary by trimming its width in
+        // `effective_width`, not by sliding it left.
+        let mut x = self.base.x;
 
         let mut max_height = Mm(0.0);
 
@@ -759,7 +748,7 @@ impl Table {
         let mut visual_row_index: usize = 0;
 
         let (header_row, header_height) = if self.show_head {
-            let header = self.create_header_row(top_margin_in_mm, &cell_widths, base_pdf)?;
+            let header = self.create_header_row(top_margin_in_mm, &cell_widths)?;
             (Some(header.0), header.1)
         } else {
             (None, Mm(0.0))
@@ -771,8 +760,7 @@ impl Table {
                 return Ok((current_page, None));
             }
             [head, tail @ ..] => {
-                let (cols, max_height) =
-                    self.process_row(head.clone(), y_line_mm, &cell_widths, base_pdf)?;
+                let (cols, max_height) = self.process_row(head.clone(), y_line_mm, &cell_widths)?;
 
                 if y_line_mm + header_height + max_height > y_bottom_mm {
                     // If the header row exceeds the page height, we need to create a new page
@@ -837,7 +825,7 @@ impl Table {
 
                 for row in tail.iter() {
                     let (cols, max_height) =
-                        self.process_row(row.clone(), y_line_mm, &cell_widths, base_pdf)?;
+                        self.process_row(row.clone(), y_line_mm, &cell_widths)?;
 
                     // Check if the next row will exceed the page height
                     // If it does, create a new page and reset the y_line_mm
@@ -1302,6 +1290,145 @@ mod tests {
     // Column width resolution
     //
 
+    /// A table at `x` with the declared width, resolved against a page with the
+    /// given horizontal padding.
+    fn table_at(x: f32, width: f32) -> Table {
+        let mut json = create_test_table_schema_with_widths(vec![
+            JsonColumnWidth::Text("10%".into()),
+            JsonColumnWidth::Text("50%".into()),
+            JsonColumnWidth::Text("20%".into()),
+            JsonColumnWidth::Text("20%".into()),
+        ]);
+        json.position.x = x;
+        json.width = width;
+        let font_map = create_real_test_font_map();
+        Table::from_json(json, &font_map).expect("table should parse")
+    }
+
+    fn page_with_horizontal_padding(left: f32, right: f32) -> BasePdf {
+        BasePdf {
+            width: Mm(210.0),
+            height: Mm(297.0),
+            padding: Frame {
+                top: Mm(0.0),
+                right: Mm(right),
+                bottom: Mm(0.0),
+                left: Mm(left),
+            },
+            static_schema: vec![],
+        }
+    }
+
+    /// The x each header cell is actually laid out at.
+    fn header_cell_xs(table: &Table, base_pdf: &BasePdf) -> Vec<f32> {
+        let cell_widths = table.resolve_column_widths(base_pdf);
+        let (cells, _) = table.create_header_row(Mm(0.0), &cell_widths).unwrap();
+        cells.iter().map(|c| c.get_base_copy().x.0).collect()
+    }
+
+    fn total_width(table: &Table, base_pdf: &BasePdf) -> f32 {
+        table
+            .resolve_column_widths(base_pdf)
+            .iter()
+            .map(|w| w.0)
+            .sum()
+    }
+
+    #[test]
+    fn declared_x_is_never_rewritten() {
+        // Whether the table starts left of, at, or right of the page padding,
+        // `position.x` is an absolute coordinate and must survive untouched.
+        let base_pdf = page_with_horizontal_padding(20.0, 10.0);
+
+        for x in [0.0, 10.0, 20.0, 35.0] {
+            let table = table_at(x, 100.0);
+            let xs = header_cell_xs(&table, &base_pdf);
+            assert!(
+                (xs[0] - x).abs() < 1e-3,
+                "declared x={x} but first cell landed at {}",
+                xs[0]
+            );
+        }
+    }
+
+    #[test]
+    fn left_padding_does_not_move_or_resize_the_table() {
+        // Nothing horizontal keys off `padding.left` any more.
+        let table = table_at(10.0, 190.0);
+
+        let narrow = page_with_horizontal_padding(0.0, 10.0);
+        let wide = page_with_horizontal_padding(50.0, 10.0);
+
+        assert_eq!(
+            header_cell_xs(&table, &narrow),
+            header_cell_xs(&table, &wide)
+        );
+        assert!((total_width(&table, &narrow) - total_width(&table, &wide)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn right_padding_shrinks_the_width_without_moving_x() {
+        let table = table_at(10.0, 190.0);
+
+        let roomy = page_with_horizontal_padding(0.0, 10.0);
+        let tight = page_with_horizontal_padding(0.0, 60.0);
+
+        assert_eq!(header_cell_xs(&table, &roomy)[0], 10.0);
+        assert_eq!(header_cell_xs(&table, &tight)[0], 10.0);
+
+        // 210 - 60 - 10 = 140mm available, down from the declared 190mm.
+        assert!((total_width(&table, &roomy) - 190.0).abs() < 1e-3);
+        assert!((total_width(&table, &tight) - 140.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn declared_width_is_kept_when_it_reaches_the_right_boundary() {
+        // templates/quote.json: x=10, width=190 on a 210mm page with 10mm right
+        // padding — exactly filling the space, so nothing may shrink it.
+        let table = table_at(10.0, 190.0);
+        let base_pdf = page_with_horizontal_padding(20.0, 10.0);
+
+        assert_eq!(header_cell_xs(&table, &base_pdf)[0], 10.0);
+        assert!((total_width(&table, &base_pdf) - 190.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn an_overflowing_table_shrinks_instead_of_sliding_left() {
+        // The old behaviour slid x left to make the declared width fit. Width is
+        // a maximum; the position is not negotiable.
+        let table = table_at(50.0, 190.0);
+        let base_pdf = page_with_horizontal_padding(0.0, 10.0);
+
+        assert_eq!(header_cell_xs(&table, &base_pdf)[0], 50.0);
+        // 210 - 10 - 50 = 150mm available.
+        assert!((total_width(&table, &base_pdf) - 150.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn a_table_starting_past_the_right_boundary_has_no_width() {
+        let table = table_at(205.0, 190.0);
+        let base_pdf = page_with_horizontal_padding(0.0, 10.0);
+
+        assert_eq!(total_width(&table, &base_pdf), 0.0);
+    }
+
+    #[test]
+    fn header_and_body_rows_start_at_the_same_x() {
+        // Header and body compute their own x; they must not drift apart.
+        let base_pdf = page_with_horizontal_padding(20.0, 10.0);
+        let table = table_at(10.0, 190.0);
+        let cell_widths = table.resolve_column_widths(&base_pdf);
+
+        let (header, _) = table.create_header_row(Mm(0.0), &cell_widths).unwrap();
+        let row = vec!["a".into(), "b".into(), "c".into(), "d".into()];
+        let (body, _) = table.process_row(row, Mm(0.0), &cell_widths).unwrap();
+
+        let header_xs: Vec<f32> = header.iter().map(|c| c.get_base_copy().x.0).collect();
+        let body_xs: Vec<f32> = body.iter().map(|c| c.get_base_copy().x.0).collect();
+        assert_eq!(header_xs, body_xs);
+        assert_eq!(header_xs[0], 10.0);
+    }
+
     #[test]
     fn percent_columns_divide_the_table_width() {
         let widths = resolve_widths(vec!["70%", "15%", "15%"]);
@@ -1458,12 +1585,15 @@ mod tests {
     }
 
     #[test]
-    fn table_width_is_capped_by_the_page_padding() {
+    fn available_width_spans_from_x_to_the_right_boundary() {
+        // The fixture sits at x=10 on a 210mm page with 20mm of padding on each
+        // side. Available is 210 - 20 (right) - 10 (x) = 180mm, capping the
+        // table's declared 190mm. `padding.left` must not be subtracted as well
+        // — doing so would leave 170mm and shrink a table it never displaced.
         let json = create_test_table_schema_with_widths(vec![JsonColumnWidth::Text("100%".into())]);
         let font_map = create_real_test_font_map();
         let table = Table::from_json(json, &font_map).unwrap();
 
-        // 210 - 20 - 20 = 170mm available, less than the table's own 190mm.
         let base_pdf = BasePdf {
             width: Mm(210.0),
             height: Mm(297.0),
@@ -1477,7 +1607,7 @@ mod tests {
         };
 
         let widths = table.resolve_column_widths(&base_pdf);
-        assert!((widths[0].0 - 170.0).abs() < 1e-3, "got {}", widths[0].0);
+        assert!((widths[0].0 - 180.0).abs() < 1e-3, "got {}", widths[0].0);
     }
 
     #[test]
@@ -1687,14 +1817,8 @@ mod tests {
         let json = create_text_table_schema(None, None, None, None);
         let table = Table::from_json(json, &font_map).unwrap();
         let cell_widths = vec![Mm(100.0)];
-        let base_pdf = create_base_pdf();
         let (schemas, _) = table
-            .process_row(
-                vec!["Body Value".to_string()],
-                Mm(0.0),
-                &cell_widths,
-                &base_pdf,
-            )
+            .process_row(vec!["Body Value".to_string()], Mm(0.0), &cell_widths)
             .unwrap();
 
         match &schemas[0] {
@@ -1709,14 +1833,8 @@ mod tests {
         let json = create_text_table_schema(None, None, Some("char"), Some("word"));
         let table = Table::from_json(json, &font_map).unwrap();
         let cell_widths = vec![Mm(100.0)];
-        let base_pdf = create_base_pdf();
         let (schemas, _) = table
-            .process_row(
-                vec!["Body Value".to_string()],
-                Mm(0.0),
-                &cell_widths,
-                &base_pdf,
-            )
+            .process_row(vec!["Body Value".to_string()], Mm(0.0), &cell_widths)
             .unwrap();
 
         match &schemas[0] {

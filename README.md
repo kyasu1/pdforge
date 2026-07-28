@@ -307,6 +307,10 @@ Example:
 }
 ```
 
+**Table Position and Width**: a table's `position.x` is an absolute page coordinate and is never adjusted — `basePdf.padding` does not move it. The table's `width` is a **maximum**: if `x + width` would cross `page width - basePdf.padding.right`, the width is trimmed to that boundary rather than the table being slid left.
+
+`basePdf.padding` is not a uniform page margin. `top` and `bottom` bound pagination (where flowing content resumes on a new page, and where it must break); `right` bounds a table's maximum width; `left` is not consulted by any schema.
+
 **Column Widths**: each entry in `columns` declares its own `width`:
 
 | Notation | Example | Meaning |

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- A table's `position.x` was silently raised to `basePdf.padding.left` and its available width was computed as `page width - padding.left - padding.right`, ignoring where the table actually starts. A table declared at `x: 10` on a page with `padding: [10, 10, 20, 20]` rendered at `x: 20` with its width cut from 190mm to 180mm. `position.x` is now honoured as the absolute coordinate it is, and the available width spans from `x` to `page width - padding.right`.
+
+  This aligns the horizontal axis with what the rest of the library already did: every other schema type uses `position.x` directly, and a table's first page already used `position.y` directly.
+
+  A table wider than the space remaining to its right no longer slides left to fit — its `width` is a maximum and is trimmed to the right boundary instead. Templates that relied on being pushed rightwards to `padding.left`, or on the leftward slide, will render differently.
+
+### Changed
+- `basePdf.padding` is documented per side rather than as a uniform page margin: `top`/`bottom` bound pagination, `right` bounds a table's maximum width, and `left` is not consulted by any schema. The field is retained for the 4-element array shape; it does not provide a default horizontal position.
+
 ## [0.15.0] - 2026-07-28
 
 ### Fixed
