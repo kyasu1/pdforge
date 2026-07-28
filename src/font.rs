@@ -247,15 +247,11 @@ impl FontSpec {
             return 0.0;
         }
 
-        // Space deliberately goes through the same `hmtx` lookup as every other
-        // character. `ParsedFont::space_width` is not authoritative here: for
-        // byte-parsed faces upstream computes it inside `from_bytes_internal`,
-        // before the source bytes are attached, so `hmtx` is unreadable and it
-        // caches `Some(0)`. A 0 here fell through to the tofu width in
-        // `width_of_text_at_size`, over-measuring spaces and wrapping lines
-        // before the box was full. `get_horizontal_advance` is what the
-        // renderer draws with, so measuring through it keeps
-        // "measured width == drawn width" true on every construction path.
+        // Space is not special-cased: `ParsedFont::space_width` is unreliable
+        // for byte-parsed faces (upstream can cache it as 0 before `hmtx` is
+        // attached), so space goes through the same `lookup_glyph_index` ->
+        // `get_horizontal_advance` lookup as every other character — the
+        // metric the renderer actually draws with.
         self.font
             .lookup_glyph_index(ch as u32)
             .map(|glyph_index| self.font.get_horizontal_advance(glyph_index))
@@ -930,6 +926,42 @@ mod tests {
             .unwrap();
 
         assert_eq!(lines, vec![text.to_string()]);
+    }
+
+    #[test]
+    fn every_supported_char_is_measured_at_its_hmtx_advance() {
+        // Guards against a future special case (e.g. for `\t`, U+3000, or
+        // NBSP) reintroducing the tofu-fallback bug this branch fixed for
+        // ASCII space: every character the test font maps must measure at
+        // exactly its `hmtx` advance, with no exceptions.
+        let font = test_font();
+        let spec = test_font_spec(LineBreakMode::Char);
+        let font_size = Pt(10.0);
+        let mut checked = 0;
+
+        for ch in " !#0Aa,.-/()\t\u{00A0}".chars().chain("　あ亜ー漢".chars()) {
+            if font.lookup_glyph_index(ch as u32).is_none() {
+                continue;
+            }
+
+            let s = ch.to_string();
+            let expected = hmtx_width_of(&font, &s, font_size);
+            let actual = spec.width_of_text_at_size(&s, font_size, Pt(0.0)).unwrap();
+
+            assert!(
+                (actual.0 - expected.0).abs() < 1e-4,
+                "{ch:?}: {} vs {}",
+                actual.0,
+                expected.0
+            );
+            checked += 1;
+        }
+
+        assert!(
+            checked > 0,
+            "no character in the table has a glyph in the test font; this test \
+             would silently pass even if space regressed"
+        );
     }
 
     #[test]
