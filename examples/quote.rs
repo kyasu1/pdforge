@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (
             "ガジェット アップル スマートフォン MHRP4J/A F27W4CNVQ5 iPhone 17e, White, 256GB 350870650569421 N",
             "95,000",
-            "80",
+            "80,000",
         ),
     ];
 
