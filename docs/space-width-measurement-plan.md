@@ -35,7 +35,7 @@ if ch == ' ' {
 
 > During `from_bytes_internal` the source bytes are not attached yet, so `hmtx` is unreadable and `get_space_width_internal` reads back 0
 
-※ これは「あらゆる `ParsedFont` で常に 0」という意味ではない。mock-backed な `ParsedFont` は `MockFont::with_space_width`（`azul-layout-0.0.12/src/font.rs:98`）で非0を返せるし、`printpdf::ParsedFont` は `from_azul` と `DerefMut`（`printpdf-0.12.3/src/font.rs:55,155`）を公開しているので構築・変更経路自体は存在する。ただし **どの経路であれ描画で使われるのは `get_horizontal_advance` の値**（mock でも `glyph_advances` を引く、`azul-layout-0.0.12/src/font.rs:2029`）なので、計測もそちらを正とするのが正しい。
+※ これは「あらゆる `ParsedFont` で常に 0」という意味ではない。mock-backed な `ParsedFont` は `MockFont::with_space_width`（`azul-layout-0.0.12/src/font.rs:98`）で非0を返せるし、`printpdf::ParsedFont` は `from_azul` と `DerefMut`（`printpdf-0.12.3/src/font.rs:55,155`）を公開しているので構築・変更経路自体は存在する。ただし pdforge は azul の描画パス（mock 経由の `glyph_advances`）を一切使わない。**実際に PDF へ出る幅は printpdf の `/W` 配列生成コード**（`printpdf-0.12.3/src/serialize.rs:1663-1672`、`get_scaled_glyph_width` が `get_or_decode_glyph(gid).horz_advance` を読む）**が起点であり、そこから `azul-layout-0.0.12/src/font.rs:1769`（`decode_glyph_inner` が `get_horizontal_advance` の戻り値を `horz_advance` にセットする）に行き着く**。計測もこの `get_horizontal_advance` を正とするのが正しい。
 
 `space_width` が `0` を返すと `width_of_text_at_size` (`src/font.rs:422-426`) の
 
@@ -82,7 +82,8 @@ total:               ours 259.830  pdf 248.790  diff +11.040
 |---|---|---|
 | `src/font.rs:245-259` | 1文字あたりの advance 取得 | スペース専用分岐を削除。`space_width` を使わない理由をコメントで残す |
 | `src/font.rs:807-` (`mod tests`) | 計測・折り返しの単体テスト | ヘルパ `hmtx_width_of` を追加し、テストを**計4本**追加（直接計測2本 + 折り返し E2E 2本） |
-| `examples/quote.rs:51-52` | 動作確認用サンプルデータ | 文字列リテラル中に紛れ込んだ改行の除去（Task 2・別原因、任意） |
+| `examples/quote.rs` | 動作確認用サンプルデータ | セル折り返しを目視確認するため、和文・英数字混在の長い商品名サンプルを1件追加（Task 2・別原因、任意） |
+| `CHANGELOG.md` | プロジェクトの変更履歴（Keep a Changelog） | `## [Unreleased]` に `### Fixed` エントリを追加。当初のこのプランに欠けていた項目で、そのままレビュー指摘（Finding 1）につながった |
 
 ---
 
@@ -243,7 +244,7 @@ Expected: 追加した4本すべて FAIL。
     }
 ```
 
-> `space_width` が非0の場合に備えた分岐は**あえて残さない**。mock-backed な face でも描画側は `glyph_advances` を引く（`azul-layout-0.0.12/src/font.rs:2029`）ため、`space_width` と `glyph_advances` が食い違う場合は後者が正。production コードに分岐を残す理由にならない。
+> `space_width` が非0の場合に備えた分岐は**あえて残さない**。pdforge の出力に実際に反映される advance は printpdf の `/W` 配列生成（`printpdf-0.12.3/src/serialize.rs:1663-1672` → `get_or_decode_glyph(gid).horz_advance`）経由で `azul-layout-0.0.12/src/font.rs:1769`（`get_horizontal_advance` の戻り値を `horz_advance` にセットする箇所）に行き着く。`space_width` と `get_horizontal_advance` が食い違う場合は後者が正。production コードに分岐を残す理由にならない。
 
 - [ ] **Step 4: テストを実行して成功を確認する**
 
@@ -270,34 +271,32 @@ git commit -m "fix: measure spaces with the font's hmtx advance instead of the t
 
 ---
 
-### Task 2: `examples/quote.rs` の文字列リテラルに混入した改行を除去する（任意・独立）
+### Task 2: `examples/quote.rs` に長い混在スクリプトのサンプル行を追加する（任意・独立）
 
 **Files:**
-- Modify: `examples/quote.rs:51-52`
+- Modify: `examples/quote.rs`（`sample_items` 配列）
 
 **Interfaces:**
 - Consumes: なし
 - Produces: なし
 
-**これはライブラリの不具合ではなく、Task 1 とは別原因。** サンプルデータ側の貼り付け事故である。`split_text_to_size` (`src/font.rs:323`) は `content.lines()` で段落分割するため、リテラル中の生の改行はそこで強制改行になり、PDF 上で `... F27W4` / `CNVQ5 iPhone 17e, W` / `hite, 256GB ...` と不自然に切れる。ハード改行の挙動を意図的に確認するためのデータであればこのタスクはスキップしてよい。Task 1 とは必ず別コミットにする。
+**これはライブラリの不具合修正ではなく、Task 1 とは別目的のサンプルデータ追加。** 既存の `sample_items` には和文のみ・英数字のみの短い行しかなく、セルの折り返し（特に和文と半角英数字が混在し、スペースを挟む行）を目視確認しづらい。そこで商品名・買取査定・質入査定の3項目からなる行を1件追加し、折り返し境界を目視で確認できるようにする。
 
-- [ ] **Step 1: 現状を確認する**
+文字列リテラル中に生の改行を書くと `split_text_to_size` (`src/font.rs:328`、`content.lines()` で段落分割) がそこを強制改行として扱ってしまうため、追加する商品名は必ず1つのソース行に収める。Task 1 とは必ず別コミットにする。
 
-```bash
-sed -n '51,52p' examples/quote.rs
-```
+- [ ] **Step 1: 追加する行を決める**
 
-Expected: 文字列リテラルが `iPhone 17e, W` で改行され、次行が `hite, 256GB ...` から始まっている。
+既存行に倣い、商品名・買取査定・質入査定の3要素タプルを用意する。商品名は和文・型番・英字・数字が混在し、スペースを複数含む長い文字列にする（折り返しがスペースの計測誤差に最も敏感な形）。
 
-- [ ] **Step 2: 改行を除去する**
+- [ ] **Step 2: サンプル行を追加する**
 
-`examples/quote.rs:51-52` を次に置き換える。
+`examples/quote.rs` の `sample_items` 配列末尾（`("シャネル ピアス", ...)` の次）に次を追加する。商品名は1ソース行のまま（生の改行を入れない）。
 
 ```rust
         (
             "ガジェット アップル スマートフォン MHRP4J/A F27W4CNVQ5 iPhone 17e, White, 256GB 350870650569421 N",
             "95,000",
-            "80",
+            "80,000",
         ),
 ```
 
@@ -307,13 +306,28 @@ Expected: 文字列リテラルが `iPhone 17e, W` で改行され、次行が `
 cargo run --example quote
 ```
 
-Expected: `Quote PDF generated successfully at ./examples/pdf/quote.pdf`。生成物の 11 行目に `W` / `hite` の分断がないこと。
+Expected: `Quote PDF generated successfully at ./examples/pdf/quote.pdf`。追加行のセルが1ソース行のまま自然に折り返され、`W` / `hite` のような不自然な分断がないこと。
 
 - [ ] **Step 4: コミット**
 
 ```bash
 git add examples/quote.rs
-git commit -m "fix(examples): remove a stray newline inside a quote sample item name"
+git commit -m "chore(examples): add a long mixed-script sample item to exercise cell wrapping"
+```
+
+- [ ] **Step 5: 質入査定の値を他行の書式に合わせて修正する**
+
+他の全行は質入査定を桁区切りカンマ付き（例: `"80,000"`）で書いているが、Step 2 の時点で `"80"` は typo として入り得る（実際にこの過程で一度混入した）。他行と揃っているか確認し、ずれていれば直す。
+
+```bash
+grep -n '"80"' examples/quote.rs
+```
+
+該当があれば `"80,000"` に置き換え、別コミットにする。
+
+```bash
+git add examples/quote.rs
+git commit -m "chore(examples): use comma-grouped thousands for the new sample item's pawn value"
 ```
 
 ---
