@@ -937,6 +937,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Recent Changes
 
+### Version 0.17.0
+- **Space Width Measurement (behavior change)**: the half-width space was measured at the 500-unit tofu (replacement-glyph) width rather than the font's real `hmtx` advance, because `ParsedFont::space_width` reads back `0` for every byte-parsed face. Any line containing spaces measured wider than it would draw and wrapped before its box was full — roughly 2.76pt of phantom width per space at 10pt with NotoSansJP. Space width now comes from the same `hmtx` advance the renderer draws from. Existing templates whose text contains spaces will re-flow: more text fits per line, so row heights shrink, page breaks move, and vertical/horizontal alignment and dynamic font sizing shift with the corrected width.
+
 ### Version 0.16.0
 - **Table Horizontal Position (behavior change)**: a table's `position.x` was silently raised to `basePdf.padding.left`, and its available width was computed from the page padding rather than from where the table starts — a table at `x: 10` with `padding: [10, 10, 20, 20]` rendered at `x: 20`, 180mm wide instead of 190mm. `position.x` is now honoured as an absolute coordinate, matching every other schema type and the table's own vertical axis. `width` is a maximum, trimmed to `page width - padding.right` rather than the table being slid left. Templates that relied on the old clamping will render differently.
 - **`basePdf.padding` semantics documented per side**: `top`/`bottom` bound pagination, `right` bounds a table's maximum width, `left` is not consulted by any schema.
