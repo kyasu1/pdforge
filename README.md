@@ -937,6 +937,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Recent Changes
 
+### Version 0.16.0
+- **Table Horizontal Position (behavior change)**: a table's `position.x` was silently raised to `basePdf.padding.left`, and its available width was computed from the page padding rather than from where the table starts — a table at `x: 10` with `padding: [10, 10, 20, 20]` rendered at `x: 20`, 180mm wide instead of 190mm. `position.x` is now honoured as an absolute coordinate, matching every other schema type and the table's own vertical axis. `width` is a maximum, trimmed to `page width - padding.right` rather than the table being slid left. Templates that relied on the old clamping will render differently.
+- **`basePdf.padding` semantics documented per side**: `top`/`bottom` bound pagination, `right` bounds a table's maximum width, `left` is not consulted by any schema.
+
 ### Version 0.15.0
 - **Table Column Widths (breaking)**: `headWidthPercentages` is gone; column definitions are unified under `columns[]`, each entry carrying `width`, `header`, and `cell` (the `columns[].schema` wrapper is removed). A column's `width` now accepts fixed millimetres (`25`, `"25mm"`), percentages (`"20%"`), and leftover shares (`"2fr"`, `"fr"`). Percentages no longer have to sum to 100. Rows whose cell count does not match the column count are rejected at parse time instead of panicking mid-render. See [CHANGELOG.md](CHANGELOG.md) for the migration example.
 - **Text Height Measurement**: `Text::get_height` wrapped text at the full element width while rendering wraps at the width minus horizontal padding, so padded elements that wrapped were measured too short — padded table cells in narrow columns drew text outside their cell, and page breaks were decided from the wrong height. Dynamic font sizing (`fontSize: { min, max, fit }`) had the same defect and picked sizes that overflowed. Both now measure against the padded box.

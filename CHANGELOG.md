@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-07-28
+
 ### Fixed
 - A table's `position.x` was silently raised to `basePdf.padding.left` and its available width was computed as `page width - padding.left - padding.right`, ignoring where the table actually starts. A table declared at `x: 10` on a page with `padding: [10, 10, 20, 20]` rendered at `x: 20` with its width cut from 190mm to 180mm. `position.x` is now honoured as the absolute coordinate it is, and the available width spans from `x` to `page width - padding.right`.
 
@@ -63,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Column widths are resolved in `f64` and converted to `f32` once at the end, so a table whose percentages sum to 100 no longer risks tipping into the overflow path on rounding alone.
 - Column `width` values must be positive and no larger than `f32::MAX`. `0fr` divided by zero, a zero-width column wraps text to one grapheme cluster per line, and values that are finite individually can still sum to infinity during resolution — two `1e308fr` columns yielded `NaN` widths.
 - Whitespace between a width's number and its suffix is rejected (`"20 %"`); only whitespace around the whole value is ignored.
+
 ## [0.14.0] - 2026-07-26
 
 ### Added
