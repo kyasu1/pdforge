@@ -3,7 +3,7 @@ use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schem
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder, Luma};
-use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
+use printpdf::{Mm, Op, PdfDocument, Px, RawImage, XObjectRotation};
 use serde::Deserialize;
 use snafu::ResultExt;
 
@@ -134,13 +134,13 @@ impl QrCode {
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
-        let qrcode_width = Px(256);
-
         let code =
             qrcode::QrCode::new(&self.content).whatever_context("Failed to create a QR code")?;
         let luma: image::ImageBuffer<Luma<u8>, Vec<u8>> = code.render::<Luma<u8>>().build();
         let w = luma.width();
         let h = luma.height();
+
+        let qrcode_width = Px(w as usize);
 
         let mut buf: Vec<u8> = Vec::new();
         let encoder: PngEncoder<&mut Vec<u8>> = PngEncoder::new(&mut buf);
@@ -184,7 +184,15 @@ impl QrCode {
         // 新しい基本スキーマを一時的に作成して、正しい位置に変換行列を取得
         let temp_base = BaseSchema::new(self.base.name.clone(), x, y, qr_width, qr_height);
 
-        let transform = temp_base.get_matrix(parent_height, Some(qrcode_width));
+        // 回転中心は画像の実サイズの中心 (w/2, h/2)
+        let rotation: Option<XObjectRotation> = self.rotate.map(|angle_deg| XObjectRotation {
+            angle_ccw_degrees: angle_deg,
+            rotation_center_x: Px(w as usize / 2),
+            rotation_center_y: Px(h as usize / 2),
+        });
+
+        let transform =
+            temp_base.get_matrix_with_rotation(parent_height, Some(qrcode_width), rotation);
 
         let ops = vec![
             Op::SaveGraphicsState,
@@ -202,6 +210,10 @@ impl QrCode {
 
     pub fn set_bounding_box(&mut self, bounding_box: BoundingBox) {
         self.bounding_box = Some(bounding_box);
+    }
+
+    pub fn set_rotate(&mut self, rotate: f32) {
+        self.rotate = Some(rotate);
     }
 
     pub fn set_x(&mut self, x: Mm) {

@@ -1,4 +1,4 @@
-use printpdf::{Mm, Px, XObjectTransform};
+use printpdf::{Mm, Px, XObjectRotation, XObjectTransform};
 
 #[derive(Debug, Clone)]
 pub struct BaseSchema {
@@ -21,6 +21,15 @@ impl BaseSchema {
     }
 
     pub fn get_matrix(&self, page_height: Mm, original_width: Option<Px>) -> XObjectTransform {
+        self.get_matrix_with_rotation(page_height, original_width, None)
+    }
+
+    pub fn get_matrix_with_rotation(
+        &self,
+        page_height: Mm,
+        original_width: Option<Px>,
+        rotation: Option<XObjectRotation>,
+    ) -> XObjectTransform {
         let dpi: f32 = 300.0;
         let ratio: f32 = match original_width {
             Some(original_width) => dpi / 25.4 / (original_width.0 as f32),
@@ -30,7 +39,7 @@ impl BaseSchema {
         XObjectTransform {
             translate_x: Some(self.x.into()),
             translate_y: Some((page_height - self.y - self.height).into()),
-            rotate: None,
+            rotate: rotation,
             scale_x: Some(ratio * self.width.0),
             scale_y: Some(ratio * self.height.0),
             dpi: Some(dpi),
