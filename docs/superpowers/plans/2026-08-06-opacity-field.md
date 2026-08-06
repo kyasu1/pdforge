@@ -238,25 +238,27 @@ fn rect_without_opacity_registers_nothing() {
 #[test]
 fn rect_opacity_scope_restores_before_next_element() {
     // Same buffer: an opacity element followed by a plain element. The first
-    // element's outer Restore must come before the second element draws, so the
-    // alpha does not leak.
+    // element's wrapper must close with its outer RestoreGraphicsState as the
+    // very last op of that render, immediately before the second element draws,
+    // so the alpha does not leak into the opaque element.
     let mut doc = PdfDocument::new("opacity_test");
     let mut buffer = OpBuffer::default();
     render_rect_into(Some(0.5), &mut doc, &mut buffer);
+    let first_element_len = buffer.buffer[0].len();
     render_rect_into(None, &mut doc, &mut buffer);
 
     let ops = &buffer.buffer[0];
-    let first_restore = ops
+    // The opacity element's wrapper ends with its outer RestoreGraphicsState...
+    assert!(matches!(
+        ops[first_element_len - 1],
+        Op::RestoreGraphicsState
+    ));
+    // ...and the opaque second element starts immediately after, drawing no
+    // ExtGState of its own (its first op is the inner draw's SaveGraphicsState).
+    assert!(matches!(ops[first_element_len], Op::SaveGraphicsState));
+    assert!(ops[first_element_len..]
         .iter()
-        .position(|op| matches!(op, Op::RestoreGraphicsState))
-        .expect("opacity element must restore graphics state");
-    // Nothing after the first element's Restore loads an ExtGState: the second,
-    // opaque element draws with no alpha.
-    assert!(
-        ops[first_restore + 1..]
-            .iter()
-            .all(|op| !matches!(op, Op::LoadGraphicsState { .. }))
-    );
+        .all(|op| !matches!(op, Op::LoadGraphicsState { .. })));
 }
 ```
 
@@ -452,7 +454,7 @@ Run: `cargo build 2>&1 | grep -E "^warning" | grep -c opacity`
 Expected: `0` (both "field `opacity` is never read" warnings are gone; the other 5 unrelated warnings remain).
 
 Run: `cargo test 2>&1 | grep -E "test result"`
-Expected: all suites pass; `opacity_test` shows 5 passed; total = 156 baseline + 5 integration + 2 unit = 163 passing.
+Expected: all suites pass; `opacity_test` shows 5 passed; total = 156 baseline + 3 unit + 5 integration = 164 passing.
 
 - [ ] **Step 5: Commit**
 
