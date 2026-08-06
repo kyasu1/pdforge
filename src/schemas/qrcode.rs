@@ -1,5 +1,8 @@
 use super::{Alignment, BoundingBox, Frame, VerticalAlignment};
-use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
+use crate::schemas::{
+    base::{BaseSchema, XOBJECT_DPI},
+    Error, HasBaseSchema, JsonPosition, Schema,
+};
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder, Luma};
@@ -157,9 +160,17 @@ impl QrCode {
         let image_x_object_id = doc.add_image(&image);
 
         // QRコードの実際のサイズを計算
+        // QRコードの縦横比は常に1:1。指定サイズと有効ボックスの両方に
+        // 収まる正方形とし、回転時も内容物のサイズを変えない。
         let (box_width, box_height) = self.get_effective_box_size();
-        let qr_width = self.base.width;
-        let qr_height = self.base.height;
+        let qr_side = self
+            .base
+            .width
+            .min(self.base.height)
+            .min(box_width)
+            .min(box_height);
+        let qr_width = qr_side;
+        let qr_height = qr_side;
 
         // 配置オフセットを計算
         let x_offset = self.calculate_horizontal_offset(box_width, qr_width);
@@ -184,11 +195,14 @@ impl QrCode {
         // 新しい基本スキーマを一時的に作成して、正しい位置に変換行列を取得
         let temp_base = BaseSchema::new(self.base.name.clone(), x, y, qr_width, qr_height);
 
-        // 回転中心は画像の実サイズの中心 (w/2, h/2)
+        // printpdf applies the image and layout scales before this pivot. Convert
+        // the center of the final QR square back to pixels at the transform DPI;
+        // using the source image's w/2,h/2 here would move a rotated, scaled QR.
+        let rotation_center = Px((qr_side.0 * XOBJECT_DPI / 25.4 / 2.0).round().max(0.0) as usize);
         let rotation: Option<XObjectRotation> = self.rotate.map(|angle_deg| XObjectRotation {
             angle_ccw_degrees: angle_deg,
-            rotation_center_x: Px(w as usize / 2),
-            rotation_center_y: Px(h as usize / 2),
+            rotation_center_x: rotation_center,
+            rotation_center_y: rotation_center,
         });
 
         let transform =

@@ -136,15 +136,22 @@ XObjectTransform {
 
 ### Code Change (`src/schemas/qrcode.rs::render()`)
 
-Apply rotation **after** alignment + padding placement. Use actual QR image dimensions `w/h` for rotation center:
+Apply rotation **after** alignment + padding placement. `printpdf` composes the
+image and layout scales before applying the pivot, so express the center of the
+final QR square as pixels at the transform DPI:
 
 ```rust
 use printpdf::{XObjectTransform, XObjectRotation};
 
+let rotation_center = Px(
+    (qr_side.0 * XOBJECT_DPI / 25.4 / 2.0)
+        .round()
+        .max(0.0) as usize,
+);
 let rotation: Option<XObjectRotation> = self.rotate.map(|angle_deg| XObjectRotation {
     angle_ccw_degrees: angle_deg,
-    rotation_center_x: Px(w as usize / 2),
-    rotation_center_y: Px(h as usize / 2),
+    rotation_center_x: rotation_center,
+    rotation_center_y: rotation_center,
 });
 
 let transform = temp_base.get_matrix_with_rotation(parent_height, Some(qrcode_width), rotation);
@@ -152,7 +159,7 @@ let transform = temp_base.get_matrix_with_rotation(parent_height, Some(qrcode_wi
 
 **Key properties:**
 
-- `rotation_center_x/y` in image pixel coordinates; `Px(w as usize / 2)` and `Px(h as usize / 2)` place pivot at image center
+- `rotation_center_x/y` represent the final rendered QR center converted to pixels at `XOBJECT_DPI`; using the source image center would shift a scaled QR during rotation
 - `Px(pub usize)` requires `usize`, not `f32`
 - Rotation logic centralized in `BaseSchema::get_matrix_with_rotation()`
 - Image/SVG rotation support is just: add `rotate` field, compute rotation from image w/h, pass to `get_matrix_with_rotation()`
@@ -167,7 +174,7 @@ let transform = temp_base.get_matrix_with_rotation(parent_height, Some(qrcode_wi
 
 2. **Auto-tests (REQUIRED)**:
    - `rotate: None` → `Op::UseXobject.transform.rotate == None` (identical to current no-rotation behavior)
-   - `rotate: 90` → `transform.rotate` center set to actual image center `(w/2, h/2)` (w/h from generated QR, e.g. 264 → 132)
+   - `rotate: 90` → the final CTM has the same bounds as the unrotated QR at the same position and size
    - `get_matrix()` keeps original 2-arg signature; `get_matrix_with_rotation(.., None)` matches original
    - Rotation direction matches Group/Rect direction at same angle
    - Scale regression: with `original_width` = intrinsic image width, `scale_x` matches `300/25.4/w*width`
@@ -186,7 +193,10 @@ Tests QR codes in table cells with observable padding and different alignment va
 Uses current `JsonTableSchema` structure:
 - `JsonFrame` is object form `{top, right, bottom, left}`, not array `[..]`
 - Each QR cell has directly specified content and padding; bodyStyles.padding is NOT inherited by QR cells
-- First column uses height=60 QR to set row max height, so subsequent height=40 QRs have visible whitespace for padding/alignment verification
+- First column uses height=60 to set the row height while every QR renders as a
+  40 mm square; the remaining whitespace makes vertical alignment observable
+- Rotated cells use 2 mm padding, which fits around the 40 mm QR without changing
+  its rendered size
 - table height=100 < page height=150
 
 ```jsonc
@@ -243,13 +253,13 @@ Uses current `JsonTableSchema` structure:
         "columns": [
           {
             "width": "3fr",
-            "header": { "content": "no rotate (60)" },
+            "header": { "content": "no rotate (40 square)" },
             "cell": {
               "type": "qrCode",
               "name": "no_rotate",
               "content": "qr_rotate_test_no_rotate",
               "position": { "x": 0, "y": 0 },
-              "width": 45,
+              "width": 40,
               "height": 60,
               "alignment": "center",
               "verticalAlignment": "middle"
@@ -257,64 +267,64 @@ Uses current `JsonTableSchema` structure:
           },
           {
             "width": "3fr",
-            "header": { "content": "rotate: 30 center" },
+            "header": { "content": "rotate: 30 (40 square)" },
             "cell": {
               "type": "qrCode",
               "name": "rotated_30_center",
               "content": "qr_rotate_test_30_center",
               "position": { "x": 0, "y": 0 },
-              "width": 30,
+              "width": 40,
               "height": 40,
               "rotate": 30,
               "alignment": "center",
               "verticalAlignment": "middle",
               "padding": {
-                "top": 8,
-                "right": 8,
-                "bottom": 8,
-                "left": 8
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
               }
             }
           },
           {
             "width": "3fr",
-            "header": { "content": "rotate: 90 top" },
+            "header": { "content": "rotate: 90 top (40)" },
             "cell": {
               "type": "qrCode",
               "name": "rotated_90_top",
               "content": "qr_rotate_test_90_top",
               "position": { "x": 0, "y": 0 },
-              "width": 30,
+              "width": 40,
               "height": 40,
               "rotate": 90,
               "alignment": "left",
               "verticalAlignment": "top",
               "padding": {
-                "top": 8,
-                "right": 8,
-                "bottom": 8,
-                "left": 8
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
               }
             }
           },
           {
             "width": "3fr",
-            "header": { "content": "rotate: 90 bottom" },
+            "header": { "content": "rotate: 90 bottom (40)" },
             "cell": {
               "type": "qrCode",
               "name": "rotated_90_bottom",
               "content": "qr_rotate_test_90_bottom",
               "position": { "x": 0, "y": 0 },
-              "width": 30,
+              "width": 40,
               "height": 40,
               "rotate": 90,
               "alignment": "left",
               "verticalAlignment": "bottom",
               "padding": {
-                "top": 8,
-                "right": 8,
-                "bottom": 8,
-                "left": 8
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
               }
             }
           }
@@ -360,7 +370,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Auto-test covering:
 - `rotate: None` → transform unchanged (no rotation applied)
-- `rotate: Some(90.0)` → transform has `rotate: Some(XObjectRotation { angle_ccw_degrees: 90.0, rotation_center_x: Px(w/2), rotation_center_y: Px(h/2) })`
+- `rotate: Some(90.0)` → the transform rotates around the center of the final rendered QR square without changing its bounds
 - Rotation direction and center match Group/Rect behavior
 
 ## Change Checklist

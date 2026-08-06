@@ -1,5 +1,7 @@
 use printpdf::{Mm, Px, XObjectRotation, XObjectTransform};
 
+pub(crate) const XOBJECT_DPI: f32 = 300.0;
+
 #[derive(Debug, Clone)]
 pub struct BaseSchema {
     pub name: String,
@@ -30,7 +32,7 @@ impl BaseSchema {
         original_width: Option<Px>,
         rotation: Option<XObjectRotation>,
     ) -> XObjectTransform {
-        let dpi: f32 = 300.0;
+        let dpi = XOBJECT_DPI;
         let ratio: f32 = match original_width {
             Some(original_width) => dpi / 25.4 / (original_width.0 as f32),
 

@@ -51,13 +51,13 @@
         "columns": [
           {
             "width": "3fr",
-            "header": { "content": "no rotate (60)" },
+            "header": { "content": "no rotate (40 square)" },
             "cell": {
               "type": "qrCode",
               "name": "no_rotate",
               "content": "qr_rotate_test_no_rotate",
               "position": { "x": 0, "y": 0 },
-              "width": 45,
+              "width": 40,
               "height": 60,
               "alignment": "center",
               "verticalAlignment": "middle"
@@ -65,64 +65,64 @@
           },
           {
             "width": "3fr",
-            "header": { "content": "rotate: 30 center" },
+            "header": { "content": "rotate: 30 (40 square)" },
             "cell": {
               "type": "qrCode",
               "name": "rotated_30_center",
               "content": "qr_rotate_test_30_center",
               "position": { "x": 0, "y": 0 },
-              "width": 30,
+              "width": 40,
               "height": 40,
               "rotate": 30,
               "alignment": "center",
               "verticalAlignment": "middle",
               "padding": {
-                "top": 8,
-                "right": 8,
-                "bottom": 8,
-                "left": 8
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
               }
             }
           },
           {
             "width": "3fr",
-            "header": { "content": "rotate: 90 top" },
+            "header": { "content": "rotate: 90 top (40)" },
             "cell": {
               "type": "qrCode",
               "name": "rotated_90_top",
               "content": "qr_rotate_test_90_top",
               "position": { "x": 0, "y": 0 },
-              "width": 30,
+              "width": 40,
               "height": 40,
               "rotate": 90,
               "alignment": "left",
               "verticalAlignment": "top",
               "padding": {
-                "top": 8,
-                "right": 8,
-                "bottom": 8,
-                "left": 8
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
               }
             }
           },
           {
             "width": "3fr",
-            "header": { "content": "rotate: 90 bottom" },
+            "header": { "content": "rotate: 90 bottom (40)" },
             "cell": {
               "type": "qrCode",
               "name": "rotated_90_bottom",
               "content": "qr_rotate_test_90_bottom",
               "position": { "x": 0, "y": 0 },
-              "width": 30,
+              "width": 40,
               "height": 40,
               "rotate": 90,
               "alignment": "left",
               "verticalAlignment": "bottom",
               "padding": {
-                "top": 8,
-                "right": 8,
-                "bottom": 8,
-                "left": 8
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
               }
             }
           }
