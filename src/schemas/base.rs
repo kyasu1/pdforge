@@ -2,6 +2,26 @@ use printpdf::{Mm, Px, XObjectRotation, XObjectTransform};
 
 pub(crate) const XOBJECT_DPI: f32 = 300.0;
 
+/// Builds a center-pivot rotation after accounting for the XObject's manual scale.
+///
+/// `printpdf` applies image/SVG auto-scaling and `scale_x`/`scale_y` before the
+/// pivot, so an intrinsic `width / 2, height / 2` pivot would shift scaled content.
+pub(crate) fn rotation_for_xobject(
+    angle_ccw_degrees: f32,
+    width: Px,
+    height: Px,
+    transform: &XObjectTransform,
+) -> XObjectRotation {
+    let scale_x = transform.scale_x.unwrap_or(1.0);
+    let scale_y = transform.scale_y.unwrap_or(1.0);
+
+    XObjectRotation {
+        angle_ccw_degrees,
+        rotation_center_x: Px(((width.0 as f32 * scale_x) / 2.0).round().max(0.0) as usize),
+        rotation_center_y: Px(((height.0 as f32 * scale_y) / 2.0).round().max(0.0) as usize),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct BaseSchema {
     pub name: String,

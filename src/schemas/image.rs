@@ -1,4 +1,7 @@
-use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
+use crate::schemas::{
+    base::{rotation_for_xobject, BaseSchema, XOBJECT_DPI},
+    Error, HasBaseSchema, JsonPosition, Schema,
+};
 use crate::utils::OpBuffer;
 use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
@@ -33,6 +36,7 @@ pub struct JsonImageSchema {
     content: String,
     #[serde(default)]
     object_fit: ObjectFit,
+    rotate: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +44,7 @@ pub struct Image {
     base: BaseSchema,
     content: image::DynamicImage,
     object_fit: ObjectFit,
+    rotate: Option<f32>,
 }
 
 impl TryFrom<JsonImageSchema> for Schema {
@@ -58,6 +63,7 @@ impl TryFrom<JsonImageSchema> for Schema {
             base,
             content,
             object_fit: json.object_fit,
+            rotate: json.rotate,
         }))
     }
 }
@@ -90,11 +96,17 @@ impl Image {
             base,
             content,
             object_fit: ObjectFit::default(),
+            rotate: None,
         })
     }
 
     pub fn with_object_fit(mut self, object_fit: ObjectFit) -> Self {
         self.object_fit = object_fit;
+        self
+    }
+
+    pub fn with_rotate(mut self, rotate: f32) -> Self {
+        self.rotate = Some(rotate);
         self
     }
 
@@ -144,9 +156,9 @@ impl Image {
         parent_height: Mm,
         image: &RawImage,
     ) -> XObjectTransform {
-        let dpi: f32 = 300.0;
+        let dpi = XOBJECT_DPI;
 
-        match self.object_fit {
+        let mut transform = match self.object_fit {
             ObjectFit::Fill => {
                 // Use the original scaling logic for Fill mode
                 self.base.get_matrix(parent_height, Some(Px(image.width)))
@@ -270,7 +282,12 @@ impl Image {
                     }
                 }
             }
-        }
+        };
+
+        transform.rotate = self.rotate.map(|angle_deg| {
+            rotation_for_xobject(angle_deg, Px(image.width), Px(image.height), &transform)
+        });
+        transform
     }
 
     pub fn set_x(&mut self, x: Mm) {
@@ -383,6 +400,22 @@ mod tests {
 
         let schema: JsonImageSchema = serde_json::from_str(json).unwrap();
         assert!(matches!(schema.object_fit, ObjectFit::Fill));
+        assert!(schema.rotate.is_none());
+    }
+
+    #[test]
+    fn test_json_image_schema_with_rotation() {
+        let json = r#"{
+            "name": "test-image",
+            "position": {"x": 10.0, "y": 20.0},
+            "width": 100.0,
+            "height": 80.0,
+            "content": "data:image/jpeg;base64,test",
+            "rotate": 90.0
+        }"#;
+
+        let schema: JsonImageSchema = serde_json::from_str(json).unwrap();
+        assert_eq!(schema.rotate, Some(90.0));
     }
 
     #[test]
@@ -498,5 +531,40 @@ mod tests {
         assert!(transform.translate_x.is_some());
         assert!(transform.translate_y.is_some());
         assert_eq!(transform.dpi.unwrap(), 300.0);
+    }
+
+    #[test]
+    fn test_rotation_is_applied_to_every_object_fit_mode() {
+        let mock_raw_image = create_mock_raw_image(200, 100);
+
+        for object_fit in [
+            ObjectFit::Fill,
+            ObjectFit::Contain,
+            ObjectFit::Cover,
+            ObjectFit::None,
+            ObjectFit::ScaleDown,
+        ] {
+            let image = create_test_image()
+                .with_object_fit(object_fit)
+                .with_rotate(90.0);
+            let transform = image.calculate_object_fit_transform(Mm(200.0), &mock_raw_image);
+            let rotation = transform.rotate.expect("rotation must be set");
+
+            assert_eq!(rotation.angle_ccw_degrees, 90.0);
+            assert_eq!(
+                rotation.rotation_center_x,
+                Px(
+                    ((mock_raw_image.width as f32 * transform.scale_x.unwrap()) / 2.0).round()
+                        as usize
+                )
+            );
+            assert_eq!(
+                rotation.rotation_center_y,
+                Px(
+                    ((mock_raw_image.height as f32 * transform.scale_y.unwrap()) / 2.0).round()
+                        as usize
+                )
+            );
+        }
     }
 }
