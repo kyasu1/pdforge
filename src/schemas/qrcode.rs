@@ -1,12 +1,12 @@
 use super::{Alignment, BoundingBox, Frame, VerticalAlignment};
 use crate::schemas::{
-    base::{BaseSchema, XOBJECT_DPI},
+    base::{rotation_for_xobject, BaseSchema},
     Error, HasBaseSchema, JsonPosition, Schema,
 };
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder, Luma};
-use printpdf::{Mm, Op, PdfDocument, Px, RawImage, XObjectRotation};
+use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
 use serde::Deserialize;
 use snafu::ResultExt;
 
@@ -195,18 +195,10 @@ impl QrCode {
         // 新しい基本スキーマを一時的に作成して、正しい位置に変換行列を取得
         let temp_base = BaseSchema::new(self.base.name.clone(), x, y, qr_width, qr_height);
 
-        // printpdf applies the image and layout scales before this pivot. Convert
-        // the center of the final QR square back to pixels at the transform DPI;
-        // using the source image's w/2,h/2 here would move a rotated, scaled QR.
-        let rotation_center = Px((qr_side.0 * XOBJECT_DPI / 25.4 / 2.0).round().max(0.0) as usize);
-        let rotation: Option<XObjectRotation> = self.rotate.map(|angle_deg| XObjectRotation {
-            angle_ccw_degrees: angle_deg,
-            rotation_center_x: rotation_center,
-            rotation_center_y: rotation_center,
+        let mut transform = temp_base.get_matrix(parent_height, Some(qrcode_width));
+        transform.rotate = self.rotate.map(|angle_deg| {
+            rotation_for_xobject(angle_deg, Px(w as usize), Px(h as usize), &transform)
         });
-
-        let transform =
-            temp_base.get_matrix_with_rotation(parent_height, Some(qrcode_width), rotation);
 
         let ops = vec![
             Op::SaveGraphicsState,
