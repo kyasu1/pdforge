@@ -1,0 +1,142 @@
+{
+  "schemas": [
+    [
+      {
+        "type": "table",
+        "name": "test_table",
+        "position": { "x": 10, "y": 10 },
+        "width": 190,
+        "height": 100,
+        "showHead": true,
+        "headStyles": {
+          "fontSize": 8,
+          "fontName": "NotoSansJP",
+          "alignment": "center",
+          "verticalAlignment": "middle",
+          "lineHeight": 1.0,
+          "fontColor": "#000000",
+          "borderColor": "#000000",
+          "backgroundColor": "#f0f0f0",
+          "borderWidth": {
+            "top": 0.2,
+            "right": 0.2,
+            "bottom": 0.2,
+            "left": 0.2
+          },
+          "padding": {
+            "top": 2,
+            "right": 2,
+            "bottom": 2,
+            "left": 2
+          }
+        },
+        "bodyStyles": {
+          "alignment": "center",
+          "verticalAlignment": "middle",
+          "lineHeight": 1.0,
+          "fontColor": "#000000",
+          "backgroundColor": "#ffffff",
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "lineBreakMode": "char"
+        },
+        "tableStyles": {
+          "borderWidth": 0.2,
+          "borderColor": "#000000"
+        },
+        "columns": [
+          {
+            "width": "3fr",
+            "header": { "content": "no rotate (40 square)" },
+            "cell": {
+              "type": "qrCode",
+              "name": "no_rotate",
+              "content": "qr_rotate_test_no_rotate",
+              "position": { "x": 0, "y": 0 },
+              "width": 40,
+              "height": 60,
+              "alignment": "center",
+              "verticalAlignment": "middle"
+            }
+          },
+          {
+            "width": "3fr",
+            "header": { "content": "rotate: 30 (40 square)" },
+            "cell": {
+              "type": "qrCode",
+              "name": "rotated_30_center",
+              "content": "qr_rotate_test_30_center",
+              "position": { "x": 0, "y": 0 },
+              "width": 40,
+              "height": 40,
+              "rotate": 30,
+              "alignment": "center",
+              "verticalAlignment": "middle",
+              "padding": {
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
+              }
+            }
+          },
+          {
+            "width": "3fr",
+            "header": { "content": "rotate: 90 top (40)" },
+            "cell": {
+              "type": "qrCode",
+              "name": "rotated_90_top",
+              "content": "qr_rotate_test_90_top",
+              "position": { "x": 0, "y": 0 },
+              "width": 40,
+              "height": 40,
+              "rotate": 90,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "padding": {
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
+              }
+            }
+          },
+          {
+            "width": "3fr",
+            "header": { "content": "rotate: 90 bottom (40)" },
+            "cell": {
+              "type": "qrCode",
+              "name": "rotated_90_bottom",
+              "content": "qr_rotate_test_90_bottom",
+              "position": { "x": 0, "y": 0 },
+              "width": 40,
+              "height": 40,
+              "rotate": 90,
+              "alignment": "left",
+              "verticalAlignment": "bottom",
+              "padding": {
+                "top": 2,
+                "right": 2,
+                "bottom": 2,
+                "left": 2
+              }
+            }
+          }
+        ],
+        "fields": [
+          ["", "", "", ""]
+        ]
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 150,
+    "padding": [10, 10, 10, 10]
+  },
+  "schemaVersion": "1.0.0"
+}

@@ -1,0 +1,61 @@
+{
+  "schemas": [
+    [
+      {
+        "type": "text",
+        "name": "title_unrotated",
+        "content": "Page 1: rotate omitted",
+        "position": { "x": 20, "y": 10 },
+        "width": 170,
+        "height": 10,
+        "fontSize": 10,
+        "fontName": "NotoSansJP",
+        "fontColor": "#000000",
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      },
+      {
+        "type": "qrCode",
+        "name": "same_size_unrotated",
+        "content": "pdforge_qr_rotation_same_position_and_size",
+        "position": { "x": 65, "y": 35 },
+        "width": 80,
+        "height": 80,
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      }
+    ],
+    [
+      {
+        "type": "text",
+        "name": "title_rotated",
+        "content": "Page 2: rotate 90 degrees",
+        "position": { "x": 20, "y": 10 },
+        "width": 170,
+        "height": 10,
+        "fontSize": 10,
+        "fontName": "NotoSansJP",
+        "fontColor": "#000000",
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      },
+      {
+        "type": "qrCode",
+        "name": "same_size_rotated_90",
+        "content": "pdforge_qr_rotation_same_position_and_size",
+        "position": { "x": 65, "y": 35 },
+        "width": 80,
+        "height": 80,
+        "rotate": 90,
+        "alignment": "center",
+        "verticalAlignment": "middle"
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 150,
+    "padding": [10, 10, 10, 10]
+  },
+  "schemaVersion": "1.0.0"
+}

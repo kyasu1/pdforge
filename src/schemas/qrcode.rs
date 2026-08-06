@@ -1,9 +1,12 @@
 use super::{Alignment, BoundingBox, Frame, VerticalAlignment};
-use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
+use crate::schemas::{
+    base::{BaseSchema, XOBJECT_DPI},
+    Error, HasBaseSchema, JsonPosition, Schema,
+};
 use crate::utils::OpBuffer;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder, Luma};
-use printpdf::{Mm, Op, PdfDocument, Px, RawImage};
+use printpdf::{Mm, Op, PdfDocument, Px, RawImage, XObjectRotation};
 use serde::Deserialize;
 use snafu::ResultExt;
 
@@ -134,13 +137,13 @@ impl QrCode {
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
-        let qrcode_width = Px(256);
-
         let code =
             qrcode::QrCode::new(&self.content).whatever_context("Failed to create a QR code")?;
         let luma: image::ImageBuffer<Luma<u8>, Vec<u8>> = code.render::<Luma<u8>>().build();
         let w = luma.width();
         let h = luma.height();
+
+        let qrcode_width = Px(w as usize);
 
         let mut buf: Vec<u8> = Vec::new();
         let encoder: PngEncoder<&mut Vec<u8>> = PngEncoder::new(&mut buf);
@@ -157,9 +160,17 @@ impl QrCode {
         let image_x_object_id = doc.add_image(&image);
 
         // QRコードの実際のサイズを計算
+        // QRコードの縦横比は常に1:1。指定サイズと有効ボックスの両方に
+        // 収まる正方形とし、回転時も内容物のサイズを変えない。
         let (box_width, box_height) = self.get_effective_box_size();
-        let qr_width = self.base.width;
-        let qr_height = self.base.height;
+        let qr_side = self
+            .base
+            .width
+            .min(self.base.height)
+            .min(box_width)
+            .min(box_height);
+        let qr_width = qr_side;
+        let qr_height = qr_side;
 
         // 配置オフセットを計算
         let x_offset = self.calculate_horizontal_offset(box_width, qr_width);
@@ -184,7 +195,18 @@ impl QrCode {
         // 新しい基本スキーマを一時的に作成して、正しい位置に変換行列を取得
         let temp_base = BaseSchema::new(self.base.name.clone(), x, y, qr_width, qr_height);
 
-        let transform = temp_base.get_matrix(parent_height, Some(qrcode_width));
+        // printpdf applies the image and layout scales before this pivot. Convert
+        // the center of the final QR square back to pixels at the transform DPI;
+        // using the source image's w/2,h/2 here would move a rotated, scaled QR.
+        let rotation_center = Px((qr_side.0 * XOBJECT_DPI / 25.4 / 2.0).round().max(0.0) as usize);
+        let rotation: Option<XObjectRotation> = self.rotate.map(|angle_deg| XObjectRotation {
+            angle_ccw_degrees: angle_deg,
+            rotation_center_x: rotation_center,
+            rotation_center_y: rotation_center,
+        });
+
+        let transform =
+            temp_base.get_matrix_with_rotation(parent_height, Some(qrcode_width), rotation);
 
         let ops = vec![
             Op::SaveGraphicsState,
@@ -202,6 +224,10 @@ impl QrCode {
 
     pub fn set_bounding_box(&mut self, bounding_box: BoundingBox) {
         self.bounding_box = Some(bounding_box);
+    }
+
+    pub fn set_rotate(&mut self, rotate: f32) {
+        self.rotate = Some(rotate);
     }
 
     pub fn set_x(&mut self, x: Mm) {
