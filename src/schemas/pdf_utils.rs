@@ -250,6 +250,37 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
     ]
 }
 
+/// Wrap `ops` so the element draws at the given `alpha` (0.0 = fully
+/// transparent, 1.0 = fully opaque).
+///
+/// A non-`None` alpha < 1.0 registers an Extended Graphics State with both the
+/// stroking (`CA`) and non-stroking (`ca`) alpha constants set to `alpha`, then
+/// scopes it around `ops` with `SaveGraphicsState` / `LoadGraphicsState` /
+/// `RestoreGraphicsState` so the transparency does not leak to elements drawn
+/// afterwards. `None` (field absent) or an alpha >= 1.0 returns `ops`
+/// unchanged and registers nothing.
+pub fn wrap_ops_with_opacity(
+    doc: &mut PdfDocument,
+    alpha: Option<f32>,
+    ops: Vec<Op>,
+) -> Vec<Op> {
+    let Some(alpha) = alpha else {
+        return ops;
+    };
+    let alpha = alpha.clamp(0.0, 1.0);
+    if alpha >= 1.0 {
+        return ops;
+    }
+    let gs = ExtendedGraphicsState::default()
+        .with_current_fill_alpha(alpha)
+        .with_current_stroke_alpha(alpha);
+    let gs_id = doc.add_graphics_state(gs);
+    let mut wrapped = vec![Op::SaveGraphicsState, Op::LoadGraphicsState { gs: gs_id }];
+    wrapped.extend(ops);
+    wrapped.push(Op::RestoreGraphicsState);
+    wrapped
+}
+
 /// A single table cell: a filled rectangle with a per-side border.
 ///
 /// `border_width` carries an independent width for each edge so non-uniform
@@ -465,5 +496,74 @@ mod tests {
         let top: Pt = Mm(2.0).into();
         let bottom: Pt = Mm(3.0).into();
         assert_eq!(thicknesses(&ops), vec![top, bottom]);
+    }
+
+    #[test]
+    fn wrap_ops_with_opacity_registers_extgstate_and_wraps() {
+        let mut doc = PdfDocument::new("opacity_test");
+        let inner = vec![Op::SetFillColor {
+            col: Color::Rgb(Rgb {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                icc_profile: None,
+            }),
+        }];
+
+        let wrapped = wrap_ops_with_opacity(&mut doc, Some(0.5), inner.clone());
+
+        // Exact structure: [q, LoadGraphicsState, ...inner, Q].
+        assert_eq!(wrapped.len(), inner.len() + 3);
+        assert!(matches!(wrapped[0], Op::SaveGraphicsState));
+        assert!(matches!(wrapped[1], Op::LoadGraphicsState { .. }));
+        assert_eq!(wrapped[2], inner[0]);
+        assert!(matches!(wrapped.last(), Some(Op::RestoreGraphicsState)));
+        // Exactly one LoadGraphicsState, scoped between the save/restore.
+        assert_eq!(
+            wrapped
+                .iter()
+                .filter(|op| matches!(op, Op::LoadGraphicsState { .. }))
+                .count(),
+            1
+        );
+
+        // The ExtGState is registered once, with both alpha constants set to 0.5.
+        assert_eq!(doc.resources.extgstates.map.len(), 1);
+        for gs in doc.resources.extgstates.map.values() {
+            assert!((gs.current_fill_alpha() - 0.5).abs() < 1e-6);
+            assert!((gs.current_stroke_alpha() - 0.5).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn wrap_ops_with_opacity_is_noop_without_alpha_or_full_alpha() {
+        let inner = vec![Op::SaveGraphicsState, Op::RestoreGraphicsState];
+
+        // None (absent) and any alpha that clamps to >= 1.0 are no-ops: ops are
+        // returned unchanged and nothing is registered.
+        for a in [None, Some(1.0), Some(1.2)] {
+            let mut doc = PdfDocument::new("opacity_test");
+            let out = wrap_ops_with_opacity(&mut doc, a, inner.clone());
+            assert_eq!(out, inner, "alpha {a:?} must be a no-op");
+            assert_eq!(doc.resources.extgstates.map.len(), 0, "alpha {a:?}");
+        }
+    }
+
+    #[test]
+    fn wrap_ops_with_opacity_clamps_alpha() {
+        // -0.2 -> 0.0, 0.0 -> 0.0, 0.5 -> 0.5, 1.0 -> no-op (>= 1.0), 1.2 -> no-op.
+        for (input, expected) in [(Some(-0.2), 0.0), (Some(0.0), 0.0), (Some(0.5), 0.5)] {
+            let mut doc = PdfDocument::new("opacity_test");
+            let _ = wrap_ops_with_opacity(
+                &mut doc,
+                input,
+                vec![Op::SaveGraphicsState, Op::RestoreGraphicsState],
+            );
+            assert_eq!(doc.resources.extgstates.map.len(), 1, "alpha {input:?}");
+            for gs in doc.resources.extgstates.map.values() {
+                assert!((gs.current_fill_alpha() - expected).abs() < 1e-6);
+                assert!((gs.current_stroke_alpha() - expected).abs() < 1e-6);
+            }
+        }
     }
 }
