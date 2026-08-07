@@ -1,5 +1,7 @@
 use super::InvalidColorSnafu;
-use crate::schemas::pdf_utils::calculate_transform_matrix_with_center_pivot;
+use crate::schemas::pdf_utils::{
+    calculate_transform_matrix_with_center_pivot, wrap_ops_with_opacity,
+};
 use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use printpdf::{
@@ -80,7 +82,7 @@ impl Line {
     pub fn render(
         &self,
         parent_height: Mm,
-        _doc: &mut PdfDocument,
+        doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
@@ -98,6 +100,7 @@ impl Line {
             }),
             border_width: Mm(self.border_width.0),
         });
+        let ops = wrap_ops_with_opacity(doc, self.opacity, ops);
 
         buffer.insert(page, ops);
         Ok(())

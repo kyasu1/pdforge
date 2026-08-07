@@ -1,3 +1,4 @@
+use pdforge::schemas::line::JsonLineSchema;
 use pdforge::schemas::rect::JsonRectSchema;
 use pdforge::schemas::{Schema, SchemaTrait};
 use pdforge::utils::OpBuffer;
@@ -87,4 +88,61 @@ fn rect_opacity_scope_restores_before_next_element() {
     assert!(ops[first_element_len..]
         .iter()
         .all(|op| !matches!(op, Op::LoadGraphicsState { .. })));
+}
+
+fn render_line_into(opacity: Option<f32>, doc: &mut PdfDocument, buffer: &mut OpBuffer) {
+    let opacity = opacity.map_or(String::new(), |v| format!(", \"opacity\": {v}"));
+    // NOTE: r##"..."## (double-hash) because "#000000" would terminate r#"..."#.
+    let json = format!(
+        r##"{{
+            "name": "line",
+            "position": {{"x": 10.0, "y": 20.0}},
+            "width": 50.0,
+            "color": "#000000"{opacity}
+        }}"##
+    );
+    let schema: Schema = serde_json::from_str::<JsonLineSchema>(&json)
+        .unwrap()
+        .try_into()
+        .unwrap();
+    schema
+        .render(Mm(150.0), Mm(210.0), doc, 0, buffer)
+        .unwrap();
+}
+
+fn render_line(opacity: Option<f32>) -> (PdfDocument, OpBuffer) {
+    let mut doc = PdfDocument::new("opacity_test");
+    let mut buffer = OpBuffer::default();
+    render_line_into(opacity, &mut doc, &mut buffer);
+    (doc, buffer)
+}
+
+#[test]
+fn line_opacity_emits_load_graphics_state_and_registers_alpha() {
+    let (doc, buffer) = render_line(Some(0.5));
+
+    assert_eq!(
+        buffer.buffer[0]
+            .iter()
+            .filter(|op| matches!(op, Op::LoadGraphicsState { .. }))
+            .count(),
+        1
+    );
+    assert_eq!(doc.resources.extgstates.map.len(), 1);
+    for gs in doc.resources.extgstates.map.values() {
+        assert!((gs.current_fill_alpha() - 0.5).abs() < 1e-6);
+        assert!((gs.current_stroke_alpha() - 0.5).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn line_without_opacity_registers_nothing() {
+    let (doc, buffer) = render_line(None);
+
+    assert!(
+        buffer.buffer[0]
+            .iter()
+            .all(|op| !matches!(op, Op::LoadGraphicsState { .. }))
+    );
+    assert_eq!(doc.resources.extgstates.map.len(), 0);
 }
