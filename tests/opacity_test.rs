@@ -22,9 +22,7 @@ fn render_rect_into(opacity: Option<f32>, doc: &mut PdfDocument, buffer: &mut Op
         .unwrap()
         .try_into()
         .unwrap();
-    schema
-        .render(Mm(150.0), Mm(210.0), doc, 0, buffer)
-        .unwrap();
+    schema.render(Mm(150.0), Mm(210.0), doc, 0, buffer).unwrap();
 }
 
 fn render_rect(opacity: Option<f32>) -> (PdfDocument, OpBuffer) {
@@ -56,11 +54,9 @@ fn rect_opacity_emits_load_graphics_state_and_registers_alpha() {
 fn rect_without_opacity_registers_nothing() {
     let (doc, buffer) = render_rect(None);
 
-    assert!(
-        buffer.buffer[0]
-            .iter()
-            .all(|op| !matches!(op, Op::LoadGraphicsState { .. }))
-    );
+    assert!(buffer.buffer[0]
+        .iter()
+        .all(|op| !matches!(op, Op::LoadGraphicsState { .. })));
     assert_eq!(doc.resources.extgstates.map.len(), 0);
 }
 
@@ -105,9 +101,7 @@ fn render_line_into(opacity: Option<f32>, doc: &mut PdfDocument, buffer: &mut Op
         .unwrap()
         .try_into()
         .unwrap();
-    schema
-        .render(Mm(150.0), Mm(210.0), doc, 0, buffer)
-        .unwrap();
+    schema.render(Mm(150.0), Mm(210.0), doc, 0, buffer).unwrap();
 }
 
 fn render_line(opacity: Option<f32>) -> (PdfDocument, OpBuffer) {
@@ -139,10 +133,8 @@ fn line_opacity_emits_load_graphics_state_and_registers_alpha() {
 fn line_without_opacity_registers_nothing() {
     let (doc, buffer) = render_line(None);
 
-    assert!(
-        buffer.buffer[0]
-            .iter()
-            .all(|op| !matches!(op, Op::LoadGraphicsState { .. }))
-    );
+    assert!(buffer.buffer[0]
+        .iter()
+        .all(|op| !matches!(op, Op::LoadGraphicsState { .. })));
     assert_eq!(doc.resources.extgstates.map.len(), 0);
 }

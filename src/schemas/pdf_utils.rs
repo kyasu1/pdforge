@@ -259,11 +259,7 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
 /// `RestoreGraphicsState` so the transparency does not leak to elements drawn
 /// afterwards. `None` (field absent) or an alpha >= 1.0 returns `ops`
 /// unchanged and registers nothing.
-pub fn wrap_ops_with_opacity(
-    doc: &mut PdfDocument,
-    alpha: Option<f32>,
-    ops: Vec<Op>,
-) -> Vec<Op> {
+pub fn wrap_ops_with_opacity(doc: &mut PdfDocument, alpha: Option<f32>, ops: Vec<Op>) -> Vec<Op> {
     let Some(alpha) = alpha else {
         return ops;
     };
