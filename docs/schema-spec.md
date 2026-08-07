@@ -485,7 +485,7 @@ PDFへ図形を描画せず、後続するフロー要素の開始位置を指�
 | `borderColor` | `string` | ✓ | | 枠線色（CSS色指定） |
 | `borderWidth` | `number` | - | `1.0` | 枠線の太さ (pt) |
 | `rotate` | `number` | - | なし | 回転角度（度数） |
-| `opacity` | `number` | - | なし | **注意: 解析されるが描画には反映されない（未実装）** |
+| `opacity` | `number` | - | なし | 要素の不透明度（0=完全透明, 1=完全不透明）。塗りと線の両方に適用。省略時・`1` のときは従来どおり不透明 |
 
 ---
 
@@ -507,7 +507,7 @@ PDFへ図形を描画せず、後続するフロー要素の開始位置を指�
 | `borderWidth` | `number` | - | `1.0` | 線の太さ (pt) |
 | `height` | `number` | - | `0.0` | 通常 0（1次元要素のため） |
 | `rotate` | `number` | - | なし | 回転角度（度数） |
-| `opacity` | `number` | - | なし | **注意: 解析されるが描画には反映されない（未実装）** |
+| `opacity` | `number` | - | なし | 要素の不透明度（0=完全透明, 1=完全不透明）。塗りと線の両方に適用。省略時・`1` のときは従来どおり不透明 |
 
 ---
 
@@ -600,7 +600,6 @@ PDFへ図形を描画せず、後続するフロー要素の開始位置を指�
 | 種別 | 内容 |
 |---|---|
 | `dynamicText.fontSize` | 省略不可。省略するとパニックが発生する（未実装） |
-| `rectangle.opacity` / `line.opacity` | JSON として解析されるが、実際の描画には反映されない |
 | `table` のセル型 | `text` と `qrCode` のみ対応。他のスキーマ型を指定するとパニックが発生する |
 | `group` 内のスキーマ | `line` と `group` は非対応。指定するとエラーになる |
 | `dynamicText` のスタイル | `fontColor`、`alignment`、`verticalAlignment`、`padding` は未対応 |
