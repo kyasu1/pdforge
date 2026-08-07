@@ -7,7 +7,6 @@
 
 use pdforge::schemas::base::BaseSchema;
 use pdforge::schemas::qrcode::QrCode;
-use pdforge::schemas::rect::Rect;
 use pdforge::schemas::{BoundingBox, HasBaseSchema, Schema, SchemaTrait};
 use pdforge::utils::OpBuffer;
 use printpdf::{Mm, PdfDocument};
@@ -16,7 +15,6 @@ use printpdf::{Mm, PdfDocument};
 #[derive(Debug, Clone)]
 struct MockSchema {
     base: BaseSchema,
-    custom_value: i32,
 }
 
 impl MockSchema {
@@ -29,7 +27,6 @@ impl MockSchema {
                 Mm(width),
                 Mm(height),
             ),
-            custom_value: 42,
         }
     }
 }

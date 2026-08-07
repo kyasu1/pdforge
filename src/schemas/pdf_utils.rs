@@ -178,12 +178,9 @@ pub fn draw_rectangle(props: DrawRectangle) -> Vec<Op> {
         matrix: CurTransMat::Raw(matrix_values),
     };
 
-    let mode = match props.color {
-        Some(_) => PaintMode::FillStroke,
-        None => PaintMode::Stroke,
-    };
-
-    let mode = if props.color == props.border_color {
+    let mode = if props.color.is_none() {
+        PaintMode::Stroke
+    } else if props.color == props.border_color {
         PaintMode::Fill
     } else {
         PaintMode::FillStroke
@@ -456,6 +453,40 @@ mod tests {
                 _ => None,
             })
             .collect()
+    }
+
+    fn sample_rectangle(color: Option<Color>, border_color: Option<Color>) -> DrawRectangle {
+        DrawRectangle {
+            x: Mm(10.0),
+            y: Mm(10.0),
+            width: Mm(20.0),
+            height: Mm(20.0),
+            rotate: None,
+            page_height: Mm(100.0),
+            color,
+            border_width: Some(Mm(0.1)),
+            border_color,
+        }
+    }
+
+    #[test]
+    fn rectangle_without_fill_uses_stroke_mode() {
+        let ops = draw_rectangle(sample_rectangle(None, None));
+
+        assert_eq!(polygon_modes(&ops), vec![PaintMode::Stroke]);
+    }
+
+    #[test]
+    fn rectangle_with_matching_fill_and_border_uses_fill_mode() {
+        let color = Color::Rgb(Rgb {
+            r: 0.5,
+            g: 0.5,
+            b: 0.5,
+            icc_profile: None,
+        });
+        let ops = draw_rectangle(sample_rectangle(Some(color.clone()), Some(color)));
+
+        assert_eq!(polygon_modes(&ops), vec![PaintMode::Fill]);
     }
 
     #[test]
