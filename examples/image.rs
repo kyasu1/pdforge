@@ -1,4 +1,4 @@
-use base64;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -20,11 +20,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let front_base64 = format!(
         "data:image/jpeg;base64,{}",
-        base64::encode(&front_image_data)
+        STANDARD.encode(&front_image_data)
     );
     let back_base64 = format!(
         "data:image/jpeg;base64,{}",
-        base64::encode(&back_image_data)
+        STANDARD.encode(&back_image_data)
     );
 
     let pdforge = pdforge::PDForgeBuilder::new("IMAGE_TEST".to_string())

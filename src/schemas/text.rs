@@ -637,7 +637,7 @@ impl HasBaseSchema for Text {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use printpdf::{FontId, Mm, ParsedFont, PdfDocument, Pt};
+    use printpdf::{Mm, ParsedFont, PdfDocument, Pt};
     use serde_json::json;
     use std::path::PathBuf;
     use std::sync::{Arc, OnceLock};
@@ -688,19 +688,6 @@ mod tests {
         ) -> Result<Pt, crate::font::Error> {
             Ok(self.height)
         }
-    }
-
-    // Note: These tests are simplified to avoid complex font construction
-    // Integration tests should be used for full font functionality testing
-    #[cfg(test)]
-    fn create_test_text_without_font() -> (BaseSchema, FontId, Arc<MockFontSpec>) {
-        let base = BaseSchema::new("test".to_string(), Mm(10.0), Mm(10.0), Mm(100.0), Mm(50.0));
-        let font_id = FontId::new();
-        let font_spec = Arc::new(MockFontSpec {
-            width_result: Pt(20.0),
-            height: Pt(12.0),
-        });
-        (base, font_id, font_spec)
     }
 
     fn test_font() -> Arc<ParsedFont> {

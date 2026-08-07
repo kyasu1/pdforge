@@ -459,7 +459,6 @@ impl TryFrom<Vec<f32>> for Frame {
 pub struct Template {
     pub schemas: Vec<serde_json::Value>,
     base_pdf: BasePdf,
-    version: String,
     static_schema_json: Vec<serde_json::Value>,
 }
 
@@ -484,7 +483,6 @@ impl Template {
         let template = Template {
             schemas: json.schemas,
             base_pdf,
-            version: json.version,
             static_schema_json: json.base_pdf.static_schema.clone(),
         };
         Ok(template)
@@ -512,10 +510,9 @@ impl Template {
         // Add date and dateTime using time crate
         let now =
             time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
-        let date_format = time::format_description::parse("[year]-[month]-[day]").unwrap();
+        let date_format = time::macros::format_description!("[year]-[month]-[day]");
         let datetime_format =
-            time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
-                .unwrap();
+            time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
 
         context.insert("date", &now.format(&date_format).unwrap_or_default());
         context.insert(
@@ -844,16 +841,6 @@ impl Template {
         }
 
         self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs)
-    }
-
-    // 共通のレンダリング処理
-    fn render_schemas(
-        &self,
-        font_map: &FontMap,
-        doc: &mut PdfDocument,
-        schemas: Vec<Vec<Schema>>,
-    ) -> Result<Vec<u8>, Error> {
-        self.render_schemas_with_static_inputs(font_map, doc, schemas, HashMap::new())
     }
 
     // static inputs対応の共通レンダリング処理
