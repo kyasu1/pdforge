@@ -1,5 +1,5 @@
 use super::InvalidColorSnafu;
-use crate::schemas::pdf_utils::{draw_rectangle, DrawRectangle};
+use crate::schemas::pdf_utils::{draw_rectangle, wrap_ops_with_opacity, DrawRectangle};
 use crate::schemas::{base::BaseSchema, Error, HasBaseSchema, JsonPosition, Schema};
 use crate::utils::OpBuffer;
 use printpdf::{
@@ -86,7 +86,7 @@ impl Rect {
     pub fn render(
         &self,
         parent_height: Mm,
-        _doc: &mut PdfDocument,
+        doc: &mut PdfDocument,
         page: usize,
         buffer: &mut OpBuffer,
     ) -> Result<(), Error> {
@@ -112,13 +112,8 @@ impl Rect {
             })),
         };
 
-        // let ops = vec![Op::SaveGraphicsState]
-        //     .into_iter()
-        //     .chain(draw_rectangle(rect))
-        //     .chain(vec![Op::RestoreGraphicsState])
-        //     .collect();
-
         let ops = draw_rectangle(rect);
+        let ops = wrap_ops_with_opacity(doc, self.opacity, ops);
         buffer.insert(page, ops);
 
         Ok(())
