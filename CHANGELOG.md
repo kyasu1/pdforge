@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `Rectangle` and `Line` schemas now honour the `opacity` field: a value between 0 (fully transparent) and 1 (fully opaque) renders the element translucent via a PDF ExtGState (`ca`/`CA`). The field is optional and defaults to fully opaque; `1` and absent both render exactly as before.
+
 ## [0.17.0] - 2026-07-28
 
 ### Fixed
