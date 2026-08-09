@@ -12,7 +12,7 @@
                 "width": 170,
                 "height": 10,
                 "fontSize": 16,
-                "fontName": "NotoSansJP",
+                "fontName": "NotoSansJP-Regular",
                 "fontColor": "#000000",
                 "alignment": "center"
             },
@@ -27,7 +27,7 @@
                 "width": 170,
                 "height": 8,
                 "fontSize": 12,
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#666666",
                 "alignment": "center"
             },
@@ -47,7 +47,7 @@
                 },
                 "headStyles": {
                     "fontSize": 12,
-                    "fontName": "NotoSansJP",
+                    "fontName": "NotoSansJP-Regular",
                     "characterSpacing": 0,
                     "alignment": "center",
                     "verticalAlignment": "middle",
@@ -101,7 +101,7 @@
                             "height": 0,
                             "alignment": "left",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 9,
                             "padding": {
@@ -129,7 +129,7 @@
                             "height": 0,
                             "alignment": "left",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 9,
                             "padding": {
@@ -157,7 +157,7 @@
                             "height": 0,
                             "alignment": "center",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 9,
                             "padding": {
@@ -185,7 +185,7 @@
                             "height": 0,
                             "alignment": "center",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 9,
                             "padding": {
@@ -213,7 +213,7 @@
                             "height": 0,
                             "alignment": "right",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 9,
                             "padding": {

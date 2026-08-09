@@ -6,8 +6,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // PDForgeインスタンスを作成し、フォントを読み込む
     let pdforge = pdforge::PDForgeBuilder::new("Line Dynamic Example".to_string())
-        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
-        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSerifJP-Regular", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP-Regular", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("line_dynamic_template", "./templates/line-dynamic.json")?
         .build();
 

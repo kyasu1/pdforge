@@ -12,7 +12,7 @@
         "width": 190,
         "height": 15,
         "fontSize": 18,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "fontColor": "#2980b9",
         "alignment": "center"
       },
@@ -33,7 +33,7 @@
         },
         "headStyles": {
           "fontSize": 12,
-          "fontName": "NotoSansJP",
+          "fontName": "NotoSansJP-Regular",
           "characterSpacing": 0,
           "alignment": "center",
           "verticalAlignment": "middle",
@@ -92,7 +92,7 @@
               "height": 0,
               "alignment": "left",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -122,7 +122,7 @@
               "height": 0,
               "alignment": "center",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -152,7 +152,7 @@
               "height": 0,
               "alignment": "right",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -203,7 +203,7 @@
         "width": 190,
         "height": 8,
         "fontSize": 9,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "fontColor": "#7f8c8d",
         "alignment": "center"
       }
@@ -220,7 +220,7 @@
         "width": 190,
         "height": 15,
         "fontSize": 18,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "fontColor": "#27ae60",
         "alignment": "center"
       },
@@ -241,7 +241,7 @@
         },
         "headStyles": {
           "fontSize": 12,
-          "fontName": "NotoSansJP",
+          "fontName": "NotoSansJP-Regular",
           "characterSpacing": 0,
           "alignment": "center",
           "verticalAlignment": "middle",
@@ -300,7 +300,7 @@
               "height": 0,
               "alignment": "left",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -330,7 +330,7 @@
               "height": 0,
               "alignment": "center",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -360,7 +360,7 @@
               "height": 0,
               "alignment": "right",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -411,7 +411,7 @@
         "width": 190,
         "height": 8,
         "fontSize": 9,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "fontColor": "#7f8c8d",
         "alignment": "center"
       }
@@ -428,7 +428,7 @@
         "width": 190,
         "height": 15,
         "fontSize": 18,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "fontColor": "#e74c3c",
         "alignment": "center"
       },
@@ -449,7 +449,7 @@
         },
         "headStyles": {
           "fontSize": 12,
-          "fontName": "NotoSansJP",
+          "fontName": "NotoSansJP-Regular",
           "characterSpacing": 0,
           "alignment": "center",
           "verticalAlignment": "middle",
@@ -508,7 +508,7 @@
               "height": 0,
               "alignment": "left",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -538,7 +538,7 @@
               "height": 0,
               "alignment": "center",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -568,7 +568,7 @@
               "height": 0,
               "alignment": "right",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -634,7 +634,7 @@
         },
         "headStyles": {
           "fontSize": 12,
-          "fontName": "NotoSansJP",
+          "fontName": "NotoSansJP-Regular",
           "characterSpacing": 0,
           "alignment": "center",
           "verticalAlignment": "middle",
@@ -693,7 +693,7 @@
               "height": 0,
               "alignment": "left",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -723,7 +723,7 @@
               "height": 0,
               "alignment": "center",
               "verticalAlignment": "middle",
-              "fontName": "NotoSansJP",
+              "fontName": "NotoSansJP-Regular",
               "fontColor": "#000000",
               "fontSize": 11,
               "padding": {
@@ -769,7 +769,7 @@
         "width": 190,
         "height": 8,
         "fontSize": 9,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "fontColor": "#7f8c8d",
         "alignment": "center"
       }

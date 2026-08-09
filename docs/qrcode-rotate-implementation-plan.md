@@ -212,7 +212,7 @@ Uses current `JsonTableSchema` structure:
         "showHead": true,
         "headStyles": {
           "fontSize": 8,
-          "fontName": "NotoSansJP",
+          "fontName": "NotoSansJP-Regular",
           "alignment": "center",
           "verticalAlignment": "middle",
           "lineHeight": 1.0,
@@ -352,7 +352,7 @@ use pdforge::PDForgeBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pdforge = PDForgeBuilder::new("QR Code Rotation Test".to_string())
-        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP-Regular", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("qr_rotate", "./templates/qrcode-rotate-test.json")?
         .build();
 

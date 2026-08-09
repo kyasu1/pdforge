@@ -9,7 +9,7 @@
                 "width": 170,
                 "height": 10,
                 "fontSize": 18,
-                "fontName": "NotoSansJP",
+                "fontName": "NotoSansJP-Regular",
                 "fontColor": "#000000",
                 "alignment": "center"
             },
@@ -31,7 +31,7 @@
                 "width": 170,
                 "height": 8,
                 "fontSize": 14,
-                "fontName": "NotoSansJP",
+                "fontName": "NotoSansJP-Regular",
                 "fontColor": "#333333"
             },
             {
@@ -52,7 +52,7 @@
                 "width": 150,
                 "height": 6,
                 "fontSize": 10,
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#666666"
             },
             {
@@ -73,7 +73,7 @@
                 "width": 150,
                 "height": 6,
                 "fontSize": 10,
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#666666"
             },
             {
@@ -94,7 +94,7 @@
                 "width": 150,
                 "height": 6,
                 "fontSize": 10,
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#666666"
             },
             {
@@ -115,7 +115,7 @@
                 "width": 170,
                 "height": 8,
                 "fontSize": 14,
-                "fontName": "NotoSansJP",
+                "fontName": "NotoSansJP-Regular",
                 "fontColor": "#333333"
             },
             {
@@ -156,7 +156,7 @@
                 "width": 140,
                 "height": 6,
                 "fontSize": 10,
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#666666"
             },
             {
@@ -177,7 +177,7 @@
                 "width": 170,
                 "height": 8,
                 "fontSize": 14,
-                "fontName": "NotoSansJP",
+                "fontName": "NotoSansJP-Regular",
                 "fontColor": "#333333"
             },
             {
@@ -218,7 +218,7 @@
                 "width": 140,
                 "height": 6,
                 "fontSize": 10,
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#666666"
             },
             {
@@ -239,7 +239,7 @@
                 "width": 170,
                 "height": 6,
                 "fontSize": 9,
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#999999",
                 "alignment": "center"
             }

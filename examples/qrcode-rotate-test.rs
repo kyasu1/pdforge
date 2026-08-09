@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pdforge = PDForgeBuilder::new("QR Code Rotation Test".to_string())
-        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP-Regular", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("qr_rotate", "./templates/qrcode-rotate-test.json")?
         .build();
 

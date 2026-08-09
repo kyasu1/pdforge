@@ -34,7 +34,7 @@
             "lineBreakMode": "char",
             "characterSpacing": 0,
             "fontColor": "#000000",
-            "fontName": "NotoSansJP",
+            "fontName": "NotoSansJP-Regular",
             "opacity": 1,
             "readOnly": false
           },
@@ -55,7 +55,7 @@
             "lineHeight": 1,
             "characterSpacing": 0,
             "fontColor": "#FFFFFF",
-            "fontName": "NotoSansJP",
+            "fontName": "NotoSansJP-Regular",
             "backgroundColor": "#000000",
             "opacity": 1,
             "readOnly": false
@@ -78,7 +78,7 @@
             "lineHeight": 1,
             "characterSpacing": 0,
             "fontColor": "#000000",
-            "fontName": "NotoSans",
+            "fontName": "NotoSansJP-Regular",
             "opacity": 1,
             "readOnly": false
           }

@@ -93,7 +93,7 @@
     "width": 100,
     "height": 30,
     "content": "表示するテキスト",
-    "fontName": "NotoSansJP",
+    "fontName": "NotoSansJP-Regular",
     "fontSize": 12
 }
 ```
@@ -162,7 +162,7 @@
     "width": 100,
     "height": 200,
     "content": "こんにちは、{{ name }} さん！",
-    "fontName": "NotoSansJP",
+    "fontName": "NotoSansJP-Regular",
     "fontSize": 12
 }
 ```
@@ -281,7 +281,7 @@
 {
     "content": "列タイトル",
     "fontSize": 12,
-    "fontName": "NotoSansJP",
+    "fontName": "NotoSansJP-Regular",
     "alignment": "center",
     "verticalAlignment": "middle",
     "characterSpacing": 0
@@ -578,7 +578,7 @@ PDFへ図形を描画せず、後続するフロー要素の開始位置を指�
         "width": 20,
         "height": 10,
         "fontSize": 9,
-        "fontName": "NotoSansJP"
+        "fontName": "NotoSansJP-Regular"
     }
 ]
 ```

@@ -49,8 +49,8 @@ use pdforge::PDForgeBuilder;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a new PDF generator using the builder pattern
     let pdforge = PDForgeBuilder::new("My Document".to_string())
-        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
-        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSerifJP-Regular", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP-Regular", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("table", "./templates/table.json")?
         .build();
 
@@ -87,8 +87,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or("output");
     
     let pdforge = pdforge::PDForgeBuilder::new("CLI Example".to_string())
-        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
-        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSerifJP-Regular", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP-Regular", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("template", template_file)?
         .build();
 
@@ -111,8 +111,8 @@ use pdforge::PDForgeBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pdforge = PDForgeBuilder::new("Dynamic Document".to_string())
-        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
-        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSerifJP-Regular", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP-Regular", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("pawn-tag", "./templates/pawn-tag.json")?
         .build();
 
@@ -146,7 +146,7 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
         "width": 100,
         "height": 20,
         "fontSize": 16,
-        "fontName": "NotoSansJP"
+        "fontName": "NotoSansJP-Regular"
       }
     ]
   ],
@@ -163,7 +163,7 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
         "width": 100,
         "height": 10,
         "fontSize": 10,
-        "fontName": "NotoSansJP"
+        "fontName": "NotoSansJP-Regular"
       }
     ]
   },
@@ -184,7 +184,7 @@ PDForge uses JSON templates to define PDF layouts. Here's the basic structure:
   "width": 100,
   "height": 20,
   "fontSize": 12,
-  "fontName": "NotoSansJP",
+  "fontName": "NotoSansJP-Regular",
   "fontColor": "#000000",
   "backgroundColor": "#f0f0f0",
   "borderColor": "#ff0000",
@@ -220,7 +220,7 @@ Example:
   "width": 60,
   "height": 20,
   "fontSize": 12,
-  "fontName": "NotoSansJP",
+  "fontName": "NotoSansJP-Regular",
   "lineBreakMode": "char"
 }
 ```
@@ -241,7 +241,7 @@ Example:
   },
   "headStyles": {
     "fontSize": 12,
-    "fontName": "NotoSansJP",
+    "fontName": "NotoSansJP-Regular",
     "fontColor": "#ffffff",
     "backgroundColor": "#2980ba",
     "borderColor": "#000000",
@@ -269,7 +269,7 @@ Example:
         "width": 0,
         "height": 0,
         "fontSize": 11,
-        "fontName": "NotoSansJP"
+        "fontName": "NotoSansJP-Regular"
       }
     },
     {
@@ -283,7 +283,7 @@ Example:
         "width": 0,
         "height": 0,
         "fontSize": 11,
-        "fontName": "NotoSansJP"
+        "fontName": "NotoSansJP-Regular"
       }
     },
     {
@@ -297,7 +297,7 @@ Example:
         "width": 0,
         "height": 0,
         "fontSize": 11,
-        "fontName": "NotoSansJP"
+        "fontName": "NotoSansJP-Regular"
       }
     }
   ],
@@ -362,7 +362,7 @@ Example:
   "showHead": true,
   "headStyles": {
     "fontSize": 12,
-    "fontName": "NotoSansJP",
+    "fontName": "NotoSansJP-Regular",
     "fontColor": "#ffffff",
     "backgroundColor": "#2980ba",
     "borderColor": "#000000",
@@ -396,7 +396,7 @@ Example:
         "width": 0,
         "height": 0,
         "fontSize": 10,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "lineBreakMode": "char"
       }
     },
@@ -411,7 +411,7 @@ Example:
         "width": 0,
         "height": 0,
         "fontSize": 10,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "lineBreakMode": "word"
       }
     }
@@ -514,7 +514,7 @@ The object-fit feature provides precise control over image display, ensuring you
       "width": 100,
       "height": 20,
       "fontSize": 16,
-      "fontName": "NotoSansJP"
+      "fontName": "NotoSansJP-Regular"
     },
     {
       "type": "qrCode",
@@ -559,7 +559,7 @@ Static schemas now support custom input variables, allowing you to pass dynamic 
         "width": 170,
         "height": 15,
         "fontSize": 14,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "alignment": "center"
       },
       {
@@ -570,7 +570,7 @@ Static schemas now support custom input variables, allowing you to pass dynamic 
         "width": 170,
         "height": 10,
         "fontSize": 9,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "alignment": "right"
       }
     ]
@@ -615,7 +615,7 @@ Then reference these in your static schema:
       "width": 170,
       "height": 15,
       "fontSize": 16,
-      "fontName": "NotoSansJP"
+      "fontName": "NotoSansJP-Regular"
     }
   ]
 }
@@ -638,12 +638,12 @@ Then reference these in your static schema:
           {
             "width": "40%",
             "header": { "content": "Name" },
-            "cell": { "type": "text", "name": "name", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "fontSize": 10, "fontName": "NotoSansJP" }
+            "cell": { "type": "text", "name": "name", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "fontSize": 10, "fontName": "NotoSansJP-Regular" }
           },
           {
             "width": "1fr",
             "header": { "content": "Value" },
-            "cell": { "type": "text", "name": "value", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "fontSize": 10, "fontName": "NotoSansJP" }
+            "cell": { "type": "text", "name": "value", "content": "", "position": { "x": 0, "y": 0 }, "width": 0, "height": 0, "fontSize": 10, "fontName": "NotoSansJP-Regular" }
           }
         ],
         "fields": []
@@ -663,7 +663,7 @@ Then reference these in your static schema:
         "width": 170,
         "height": 15,
         "fontSize": 16,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "alignment": "center"
       },
       {
@@ -674,7 +674,7 @@ Then reference these in your static schema:
         "width": 40,
         "height": 10,
         "fontSize": 9,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "alignment": "right"
       },
       {
@@ -685,7 +685,7 @@ Then reference these in your static schema:
         "width": 120,
         "height": 10,
         "fontSize": 8,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "alignment": "left"
       }
     ]
@@ -798,7 +798,7 @@ let pdforge = PDForgeBuilder::new("Document".to_string())
 // Example: Embedded fonts (using include_bytes!)
 let embedded_font = include_bytes!("../assets/fonts/NotoSansJP-Regular.ttf");
 let pdforge = PDForgeBuilder::new("Document".to_string())
-    .add_font("NotoSansJP", embedded_font)?
+    .add_font("NotoSansJP-Regular", embedded_font)?
     .build();
 ```
 
