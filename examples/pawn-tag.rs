@@ -127,9 +127,8 @@ pub fn sanitize_string(input: &str) -> String {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pdforge = pdforge::PDForgeBuilder::new("PAWN_TAG_EXAMPLE".to_string())
-        .add_font_from_file("NotoSerifJP", "./assets/fonts/NotoSerifJP-Regular.ttf")?
-        .add_font_from_file("NotoSansJP", "./assets/fonts/NotoSansJP-Regular.ttf")?
-        .add_font_from_file("NotoSans", "./assets/fonts/NotoSansJP-Regular.ttf")?
+        .add_font_from_file("NotoSerifJP-Regular", "./assets/fonts/NotoSerifJP-Regular.ttf")?
+        .add_font_from_file("NotoSansJP-Regular", "./assets/fonts/NotoSansJP-Regular.ttf")?
         .load_template("pawn_tag", "./templates/pawn-tag.json")?
         .build();
 

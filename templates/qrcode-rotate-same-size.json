@@ -9,7 +9,7 @@
         "width": 170,
         "height": 10,
         "fontSize": 10,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "fontColor": "#000000",
         "alignment": "center",
         "verticalAlignment": "middle"
@@ -34,7 +34,7 @@
         "width": 170,
         "height": 10,
         "fontSize": 10,
-        "fontName": "NotoSansJP",
+        "fontName": "NotoSansJP-Regular",
         "fontColor": "#000000",
         "alignment": "center",
         "verticalAlignment": "middle"

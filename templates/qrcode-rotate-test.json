@@ -10,7 +10,7 @@
         "showHead": true,
         "headStyles": {
           "fontSize": 8,
-          "fontName": "NotoSansJP",
+          "fontName": "NotoSansJP-Regular",
           "alignment": "center",
           "verticalAlignment": "middle",
           "lineHeight": 1.0,

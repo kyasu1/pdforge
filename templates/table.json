@@ -36,7 +36,7 @@
                 },
                 "headStyles": {
                     "fontSize": 12,
-                    "fontName": "NotoSansJP",
+                    "fontName": "NotoSansJP-Regular",
                     "characterSpacing": 0,
                     "alignment": "center",
                     "verticalAlignment": "middle",
@@ -94,7 +94,7 @@
                             "height": 0,
                             "alignment": "left",
                             "verticalAlignment": "top",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 10,
                             "padding": {
@@ -122,7 +122,7 @@
                             "height": 0,
                             "alignment": "left",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 10,
                             "padding": {
@@ -150,7 +150,7 @@
                             "height": 0,
                             "alignment": "left",
                             "verticalAlignment": "bottom",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 10,
                             "padding": {
@@ -178,7 +178,7 @@
                             "height": 0,
                             "alignment": "left",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 10,
                             "padding": {
@@ -206,7 +206,7 @@
                             "height": 0,
                             "alignment": "left",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 10,
                             "padding": {
@@ -234,7 +234,7 @@
                             "height": 0,
                             "alignment": "right",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 10,
                             "padding": {
@@ -263,7 +263,7 @@
                             "height": 0,
                             "alignment": "right",
                             "verticalAlignment": "middle",
-                            "fontName": "NotoSerifJP",
+                            "fontName": "NotoSerifJP-Regular",
                             "fontColor": "#000000",
                             "fontSize": 10,
                             "padding": {
@@ -335,7 +335,7 @@
                 "height": 20,
                 "alignment": "left",
                 "verticalAlignment": "top",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#000000",
                 "fontSize": 10,
                 "padding": {
@@ -375,7 +375,7 @@
                 "height": 20,
                 "alignment": "left",
                 "verticalAlignment": "middle",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#000000",
                 "fontSize": 10,
                 "padding": {
@@ -415,7 +415,7 @@
                 "height": 20,
                 "alignment": "left",
                 "verticalAlignment": "bottom",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#000000",
                 "fontSize": 10,
                 "padding": {
@@ -455,7 +455,7 @@
                 "height": 20,
                 "alignment": "center",
                 "verticalAlignment": "top",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#000000",
                 "fontSize": 10,
                 "padding": {
@@ -495,7 +495,7 @@
                 "height": 20,
                 "alignment": "center",
                 "verticalAlignment": "middle",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#000000",
                 "fontSize": 10,
                 "padding": {
@@ -517,7 +517,7 @@
                 "height": 20,
                 "alignment": "center",
                 "verticalAlignment": "bottom",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#FFFFFF",
                 "fontSize": 10,
                 "backgroundColor": "#000000",
@@ -540,7 +540,7 @@
                 "height": 20,
                 "alignment": "right",
                 "verticalAlignment": "top",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#FFFFFF",
                 "fontSize": 10,
                 "backgroundColor": "#000000",
@@ -563,7 +563,7 @@
                 "height": 20,
                 "alignment": "right",
                 "verticalAlignment": "middle",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#FFFFFF",
                 "fontSize": 10,
                 "backgroundColor": "#000000",
@@ -586,7 +586,7 @@
                 "height": 20,
                 "alignment": "right",
                 "verticalAlignment": "bottom",
-                "fontName": "NotoSerifJP",
+                "fontName": "NotoSerifJP-Regular",
                 "fontColor": "#FFFFFF",
                 "fontSize": 10,
                 "backgroundColor": "#000000",
