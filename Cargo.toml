@@ -4,10 +4,10 @@ version = "0.18.0"
 edition = "2021"
 
 [dependencies]
-base64 = "0.22.1"
-csscolorparser = "0.7.0"
+base64 = "0.23"
+csscolorparser = "0.9"
 derive-new = "0.7.0"
-icu_segmenter = { version = "1.5.0", features = ["serde"] }
+icu_segmenter = { version = "2", features = ["serde"] }
 image = { version = "0.25.5", features = ["png"] }
 lopdf = { version = "0.44.0", default-features = false }
 palette = "0.7.6"
@@ -20,8 +20,8 @@ printpdf = { version = "0.12.3", features = [
 qrcode = "0.14.1"
 serde = { version = "1.0.217", features = ["derive", "serde_derive"] }
 serde_json = "1.0.139"
-snafu = "0.8.5"
-tera = "1.20.0"
+snafu = "0.9"
+tera = "2"
 time = { version = "0.3.53", features = ["macros", "formatting", "local-offset"] }
 uuid = { version = "1.16.0", features = ["v4", "v7"] }
 
