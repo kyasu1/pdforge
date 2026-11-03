@@ -4,10 +4,10 @@ version = "0.18.0"
 edition = "2021"
 
 [dependencies]
-base64 = "0.22.1"
-csscolorparser = "0.7.0"
+base64 = "0.23"
+csscolorparser = "0.9"
 derive-new = "0.7.0"
-icu_segmenter = { version = "1.5.0", features = ["serde"] }
+icu_segmenter = { version = "2", features = ["serde"] }
 image = { version = "0.25.5", features = ["png"] }
 lopdf = { version = "0.44.0", default-features = false }
 palette = "0.7.6"

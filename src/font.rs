@@ -1,20 +1,13 @@
 use derive_new::new;
+use icu_segmenter::options::WordBreakInvariantOptions;
 use icu_segmenter::{GraphemeClusterSegmenter, WordSegmenter};
 use printpdf::*;
 use serde::Deserialize;
 use snafu::prelude::*;
-use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::Arc;
-
-// Thread-local WordSegmenter instance cached for performance
-thread_local! {
-    static WORD_SEGMENTER: RefCell<WordSegmenter> = RefCell::new(WordSegmenter::new_auto());
-    static GRAPHEME_SEGMENTER: RefCell<GraphemeClusterSegmenter> =
-        RefCell::new(GraphemeClusterSegmenter::new());
-}
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -214,14 +207,14 @@ impl FontSpec {
         let mut segments: Vec<String> = Vec::new();
         let mut last_breakpoint = 0;
 
-        WORD_SEGMENTER.with(|segmenter| {
-            for breakpoint in segmenter.borrow().segment_str(paragraph) {
-                if last_breakpoint > 0 || breakpoint > 0 {
-                    segments.push(paragraph[last_breakpoint..breakpoint].to_string());
-                }
-                last_breakpoint = breakpoint;
+        // icu_segmenter 2 constructors return cheap `Copy` handles over
+        // compiled-in data, so there is nothing to cache between calls.
+        for breakpoint in WordSegmenter::new_auto(WordBreakInvariantOptions::default()).segment_str(paragraph) {
+            if last_breakpoint > 0 || breakpoint > 0 {
+                segments.push(paragraph[last_breakpoint..breakpoint].to_string());
             }
-        });
+            last_breakpoint = breakpoint;
+        }
 
         segments
     }
@@ -230,14 +223,14 @@ impl FontSpec {
         let mut segments: Vec<String> = Vec::new();
         let mut last_breakpoint = 0;
 
-        GRAPHEME_SEGMENTER.with(|segmenter| {
-            for breakpoint in segmenter.borrow().segment_str(paragraph) {
-                if last_breakpoint > 0 || breakpoint > 0 {
-                    segments.push(paragraph[last_breakpoint..breakpoint].to_string());
-                }
-                last_breakpoint = breakpoint;
+        // icu_segmenter 2 constructors return cheap `Copy` handles over
+        // compiled-in data, so there is nothing to cache between calls.
+        for breakpoint in GraphemeClusterSegmenter::new().segment_str(paragraph) {
+            if last_breakpoint > 0 || breakpoint > 0 {
+                segments.push(paragraph[last_breakpoint..breakpoint].to_string());
             }
-        });
+            last_breakpoint = breakpoint;
+        }
 
         segments
     }
