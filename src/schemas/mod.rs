@@ -729,7 +729,7 @@ impl Template {
             schemas.push(converted);
         }
 
-        self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs)
+        self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs, false)
     }
 
     // 統合されたrender関数
@@ -740,6 +740,21 @@ impl Template {
         inputs: Vec<Vec<HashMap<&'static str, String>>>,
         table_data: HashMap<&'static str, Vec<Vec<String>>>,
         static_inputs: HashMap<&'static str, String>,
+    ) -> Result<Vec<u8>, Error> {
+        self.render_with_options(doc, font_map, inputs, table_data, static_inputs, false)
+    }
+
+    /// Same as [`Self::render_with_inputs_table_data_and_static_inputs`], with
+    /// `optimize` controlling stream compression when saving (see
+    /// `PDForgeBuilder::optimize`).
+    pub(crate) fn render_with_options(
+        &self,
+        doc: &mut PdfDocument,
+        font_map: &FontMap,
+        inputs: Vec<Vec<HashMap<&'static str, String>>>,
+        table_data: HashMap<&'static str, Vec<Vec<String>>>,
+        static_inputs: HashMap<&'static str, String>,
+        optimize: bool,
     ) -> Result<Vec<u8>, Error> {
         if inputs.len() != self.schemas.len() {
             return Err(Error::Whatever {
@@ -840,7 +855,7 @@ impl Template {
             schemas.extend(converted);
         }
 
-        self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs)
+        self.render_schemas_with_static_inputs(font_map, doc, schemas, static_inputs, optimize)
     }
 
     // static inputs対応の共通レンダリング処理
@@ -850,6 +865,7 @@ impl Template {
         doc: &mut PdfDocument,
         schemas: Vec<Vec<Schema>>,
         static_inputs: HashMap<&'static str, String>,
+        optimize: bool,
     ) -> Result<Vec<u8>, Error> {
         let mut buffer = OpBuffer::default();
         // First render all page content to determine actual page count
@@ -971,7 +987,7 @@ impl Template {
         let mut warn = Vec::new();
         let bytes = doc.with_pages(pages).save(
             &PdfSaveOptions {
-                optimize: false,
+                optimize,
                 subset_fonts: true,
                 secure: false,
                 image_optimization: None,
