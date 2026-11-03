@@ -21,9 +21,9 @@ dependencies = [
 
 [[package]]
 name = "agg-rust-azul"
-version = "1.0.3"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e782814ac90251de42fae8457a0ca3de88e9ad42cd3a218a57a0f1a3e31e80a2"
+checksum = "ac039e3c6c386b293acd28d6260c7c2ed664ca5107b3f93c54d59562cd2b681b"
 
 [[package]]
 name = "aho-corasick"
@@ -209,9 +209,9 @@ dependencies = [
 
 [[package]]
 name = "azul-core"
-version = "0.0.12"
+version = "0.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9922e02dbcb4b648c04f7a880d6a73b4d628187905cfc9de8dfe80f8de90ebb7"
+checksum = "00174fb58e1c8cb8ae1b089c7c28b4ec17ffcec56ffab1af59a042390f907278"
 dependencies = [
  "azul-css",
  "gl-context-loader",
@@ -221,9 +221,9 @@ dependencies = [
 
 [[package]]
 name = "azul-css"
-version = "0.0.12"
+version = "0.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5403f56264a7b6da84b05f557d55ebe936e19d300c07e71d090aa0c232e946d0"
+checksum = "c2e635a63e2bf08b9b8e410aa1bdee53ccb1462ae021034e2c82373b05b2b306"
 dependencies = [
  "azul-simplecss",
  "libm",
@@ -231,9 +231,9 @@ dependencies = [
 
 [[package]]
 name = "azul-layout"
-version = "0.0.12"
+version = "0.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f19d95c1b4ab80cd85c7c1e199c6343ed74227d7d30e7e07bd72aa26c9d32b95"
+checksum = "38d84675106afffa51082e9bd416ba19683663bb49eb6b52caefac9bf3c27a62"
 dependencies = [
  "agg-rust-azul",
  "allsorts-azul",
@@ -245,6 +245,7 @@ dependencies = [
  "lru",
  "lyon",
  "png 0.18.0",
+ "regex-lite",
  "roxmltree 0.21.1",
  "rust-fontconfig",
  "serde",
@@ -261,9 +262,9 @@ dependencies = [
 
 [[package]]
 name = "azul-simplecss"
-version = "0.2.0"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8259ebd5ee48a37fd8931116405456fd67efbb5435b4789e45bdbccf5d7dea7e"
+checksum = "beea02de84f7d4c090ccf9a2bddcd0595105b35c2ed0c9a0ed66aca4b79559bd"
 
 [[package]]
 name = "base64"
@@ -1376,9 +1377,9 @@ dependencies = [
 
 [[package]]
 name = "lru"
-version = "0.16.3"
+version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1dc47f592c06f33f8e3aea9591776ec7c9f9e4124778ff8a3c3b87159f7e593"
+checksum = "ef9ac18847474e638e3702b76c65d4eb93428471a74778ef0f1be711717f89b5"
 
 [[package]]
 name = "lyon"
@@ -1867,9 +1868,9 @@ dependencies = [
 
 [[package]]
 name = "printpdf"
-version = "0.12.3"
+version = "0.12.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a8b6a0dde82e23e89ded1f9537a76b14219517189062d406611e247353d6878"
+checksum = "95d50369c5e18e18d4716bd855172db3a70f9e82c966687ae051ea58138f285c"
 dependencies = [
  "allsorts-azul",
  "azul-core",
@@ -2174,6 +2175,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "regex-lite"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab834c73d247e67f4fae452806d17d3c7501756d98c8808d7c9c7aa7d18f973"
+
+[[package]]
 name = "regex-syntax"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2222,9 +2229,9 @@ dependencies = [
 
 [[package]]
 name = "rust-fontconfig"
-version = "4.4.7"
+version = "5.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a83df0c47410e28febe95e19096298103a4188aa29d2083219e207d24b357ec3"
+checksum = "ed5799956a5fa7abd968823c4d4876f2eb9301d5c02e2f53d0dc9471c001c782"
 dependencies = [
  "allsorts-azul",
  "mmapio",
