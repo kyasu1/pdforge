@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-03
+
 ### Added
 - `PDForgeBuilder::optimize(bool)` enables PDF optimization when saving: content and embedded font streams are Flate-compressed and unreferenced objects are pruned. Defaults to `false`, so existing output is unchanged; text-heavy documents typically shrink to 40–70% of their uncompressed size when enabled.
+
+### Changed
+- **Breaking:** `csscolorparser` is upgraded from 0.7 to 0.9. Its types are part of the public API — `schemas::Error` variants carry `csscolorparser::ParseColorError`, and `Text::font_color` / `Text::set_font_color` use `csscolorparser::Color` — so downstream code that names these types must depend on `csscolorparser` 0.9.
+- `printpdf` is updated from 0.12.3 to 0.12.8. Rendered output is unchanged.
+- Other dependencies are updated to their latest versions: `base64` 0.23, `icu_segmenter` 2, `snafu` 0.9, `tera` 2, plus semver-compatible updates. `lopdf` stays at 0.44 to match `printpdf`.
+- Tera 2 reports missing template variables with different wording (``Variable `x` is not defined.``, now with the source span). The same templates fail as before; only the error message text changed.
+
+### Fixed
+- Removed a `semicolon_in_expressions_from_non_local_macros` future-incompatibility warning in `src/schemas/table.rs`.
 
 ## [0.18.0] - 2026-08-08
 
