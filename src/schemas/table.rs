@@ -63,7 +63,7 @@ impl JsonColumnWidth {
                     whatever!(
                         "column {column_index}: invalid width {text:?}; \
                          expected a number (mm) or one of \"25mm\", \"20%\", \"2fr\""
-                    )
+                    );
                 }
             }
         };
