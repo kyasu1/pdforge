@@ -130,6 +130,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### Compressing Output
+
+By default PDForge writes uncompressed PDFs, which are easy to inspect while developing templates. Call `optimize(true)` on the builder to Flate-compress content and font streams and prune unreferenced objects; text-heavy documents typically shrink to 40–70% of their uncompressed size.
+
+```rust
+let pdforge = PDForgeBuilder::new("My Document".to_string())
+    .add_font_from_file("NotoSansJP-Regular", "./assets/fonts/NotoSansJP-Regular.ttf")?
+    .optimize(true)
+    .load_template("table", "./templates/table.json")?
+    .build();
+```
+
 ## Template Structure
 
 PDForge uses JSON templates to define PDF layouts. Here's the basic structure:

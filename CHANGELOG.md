@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `PDForgeBuilder::optimize(bool)` enables PDF optimization when saving: content and embedded font streams are Flate-compressed and unreferenced objects are pruned. Defaults to `false`, so existing output is unchanged; text-heavy documents typically shrink to 40–70% of their uncompressed size when enabled.
+
 ## [0.18.0] - 2026-08-08
 
 ### Added

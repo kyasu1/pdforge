@@ -38,6 +38,7 @@ pub struct PDForge {
     name: String,
     font_map: font::FontMap,
     template_map: HashMap<String, schemas::Template>,
+    optimize: bool,
 }
 
 impl PDForge {
@@ -62,12 +63,13 @@ impl PDForge {
             Some(template) => {
                 let mut doc = PdfDocument::new(&self.name);
                 let font_map = self.font_map.register_fonts_for_document(&mut doc);
-                template.render_with_inputs_table_data_and_static_inputs(
+                template.render_with_options(
                     &mut doc,
                     &font_map,
                     inputs,
                     table_data,
                     static_inputs,
+                    self.optimize,
                 )
             }
             None => Err(Error::Whatever {
@@ -82,6 +84,7 @@ pub struct PDForgeBuilder {
     name: String,
     font_map: font::FontMap,
     template_map: HashMap<String, schemas::Template>,
+    optimize: bool,
 }
 
 impl PDForgeBuilder {
@@ -90,7 +93,19 @@ impl PDForgeBuilder {
             name,
             font_map: font::FontMap::default(),
             template_map: HashMap::new(),
+            optimize: false,
         }
+    }
+
+    /// Enables or disables PDF optimization when saving (default: `false`).
+    ///
+    /// When enabled, content and embedded font streams are Flate-compressed
+    /// and unreferenced objects are pruned, which makes the output noticeably
+    /// smaller. Leave it disabled to get uncompressed output that is easier
+    /// to inspect when debugging templates.
+    pub fn optimize(mut self, optimize: bool) -> Self {
+        self.optimize = optimize;
+        self
     }
 
     /// Loads a font from a byte slice and registers it under `font_name`.
@@ -176,6 +191,7 @@ impl PDForgeBuilder {
             name: self.name,
             font_map: self.font_map,
             template_map: self.template_map,
+            optimize: self.optimize,
         }
     }
 }
